@@ -1,3 +1,15 @@
+## v0.8.0 (2025-10-24)
+
+### Feat
+
+- use core type blue ids from blue-repository (#11)
+
+### Fix
+
+- change list Blue ID in Preprocessor and Properties classes (#13)
+- **java8**: restore JDK 8 compatibility by removing Java 9–11 APIs (#12)
+- **types,merge**: treat List/Dictionary as subtypes and add idempotent resolve test (#10)
+
 ## v0.7.3 (2024-10-09)
 
 ### Fix
