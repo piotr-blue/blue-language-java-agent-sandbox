@@ -27,7 +27,7 @@ final class PatchEngine {
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
-        List<String> segments = splitPointer(targetPath);
+        List<String> segments = new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(targetPath)));
 
         Node before = cloneNode(readNode(document, segments, LookupMode.BEFORE, targetPath));
         JsonPatch.Op op = patch.getOp();
@@ -58,7 +58,7 @@ final class PatchEngine {
         if ("/".equals(normalized)) {
             throw new IllegalArgumentException("Direct write cannot target root document");
         }
-        List<String> segments = splitPointer(normalized);
+        List<String> segments = new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(normalized)));
         ParentContext ctx = resolveParent(document, segments, true, normalized);
         Node parent = ctx.parent;
         String leaf = ctx.leaf;
@@ -416,10 +416,6 @@ final class PatchEngine {
             return node.getProperties();
         }
         return properties;
-    }
-
-    private List<String> splitPointer(String path) {
-        return new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(path)));
     }
 
     private Node cloneNode(Node node) {
