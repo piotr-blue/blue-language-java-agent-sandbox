@@ -83,6 +83,13 @@ public final class PointerUtils {
         return segment.replace("~", "~0").replace("/", "~1");
     }
 
+    public static String escapeRequiredPointerSegment(String segment, String argumentName) {
+        if (segment == null || segment.isEmpty()) {
+            throw new IllegalArgumentException(argumentName + " cannot be null or empty");
+        }
+        return escapePointerSegment(segment);
+    }
+
     public static boolean isArrayIndexSegment(String segment) {
         if (segment == null || segment.isEmpty()) {
             return false;

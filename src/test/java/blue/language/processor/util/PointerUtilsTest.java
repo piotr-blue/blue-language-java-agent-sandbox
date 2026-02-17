@@ -113,4 +113,13 @@ class PointerUtilsTest {
         assertEquals("a~0b", PointerUtils.escapePointerSegment("a~b"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.escapePointerSegment(null));
     }
+
+    @Test
+    void escapeRequiredPointerSegmentRejectsNullOrEmpty() {
+        assertEquals("a~1b", PointerUtils.escapeRequiredPointerSegment("a/b", "segment"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PointerUtils.escapeRequiredPointerSegment(null, "segment"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PointerUtils.escapeRequiredPointerSegment("", "segment"));
+    }
 }

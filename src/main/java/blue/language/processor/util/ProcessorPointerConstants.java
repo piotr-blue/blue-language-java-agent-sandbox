@@ -34,12 +34,6 @@ public final class ProcessorPointerConstants {
     }
 
     private static String escapePointerSegment(String segment) {
-        if (segment == null) {
-            throw new IllegalArgumentException("Pointer segment cannot be null");
-        }
-        if (segment.isEmpty()) {
-            throw new IllegalArgumentException("Pointer segment cannot be empty");
-        }
-        return PointerUtils.escapePointerSegment(segment);
+        return PointerUtils.escapeRequiredPointerSegment(segment, "Pointer segment");
     }
 }
