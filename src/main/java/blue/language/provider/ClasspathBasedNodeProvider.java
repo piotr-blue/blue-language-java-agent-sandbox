@@ -3,7 +3,6 @@ package blue.language.provider;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.blueid.v2.BlueIdCalculatorV2;
-import blue.language.utils.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
@@ -55,7 +54,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
                     if (resource.endsWith(BLUE_FILE_EXTENSION)) {
                         processContent(content);
                     } else {
-                        String blueId = BlueIdCalculator.calculateBlueId(new Node().value(content));
+                        String blueId = BlueIdCalculatorV2.calculateSemanticBlueId(new Node().value(content));
                         blueIdToContentMap.put(blueId, content);
                         blueIdToMultipleDocumentsMap.put(blueId, false);
                     }

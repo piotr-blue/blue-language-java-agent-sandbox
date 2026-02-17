@@ -3,9 +3,9 @@ package blue.language.merge.processor;
 import blue.language.merge.MergingProcessor;
 import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigDecimal;
@@ -145,7 +145,7 @@ public class ConstraintsVerifier implements MergingProcessor {
             int uniqueItemsCount = items.stream()
                     .map(NodeToMapListOrValue::get)
                     .map(doc -> YAML_MAPPER.convertValue(doc, Node.class))
-                    .map(BlueIdCalculator::calculateBlueId)
+                    .map(BlueIdCalculatorV2::calculateSemanticBlueId)
                     .collect(Collectors.toSet())
                     .size();
             if (items.size() != uniqueItemsCount)
