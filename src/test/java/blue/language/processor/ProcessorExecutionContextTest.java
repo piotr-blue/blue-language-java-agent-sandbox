@@ -151,6 +151,22 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void documentHelpersUseLeadingZeroNumericPropertyWhenMixedParentHasPropertyMap() {
+        Node document = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"), new Node().value("index-one"))
+                        .properties("01", new Node().value("property-leading-zero")));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("property-leading-zero", context.documentAt("/list/01").getValue());
+        assertEquals("index-one", context.documentAt("/list/1").getValue());
+    }
+
+    @Test
     void documentHelpersTreatEmptyPointerAsRoot() {
         Node document = new Node()
                 .properties("value", new Node().value(1));

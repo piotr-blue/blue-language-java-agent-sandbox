@@ -61,6 +61,17 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtUsesLeadingZeroNumericPropertyWhenMixedParentHasPropertyMap() {
+        Node root = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"), new Node().value("index-one"))
+                        .properties("01", new Node().value("property-leading-zero")));
+
+        assertEquals("property-leading-zero", ProcessorEngine.nodeAt(root, "/list/01").getValue());
+        assertEquals("index-one", ProcessorEngine.nodeAt(root, "/list/1").getValue());
+    }
+
+    @Test
     void nodeAtSupportsBuiltInTypeAndBlueTraversal() {
         Node root = new Node()
                 .type(new Node().name("TypeRoot"))
