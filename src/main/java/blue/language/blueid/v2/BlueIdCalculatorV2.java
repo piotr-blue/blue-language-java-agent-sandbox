@@ -164,7 +164,24 @@ public final class BlueIdCalculatorV2 {
         if (!pointer.startsWith("/")) {
             throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
         }
+        validatePointerEscapes(pointer);
         return pointer;
+    }
+
+    private static void validatePointerEscapes(String pointer) {
+        for (int i = 1; i < pointer.length(); i++) {
+            char c = pointer.charAt(i);
+            if (c != '~') {
+                continue;
+            }
+            if (i + 1 >= pointer.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
+            }
+            char next = pointer.charAt(++i);
+            if (next != '0' && next != '1') {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
+            }
+        }
     }
 
     private static Node nodeAt(Node root, String pointer) {
