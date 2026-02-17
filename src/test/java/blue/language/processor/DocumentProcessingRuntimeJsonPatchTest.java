@@ -251,6 +251,16 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void missingEscapedPropertyReportsCanonicalPointerInError() {
+        Node document = new Node().properties("a/b", new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> runtime.applyPatch("/", JsonPatch.remove("/a~1b/missing")));
+        assertTrue(ex.getMessage().contains("/a~1b/missing"), ex.getMessage());
+    }
+
+    @Test
     void rejectsPatchPathWithoutLeadingSlash() {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);

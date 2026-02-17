@@ -431,7 +431,7 @@ final class PatchEngine {
             builder.append('/');
             String segment = segments.get(i);
             if (segment != null) {
-                builder.append(segment);
+                builder.append(PointerUtils.escapePointerSegment(segment));
             }
         }
         return builder.length() == 0 ? "/" : builder.toString();
