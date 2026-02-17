@@ -6,6 +6,7 @@ import blue.language.model.Node;
 import blue.language.utils.NodeToMapListOrValue;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -20,11 +21,20 @@ public final class BundleBuilderV2 {
         Objects.requireNonNull(blue, "blue");
         Objects.requireNonNull(canonicalRoot, "canonicalRoot");
 
-        Set<String> references = new LinkedHashSet<String>();
-        collectReferences(canonicalRoot, references);
+        Set<String> pendingReferences = new LinkedHashSet<String>();
+        collectReferences(canonicalRoot, pendingReferences);
+        Set<String> visitedReferences = new LinkedHashSet<String>();
 
         Map<String, Object> bundle = new LinkedHashMap<String, Object>();
-        for (String blueId : references) {
+        while (!pendingReferences.isEmpty()) {
+            Iterator<String> iterator = pendingReferences.iterator();
+            String blueId = iterator.next();
+            iterator.remove();
+            if (visitedReferences.contains(blueId)) {
+                continue;
+            }
+            visitedReferences.add(blueId);
+
             List<Node> referencedNodes = blue.getNodeProvider().fetchByBlueId(blueId);
             if (referencedNodes == null || referencedNodes.isEmpty()) {
                 continue;
@@ -37,6 +47,16 @@ public final class BundleBuilderV2 {
                         .map(NodeToMapListOrValue::get)
                         .collect(Collectors.toList());
                 bundle.put(blueId, serializedList);
+            }
+
+            Set<String> discoveredReferences = new LinkedHashSet<String>();
+            for (Node referencedNode : referencedNodes) {
+                collectReferences(referencedNode, discoveredReferences);
+            }
+            for (String discovered : discoveredReferences) {
+                if (!visitedReferences.contains(discovered)) {
+                    pendingReferences.add(discovered);
+                }
             }
         }
         return bundle;

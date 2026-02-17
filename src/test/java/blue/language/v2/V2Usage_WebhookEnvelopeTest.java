@@ -52,4 +52,40 @@ class V2Usage_WebhookEnvelopeTest {
         assertFalse(envelope.bundle().isEmpty());
         assertTrue(envelope.bundle().containsKey(baseTypeBlueId));
     }
+
+    @Test
+    void canAttachTransitiveReferenceBundleFromProvider() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs("name: RootType\nx: 1\n");
+
+        String rootTypeBlueId = provider.getBlueIdByName("RootType");
+
+        provider.addSingleDocs(
+                "name: MidTypeTyped\n" +
+                        "type:\n" +
+                        "  blueId: " + rootTypeBlueId + "\n"
+        );
+        String midTypeBlueId = provider.getBlueIdByName("MidTypeTyped");
+
+        provider.addSingleDocs(
+                "name: LeafTypeTyped\n" +
+                        "type:\n" +
+                        "  blueId: " + midTypeBlueId + "\n"
+        );
+        String leafTypeBlueId = provider.getBlueIdByName("LeafTypeTyped");
+
+        Blue blue = new Blue(provider);
+        Node doc = blue.yamlToNode(
+                "name: Derived\n" +
+                        "type:\n" +
+                        "  blueId: " + leafTypeBlueId + "\n"
+        );
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
+        WebhookEnvelopeV2 envelope = WebhookEnvelopeV2.fromSnapshot(snapshot, blue);
+
+        assertTrue(envelope.bundle().containsKey(leafTypeBlueId));
+        assertTrue(envelope.bundle().containsKey(midTypeBlueId));
+        assertTrue(envelope.bundle().containsKey(rootTypeBlueId));
+    }
 }
