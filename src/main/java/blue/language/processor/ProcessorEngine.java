@@ -136,7 +136,7 @@ final class ProcessorEngine {
         if (watchPath == null || watchPath.isEmpty()) {
             return false;
         }
-        String watch = PointerUtils.normalizePointer(PointerUtils.resolvePointer(scopePath, watchPath));
+        String watch = PointerUtils.resolvePointer(scopePath, watchPath);
         String changed = PointerUtils.normalizePointer(changedPath);
         if (watch.equals("/")) {
             return true;
