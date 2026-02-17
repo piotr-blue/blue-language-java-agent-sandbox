@@ -362,6 +362,42 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsMalformed() {
+        String yaml = "name: Bad Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: /x~2\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("invalid path"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsMalformed() {
+        String yaml = "name: Bad Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n" +
+                "    childPath: /child~\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("invalid childPath"));
+    }
+
+    @Test
     void childLifecycleIsBridgedToParent() {
         String yaml = "name: Embedded Lifecycle\n" +
                 "child:\n" +

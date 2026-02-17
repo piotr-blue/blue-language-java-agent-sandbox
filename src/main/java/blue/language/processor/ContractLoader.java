@@ -4,10 +4,13 @@ import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
+import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.Map;
 import java.util.Objects;
@@ -43,6 +46,7 @@ final class ContractLoader {
                 continue;
             }
             contract.setKey(key);
+            normalizePointerBackedContracts(contract, key, scopePath);
             if (contract instanceof ChannelContract) {
                 ChannelContract channel = (ChannelContract) contract;
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
@@ -69,5 +73,42 @@ final class ContractLoader {
         }
 
         return builder.build();
+    }
+
+    private void normalizePointerBackedContracts(Contract contract, String key, String scopePath) {
+        if (contract instanceof DocumentUpdateChannel) {
+            DocumentUpdateChannel channel = (DocumentUpdateChannel) contract;
+            channel.setPath(normalizeContractPointer(channel.getPath(),
+                    "DocumentUpdateChannel",
+                    key,
+                    scopePath,
+                    "path"));
+            return;
+        }
+        if (contract instanceof EmbeddedNodeChannel) {
+            EmbeddedNodeChannel channel = (EmbeddedNodeChannel) contract;
+            channel.setChildPath(normalizeContractPointer(channel.getChildPath(),
+                    "EmbeddedNodeChannel",
+                    key,
+                    scopePath,
+                    "childPath"));
+        }
+    }
+
+    private String normalizeContractPointer(String pointer,
+                                            String contractType,
+                                            String key,
+                                            String scopePath,
+                                            String fieldName) {
+        if (pointer == null || pointer.trim().isEmpty()) {
+            return pointer;
+        }
+        String trimmed = pointer.trim();
+        try {
+            return PointerUtils.normalizePointer(trimmed);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
+                    + " has invalid " + fieldName + ": " + pointer, ex);
+        }
     }
 }
