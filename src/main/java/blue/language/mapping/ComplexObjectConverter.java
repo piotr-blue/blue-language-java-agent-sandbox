@@ -4,7 +4,7 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueId;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.utils.Nodes;
 import blue.language.utils.TypeClassResolver;
 
@@ -118,7 +118,7 @@ public class ComplexObjectConverter implements Converter<Object> {
         if (targetNode == null) {
             return null;
         }
-        return BlueIdCalculator.calculateBlueId(targetNode);
+        return BlueIdCalculatorV2.calculateSemanticBlueId(targetNode);
     }
 
     private String handleBlueNameAnnotation(Node node, Field field) {

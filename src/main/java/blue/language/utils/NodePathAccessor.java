@@ -1,6 +1,7 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,10 @@ public class NodePathAccessor {
             case "value":
                 return new Node().value(node.getValue());
             case "blueId":
-                return new Node().value(BlueIdCalculator.calculateBlueId(node));
+                String blueId = node.getBlueId() != null
+                        ? node.getBlueId()
+                        : BlueIdCalculatorV2.calculateSemanticBlueId(node);
+                return new Node().value(blueId);
         }
 
         if (segment.matches("\\d+")) {
