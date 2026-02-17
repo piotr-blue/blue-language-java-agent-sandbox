@@ -68,9 +68,25 @@ class NodePathAccessorTest {
     }
 
     @Test
+    void testPropertySegmentTakesPrecedenceOverBuiltIns() {
+        Node node = new Node()
+                .type(new Node().name("BuiltInType"))
+                .properties("type", new Node().value("property-type"));
+
+        assertEquals("property-type", NodePathAccessor.get(node, "/type"));
+    }
+
+    @Test
     void testBlueIdAccess() {
         assertNotNull(rootNode.get("/blueId"));
         assertNotNull(rootNode.get("/a/0/blueId"));
+    }
+
+    @Test
+    void testBlueBuiltInAccess() {
+        Node node = new Node()
+                .blue(new Node().name("BlueRoot"));
+        assertEquals("BlueRoot", NodePathAccessor.get(node, "/blue/name"));
     }
 
     @Test

@@ -52,28 +52,6 @@ public class NodePathAccessor {
     private static Node getNodeForSegment(Node node, String segment, Function<Node, Node> linkingProvider, boolean resolveLink) {
         Node result;
 
-        switch (segment) {
-            case "name":
-                return new Node().value(node.getName());
-            case "description":
-                return new Node().value(node.getDescription());
-            case "type":
-                return node.getType();
-            case "itemType":
-                return node.getItemType();
-            case "keyType":
-                return node.getKeyType();
-            case "valueType":
-                return node.getValueType();
-            case "value":
-                return new Node().value(node.getValue());
-            case "blueId":
-                String blueId = node.getBlueId() != null
-                        ? node.getBlueId()
-                        : BlueIdCalculatorV2.calculateSemanticBlueId(node);
-                return new Node().value(blueId);
-        }
-
         Map<String, Node> properties = node.getProperties();
         if (properties != null && properties.containsKey(segment)) {
             result = properties.get(segment);
@@ -85,7 +63,40 @@ public class NodePathAccessor {
             }
             result = items.get(itemIndex);
         } else {
-            throw new IllegalArgumentException("Property not found: " + segment);
+            switch (segment) {
+                case "name":
+                    result = new Node().value(node.getName());
+                    break;
+                case "description":
+                    result = new Node().value(node.getDescription());
+                    break;
+                case "type":
+                    result = node.getType();
+                    break;
+                case "itemType":
+                    result = node.getItemType();
+                    break;
+                case "keyType":
+                    result = node.getKeyType();
+                    break;
+                case "valueType":
+                    result = node.getValueType();
+                    break;
+                case "value":
+                    result = new Node().value(node.getValue());
+                    break;
+                case "blueId":
+                    String blueId = node.getBlueId() != null
+                            ? node.getBlueId()
+                            : BlueIdCalculatorV2.calculateSemanticBlueId(node);
+                    result = new Node().value(blueId);
+                    break;
+                case "blue":
+                    result = node.getBlue();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Property not found: " + segment);
+            }
         }
 
         return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
