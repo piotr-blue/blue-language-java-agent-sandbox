@@ -9,7 +9,7 @@ import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -101,7 +101,7 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = BlueIdCalculator.calculateBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
+        String documentId = BlueIdCalculatorV2.calculateSemanticBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, false, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, true);
