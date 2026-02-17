@@ -150,6 +150,25 @@ class V2Spec_RehashPathMatchesIndexTest {
     }
 
     @Test
+    void rehashPathAllowsLeadingZeroNumericPropertyKeys() {
+        Blue blue = new Blue();
+        Node withLeadingZeroProperty = new Node()
+                .name("Root")
+                .items(
+                        new Node().name("Item0"),
+                        new Node().name("Item1")
+                )
+                .properties("01", new Node().value("leading-zero-property"));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(withLeadingZeroProperty);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String propertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("01"));
+        assertEquals(propertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/01"));
+        assertEquals(propertyHash, snapshot.blueIdsByPointer().blueIdAt("/01"));
+    }
+
+    @Test
     void rehashPathUsesBuiltInTypeSegmentWhenNoPropertyCollisionExists() {
         Blue blue = new Blue();
         Node withoutTypePropertyCollision = new Node()
