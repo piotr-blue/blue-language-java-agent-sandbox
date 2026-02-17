@@ -208,15 +208,57 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void tildeSegmentsAreNotUnescaped() {
+    void tildeSegmentsAreUnescapedUsingJsonPointerRules() {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        runtime.applyPatch("/", JsonPatch.add("/tilde/~1key", new Node().value("value")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/a~1b", new Node().value("slash")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/a~0b", new Node().value("tilde")));
 
         Node tilde = property(document, "tilde");
-        Node literal = property(tilde, "~1key");
-        assertEquals("value", literal.getValue());
+        assertEquals("slash", property(tilde, "a/b").getValue());
+        assertEquals("tilde", property(tilde, "a~b").getValue());
+    }
+
+    @Test
+    void rejectsMalformedEscapedPointerSegments() {
+        Node document = new Node();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> runtime.applyPatch("/", JsonPatch.add("/tilde/~2key", new Node().value("value"))));
+        assertThrows(IllegalArgumentException.class,
+                () -> runtime.applyPatch("/", JsonPatch.add("/tilde/~", new Node().value("value"))));
+    }
+
+    @Test
+    void rejectsPatchPathWithoutLeadingSlash() {
+        Node document = new Node();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> runtime.applyPatch("/", JsonPatch.add("tilde/key", new Node().value("value"))));
+    }
+
+    @Test
+    void rejectsLeadingZeroArrayIndexSegments() {
+        Node document = arrayDocument("nums", 7, 8);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        assertThrows(IllegalStateException.class,
+                () -> runtime.applyPatch("/", JsonPatch.replace("/nums/01", new Node().value(80))));
+    }
+
+    @Test
+    void allowsNumericLookingPropertySegmentsWhenParentIsObject() {
+        Node document = new Node().properties("box", new Node());
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.add("/box/01/name", new Node().value("ok")));
+
+        Node box = property(document, "box");
+        Node key01 = property(box, "01");
+        assertEquals("ok", property(key01, "name").getValue());
     }
 
     @Test
