@@ -68,7 +68,7 @@ public final class SnapshotFactoryV2 {
         List<Node> items = node.getItems();
         if (items != null) {
             for (int i = 0; i < items.size(); i++) {
-                indexNode(PointerUtils.appendEscapedPointerSegment(pointer, String.valueOf(i)), items.get(i), ids);
+                indexNode(PointerUtils.appendPointerSegment(pointer, String.valueOf(i)), items.get(i), ids);
             }
         }
 
@@ -82,7 +82,7 @@ public final class SnapshotFactoryV2 {
 
     private void indexSingle(String parentPointer, String segment, Node child, Map<String, String> ids) {
         if (child != null) {
-            indexNode(PointerUtils.appendEscapedPointerSegment(parentPointer, segment), child, ids);
+            indexNode(PointerUtils.appendPointerSegment(parentPointer, segment), child, ids);
         }
     }
 
