@@ -74,4 +74,27 @@ final class ProcessorEngineDocumentUpdateEventTest {
         assertThrows(IllegalArgumentException.class,
                 () -> ProcessorEngine.matchesDocumentUpdate("/scope", "/mixed/01", "scope/mixed/01"));
     }
+
+    @Test
+    void matchesDocumentUpdateRespectsEscapedAndTrailingEmptySegments() {
+        assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b/", "/scope/a~1b/"));
+        assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b/", "/scope/a~1b//child"));
+        assertFalse(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b/", "/scope/a~1b"));
+        assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b", "/scope/a~1b/"));
+    }
+
+    @Test
+    void createDocumentUpdateEventKeepsAbsolutePathWhenScopeNotPrefix() {
+        DocumentProcessingRuntime.DocumentUpdateData data = new DocumentProcessingRuntime.DocumentUpdateData(
+                "/other/path",
+                new Node().value("before"),
+                new Node().value("after"),
+                JsonPatch.Op.REPLACE,
+                "/scope",
+                Collections.singletonList("/scope")
+        );
+
+        Node event = ProcessorEngine.createDocumentUpdateEvent(data, "/scope");
+        assertEquals("/other/path", event.getProperties().get("path").getValue());
+    }
 }
