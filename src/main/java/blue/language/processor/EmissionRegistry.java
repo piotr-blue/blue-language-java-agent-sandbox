@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,11 +22,13 @@ final class EmissionRegistry {
     }
 
     ScopeRuntimeContext scope(String scopePath) {
-        return scopes.computeIfAbsent(scopePath, ScopeRuntimeContext::new);
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        return scopes.computeIfAbsent(normalized, ScopeRuntimeContext::new);
     }
 
     ScopeRuntimeContext existingScope(String scopePath) {
-        return scopes.get(scopePath);
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        return scopes.get(normalized);
     }
 
     List<Node> rootEmissions() {
@@ -37,11 +40,13 @@ final class EmissionRegistry {
     }
 
     boolean isScopeTerminated(String scopePath) {
-        ScopeRuntimeContext context = scopes.get(scopePath);
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        ScopeRuntimeContext context = scopes.get(normalized);
         return context != null && context.isTerminated();
     }
 
     void clearScope(String scopePath) {
-        scopes.remove(scopePath);
+        String normalized = PointerUtils.normalizeScope(scopePath);
+        scopes.remove(normalized);
     }
 }
