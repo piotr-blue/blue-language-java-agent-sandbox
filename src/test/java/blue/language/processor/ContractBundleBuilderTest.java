@@ -109,6 +109,19 @@ class ContractBundleBuilderTest {
                         .addHandler("setX", handlerA)
                         .addHandler(" setX ", handlerB)
                         .build());
+
+        SetProperty handler = new SetProperty();
+        handler.setChannelKey("life");
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder()
+                        .addChannel("life", new LifecycleChannel())
+                        .addHandler(" life ", handler)
+                        .build());
+
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder()
+                        .addChannel("life", new LifecycleChannel())
+                        .addMarker(" life ", new ProcessEmbedded()));
     }
 
     @Test
