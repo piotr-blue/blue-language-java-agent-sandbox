@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -275,6 +276,21 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node child = property(created, "b");
         Node grandChild = property(child, "c");
         assertEquals("v", grandChild.getValue());
+    }
+
+    @Test
+    void failedPatchRollsBackCreatedNullArrayElementWithoutShrinkingList() {
+        List<Node> items = new ArrayList<>(Collections.singletonList(null));
+        Node document = new Node().properties("arr", new Node().items(items));
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> runtime.applyPatch("/", JsonPatch.add("/arr/0/-", new Node().value("x"))));
+        assertTrue(ex.getMessage().contains("Append token"));
+
+        List<Node> stored = array(document, "arr");
+        assertEquals(1, stored.size());
+        assertNull(stored.get(0));
     }
 
     @Test

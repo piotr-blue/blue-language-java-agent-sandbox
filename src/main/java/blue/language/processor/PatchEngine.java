@@ -571,7 +571,7 @@ final class PatchEngine {
             if (arrayIndex != null) {
                 List<Node> items = parent.getItems();
                 if (items != null && arrayIndex >= 0 && arrayIndex < items.size()) {
-                    items.remove(arrayIndex.intValue());
+                    items.set(arrayIndex, null);
                 }
                 return;
             }
