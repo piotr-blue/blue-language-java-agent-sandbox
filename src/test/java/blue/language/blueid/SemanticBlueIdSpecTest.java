@@ -107,4 +107,33 @@ class SemanticBlueIdSpecTest {
                 BlueIdCalculator.calculateSemanticBlueId(noisy)
         );
     }
+
+    @Test
+    void nonContentPreviousControlFormIsIgnoredForHashing() {
+        Node compact = new Node().items(new Node().value("x"));
+        Node withPreviousControl = new Node().items(
+                new Node().properties("$previous", new Node().value(true)),
+                new Node().value("x")
+        );
+
+        assertEquals(
+                BlueIdCalculator.calculateSemanticBlueId(compact),
+                BlueIdCalculator.calculateSemanticBlueId(withPreviousControl)
+        );
+    }
+
+    @Test
+    void nonContentPosControlIsRemovedWhileKeepingItemContent() {
+        Node compact = new Node().items(new Node().properties("name", new Node().value("x")));
+        Node withPosControl = new Node().items(
+                new Node()
+                        .properties("$pos", new Node().value(0))
+                        .properties("name", new Node().value("x"))
+        );
+
+        assertEquals(
+                BlueIdCalculator.calculateSemanticBlueId(compact),
+                BlueIdCalculator.calculateSemanticBlueId(withPosControl)
+        );
+    }
 }

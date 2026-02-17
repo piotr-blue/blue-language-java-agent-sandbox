@@ -200,6 +200,7 @@ public final class BlueIdTreeHasher {
                 }
                 result.put(String.valueOf(entry.getKey()), child);
             }
+            stripListControlForms(result);
             return result;
         }
         if (value instanceof List) {
@@ -218,6 +219,18 @@ public final class BlueIdTreeHasher {
             return normalized;
         }
         return value;
+    }
+
+    private static void stripListControlForms(Map<String, Object> map) {
+        if (map.containsKey("$pos")) {
+            map.remove("$pos");
+        }
+        if (map.containsKey("$previous")) {
+            Object previous = map.get("$previous");
+            if (previous instanceof Boolean && (Boolean) previous) {
+                map.remove("$previous");
+            }
+        }
     }
 
     private static Map<String, String> blueIdWrapper(String blueId) {

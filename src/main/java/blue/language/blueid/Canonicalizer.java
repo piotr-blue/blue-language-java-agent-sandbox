@@ -203,6 +203,7 @@ public final class Canonicalizer {
                 }
                 cleaned.put(entry.getKey(), cleanedChild);
             }
+            stripListControlForms(cleaned);
             return cleaned;
         }
         if (value instanceof List) {
@@ -221,5 +222,17 @@ public final class Canonicalizer {
             return cleaned;
         }
         return value;
+    }
+
+    private static void stripListControlForms(Map<String, Object> map) {
+        if (map.containsKey("$pos")) {
+            map.remove("$pos");
+        }
+        if (map.containsKey("$previous")) {
+            Object previous = map.get("$previous");
+            if (previous instanceof Boolean && (Boolean) previous) {
+                map.remove("$previous");
+            }
+        }
     }
 }

@@ -167,6 +167,7 @@ public final class BlueIdCalculator {
                 }
                 result.put(String.valueOf(entry.getKey()), child);
             }
+            stripListControlForms(result);
             return result;
         }
         if (value instanceof List) {
@@ -185,6 +186,18 @@ public final class BlueIdCalculator {
             return cleaned;
         }
         return value;
+    }
+
+    private static void stripListControlForms(Map<String, Object> map) {
+        if (map.containsKey("$pos")) {
+            map.remove("$pos");
+        }
+        if (map.containsKey("$previous")) {
+            Object previous = map.get("$previous");
+            if (previous instanceof Boolean && (Boolean) previous) {
+                map.remove("$previous");
+            }
+        }
     }
 
     private static boolean isPureReferenceMap(Map<String, Object> map) {
