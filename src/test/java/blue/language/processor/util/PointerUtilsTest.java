@@ -38,4 +38,11 @@ class PointerUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("scope", "/x"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "x"));
     }
+
+    @Test
+    void resolvePointerTreatsNullAndEmptyAsRootWithinScope() {
+        assertEquals("/scope", PointerUtils.resolvePointer("/scope", null));
+        assertEquals("/scope", PointerUtils.resolvePointer("/scope", ""));
+        assertEquals("/x", PointerUtils.resolvePointer(null, "/x"));
+    }
 }

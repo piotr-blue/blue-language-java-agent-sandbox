@@ -171,4 +171,25 @@ final class ProcessorExecutionContextTest {
         assertThrows(IllegalArgumentException.class, () -> context.documentAt("x"));
         assertThrows(IllegalArgumentException.class, () -> context.documentContains("x"));
     }
+
+    @Test
+    void resolvePointerTreatsNullAndEmptyAsScopeRoot() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("/", context.resolvePointer(null));
+        assertEquals("/", context.resolvePointer(""));
+    }
+
+    @Test
+    void resolvePointerRejectsNonPointerInputs() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertThrows(IllegalArgumentException.class, () -> context.resolvePointer("child"));
+    }
 }
