@@ -161,6 +161,18 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testJsonPointerEscapedAllowedPathMatchesRawSegment() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/a~1b/x~0y")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("a/b", mockNode));
+        pathLimits.enterPathSegment("a/b", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x~y", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("x/y", mockNode));
+    }
+
+    @Test
     public void testConstraintsAndBlueId() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);

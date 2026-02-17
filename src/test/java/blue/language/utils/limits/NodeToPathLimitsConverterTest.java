@@ -73,4 +73,16 @@ class NodeToPathLimitsConverterTest {
         assertFalse(limits.shouldExtendPathSegment("/anyPath", mockNode));
     }
 
+    @Test
+    void testSpecialCharacterPropertySegmentsUseJsonPointerEscaping() {
+        Node node = new Node().properties("a/b", new Node().properties("x~y", new Node()));
+        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+
+        assertTrue(limits.shouldExtendPathSegment("a/b", mockNode));
+        limits.enterPathSegment("a/b", mockNode);
+
+        assertTrue(limits.shouldExtendPathSegment("x~y", mockNode));
+        assertFalse(limits.shouldExtendPathSegment("x/y", mockNode));
+    }
+
 }

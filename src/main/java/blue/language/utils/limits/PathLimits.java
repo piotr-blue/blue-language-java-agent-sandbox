@@ -31,7 +31,7 @@ public class PathLimits implements Limits {
             return false;
         }
 
-        String potentialPath = normalizePath(getCurrentFullPath() + "/" + pathSegment);
+        String potentialPath = buildPotentialPath(pathSegment);
         return isAllowedPath(potentialPath);
     }
 
@@ -50,14 +50,14 @@ public class PathLimits implements Limits {
     }
 
     private boolean matchesAllowedPath(String allowedPath, String path) {
-        String[] allowedParts = allowedPath.split("/");
-        String[] pathParts = path.split("/");
+        String[] allowedParts = splitPointerSegments(allowedPath);
+        String[] pathParts = splitPointerSegments(path);
 
         if (pathParts.length > allowedParts.length) {
             return false;
         }
 
-        for (int i = 1; i < pathParts.length; i++) {
+        for (int i = 0; i < pathParts.length; i++) {
             if (!allowedParts[i].equals("*") && !allowedParts[i].equals(pathParts[i])) {
                 return false;
             }
@@ -68,7 +68,12 @@ public class PathLimits implements Limits {
 
     @Override
     public void enterPathSegment(String pathSegment, Node noe) {
-        currentPath.push(pathSegment);
+        String segment = pathSegment == null ? "" : pathSegment;
+        if (segment.startsWith("/")) {
+            currentPath.push(segment.replaceAll("^/+", ""));
+            return;
+        }
+        currentPath.push(escapeJsonPointerSegment(segment));
     }
 
     @Override
@@ -82,10 +87,34 @@ public class PathLimits implements Limits {
         return "/" + String.join("/", currentPath);
     }
 
+    private String buildPotentialPath(String pathSegment) {
+        String segment = pathSegment == null ? "" : pathSegment;
+        if (segment.startsWith("/")) {
+            return normalizePath(getCurrentFullPath() + segment);
+        }
+        String escapedSegment = escapeJsonPointerSegment(segment);
+        return normalizePath(getCurrentFullPath() + "/" + escapedSegment);
+    }
+
     private String normalizePath(String path) {
         return "/" + Stream.of(path.split("/"))
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.joining("/"));
+    }
+
+    private String escapeJsonPointerSegment(String segment) {
+        return segment.replace("~", "~0").replace("/", "~1");
+    }
+
+    private String[] splitPointerSegments(String pointerPath) {
+        if (pointerPath == null || pointerPath.isEmpty() || "/".equals(pointerPath)) {
+            return new String[0];
+        }
+        String normalized = pointerPath.startsWith("/") ? pointerPath.substring(1) : pointerPath;
+        if (normalized.isEmpty()) {
+            return new String[0];
+        }
+        return normalized.split("/", -1);
     }
 
     public static class Builder {
