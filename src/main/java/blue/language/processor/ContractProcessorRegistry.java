@@ -1,16 +1,22 @@
 package blue.language.processor;
 
+import blue.language.model.BlueType;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.utils.BlueIdResolver;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Maintains the mapping between contract BlueIds and their processors.
@@ -78,21 +84,56 @@ public class ContractProcessorRegistry {
     private <T extends Contract> void registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {
         Objects.requireNonNull(contractType, "contractType");
 
-        TypeBlueId typeBlueId = contractType.getAnnotation(TypeBlueId.class);
-        if (typeBlueId == null) {
-            throw new IllegalArgumentException("Contract type lacks @TypeBlueId: " + contractType.getName());
+        Set<String> declaredBlueIds = collectDeclaredBlueIds(contractType);
+        if (declaredBlueIds.isEmpty()) {
+            String resolved = BlueIdResolver.resolveBlueId(contractType);
+            if (resolved != null && !resolved.trim().isEmpty()) {
+                declaredBlueIds.add(resolved.trim());
+            }
         }
-
-        String[] declared = typeBlueId.value();
-        if (declared.length == 0 && !typeBlueId.defaultValue().isEmpty()) {
-            declared = new String[]{typeBlueId.defaultValue()};
-        }
-        if (declared.length == 0) {
+        if (declaredBlueIds.isEmpty()) {
             throw new IllegalArgumentException("Contract type " + contractType.getName() + " does not declare any BlueId values");
         }
 
-        for (String blueId : declared) {
+        for (String blueId : declaredBlueIds) {
             processorsByBlueId.put(blueId, processor);
+        }
+    }
+
+    private Set<String> collectDeclaredBlueIds(Class<? extends Contract> contractType) {
+        Set<String> result = new LinkedHashSet<String>();
+
+        BlueType blueType = contractType.getAnnotation(BlueType.class);
+        if (blueType != null) {
+            addDeclaredBlueIds(result, blueType.value(), blueType.defaultValue());
+        }
+
+        TypeBlueId typeBlueId = contractType.getAnnotation(TypeBlueId.class);
+        if (typeBlueId == null && blueType == null) {
+            throw new IllegalArgumentException("Contract type lacks @TypeBlueId/@BlueType: " + contractType.getName());
+        }
+        if (typeBlueId != null) {
+            addDeclaredBlueIds(result, typeBlueId.value(), typeBlueId.defaultValue());
+        }
+        return result;
+    }
+
+    private void addDeclaredBlueIds(Set<String> sink, String[] values, String defaultValue) {
+        List<String> raw = new ArrayList<String>();
+        if (values != null) {
+            Collections.addAll(raw, values);
+        }
+        if ((values == null || values.length == 0) && defaultValue != null && !defaultValue.isEmpty()) {
+            raw.add(defaultValue);
+        }
+        for (String candidate : raw) {
+            if (candidate == null) {
+                continue;
+            }
+            String trimmed = candidate.trim();
+            if (!trimmed.isEmpty()) {
+                sink.add(trimmed);
+            }
         }
     }
 }
