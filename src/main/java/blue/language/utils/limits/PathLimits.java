@@ -151,6 +151,9 @@ public class PathLimits implements Limits {
         }
 
         public Builder setMaxDepth(int maxDepth) {
+            if (maxDepth < 0) {
+                throw new IllegalArgumentException("Max depth cannot be negative: " + maxDepth);
+            }
             this.maxDepth = maxDepth;
             return this;
         }

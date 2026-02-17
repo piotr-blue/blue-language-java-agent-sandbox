@@ -76,6 +76,18 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testBuilderRejectsNegativeMaxDepth() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().setMaxDepth(-1));
+    }
+
+    @Test
+    public void testWithMaxDepthRejectsNegativeDepth() {
+        assertThrows(IllegalArgumentException.class,
+                () -> PathLimits.withMaxDepth(-1));
+    }
+
+    @Test
     public void testMaxDepth() {
         pathLimits.enterPathSegment("a");
         pathLimits.enterPathSegment("b");
