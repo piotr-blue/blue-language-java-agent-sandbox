@@ -148,4 +148,15 @@ class PointerUtilsTest {
         assertEquals(Arrays.asList("/"), PointerUtils.ancestorPointers("/", true));
         assertEquals(Arrays.asList("/"), PointerUtils.ancestorPointers("/", false));
     }
+
+    @Test
+    void appendPointerSegmentComposesEscapedChildPointers() {
+        assertEquals("/a~1b", PointerUtils.appendPointerSegment("/", "a/b"));
+        assertEquals("/scope/a~0b", PointerUtils.appendPointerSegment("/scope", "a~b"));
+        assertEquals("/scope/value", PointerUtils.appendEscapedPointerSegment("/scope", "value"));
+        assertThrows(IllegalArgumentException.class,
+                () -> PointerUtils.appendEscapedPointerSegment("/scope", null));
+        assertThrows(IllegalArgumentException.class,
+                () -> PointerUtils.appendPointerSegment("scope", "value"));
+    }
 }

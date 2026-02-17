@@ -164,6 +164,21 @@ public final class PointerUtils {
         return pointers;
     }
 
+    public static String appendEscapedPointerSegment(String pointer, String escapedSegment) {
+        if (escapedSegment == null) {
+            throw new IllegalArgumentException("Escaped JSON pointer segment cannot be null");
+        }
+        String normalizedPointer = normalizePointer(pointer);
+        if ("/".equals(normalizedPointer)) {
+            return "/" + escapedSegment;
+        }
+        return normalizedPointer + "/" + escapedSegment;
+    }
+
+    public static String appendPointerSegment(String pointer, String segment) {
+        return appendEscapedPointerSegment(pointer, escapePointerSegment(segment));
+    }
+
     public static String resolvePointer(String scopePath, String relativePointer) {
         String normalizedScope = normalizeScope(scopePath);
         String normalizedPointer = normalizePointer(relativePointer);

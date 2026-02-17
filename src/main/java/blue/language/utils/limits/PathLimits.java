@@ -95,12 +95,7 @@ public class PathLimits implements Limits {
         if (segment.startsWith("/")) {
             return segment;
         }
-        String escapedSegment = PointerUtils.escapePointerSegment(segment);
-        String current = getCurrentFullPath();
-        if ("/".equals(current)) {
-            return "/" + escapedSegment;
-        }
-        return current + "/" + escapedSegment;
+        return PointerUtils.appendPointerSegment(getCurrentFullPath(), segment);
     }
 
     public static class Builder {
