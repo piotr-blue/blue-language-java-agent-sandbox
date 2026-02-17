@@ -178,4 +178,27 @@ class NodePathAccessorTest {
         assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/type/name"));
         assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/blue/name"));
     }
+
+    @Test
+    void testResolveFinalLinkFalseReturnsRootNodeForRootPointers() {
+        Node scalar = new Node().value("root-value");
+
+        assertSame(scalar, NodePathAccessor.get(scalar, "/", null, false));
+        assertSame(scalar, NodePathAccessor.get(scalar, "", null, false));
+        assertSame(scalar, NodePathAccessor.get(scalar, null, null, false));
+    }
+
+    @Test
+    void testResolveFinalLinkFalseSkipsFinalLinkResolution() {
+        Node reference = new Node().blueId("ref-id");
+        Node linked = new Node().value("linked");
+        Node root = new Node().properties("x", reference);
+
+        Object unresolved = NodePathAccessor.get(root, "/x", node -> "ref-id".equals(node.getBlueId()) ? linked : node, false);
+        Object resolved = NodePathAccessor.get(root, "/x", node -> "ref-id".equals(node.getBlueId()) ? linked : node, true);
+
+        assertTrue(unresolved instanceof Node);
+        assertSame(reference, unresolved);
+        assertEquals("linked", resolved);
+    }
 }

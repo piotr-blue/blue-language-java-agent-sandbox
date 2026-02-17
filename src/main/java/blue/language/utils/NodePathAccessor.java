@@ -26,6 +26,9 @@ public class NodePathAccessor {
         }
 
         if (path.equals("/")) {
+            if (!resolveFinalLink) {
+                return node;
+            }
             return node.getValue() != null ? node.getValue() : node;
         }
 
