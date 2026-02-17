@@ -57,4 +57,45 @@ class V2Spec_Generalization_CurrencyExampleTest {
         ResolvedSnapshotV2 committed = workingDocument.commit();
         assertEquals(priceBlueId, committed.resolvedRoot().toNode().getAsText("/price/type/blueId"));
     }
+
+    @Test
+    void patchAndCommitDoNotRequireProviderLookupsForResolvedSnapshots() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Price\n" +
+                        "amount:\n" +
+                        "  type: Integer\n" +
+                        "currency:\n" +
+                        "  type: Text\n"
+        );
+        String priceBlueId = provider.getBlueIdByName("Price");
+        provider.addSingleDocs(
+                "name: PriceInEUR\n" +
+                        "type:\n" +
+                        "  blueId: " + priceBlueId + "\n" +
+                        "currency: EUR\n"
+        );
+        String priceInEURBlueId = provider.getBlueIdByName("PriceInEUR");
+
+        Blue bootstrapBlue = new Blue(provider);
+        Node doc = bootstrapBlue.yamlToNode(
+                "price:\n" +
+                        "  type:\n" +
+                        "    blueId: " + priceInEURBlueId + "\n" +
+                        "  currency: EUR\n" +
+                        "  amount: 10\n"
+        );
+        ResolvedSnapshotV2 snapshot = bootstrapBlue.resolveToSnapshotV2(doc);
+
+        Blue noLookupBlue = new Blue(blueId -> {
+            throw new AssertionError("Unexpected provider lookup for blueId: " + blueId);
+        });
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(noLookupBlue, snapshot);
+
+        PatchReport report = workingDocument.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
+        assertTrue(report.generalizationReport().hasGeneralizations());
+
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+        assertEquals(priceBlueId, committed.resolvedRoot().toNode().getAsText("/price/type/blueId"));
+    }
 }
