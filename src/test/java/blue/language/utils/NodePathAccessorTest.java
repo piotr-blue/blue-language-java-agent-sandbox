@@ -140,6 +140,15 @@ class NodePathAccessorTest {
     }
 
     @Test
+    void testPureListRejectsLeadingZeroAndNonNumericSegments() {
+        Node list = new Node().items(new Node().value("x"), new Node().value("y"));
+
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(list, "/01"));
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(list, "/child"));
+        assertEquals("x", NodePathAccessor.get(list, "/0"));
+    }
+
+    @Test
     void testOversizedNumericSegmentIsRejectedAsInvalidIndex() {
         Node node = new Node().items(new Node().value("only"));
         assertThrows(IllegalArgumentException.class,

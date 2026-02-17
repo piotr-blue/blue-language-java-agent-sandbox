@@ -73,6 +73,9 @@ public class NodePathAccessor {
             }
             result = items.get(itemIndex);
         } else {
+            if (node.getItems() != null && properties == null && !isBuiltInSegment(segment)) {
+                throw new IllegalArgumentException("Invalid item index: " + segment);
+            }
             switch (segment) {
                 case "name":
                     result = new Node().value(node.getName());
@@ -110,6 +113,18 @@ public class NodePathAccessor {
         }
 
         return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
+    }
+
+    private static boolean isBuiltInSegment(String segment) {
+        return "name".equals(segment)
+                || "description".equals(segment)
+                || "type".equals(segment)
+                || "itemType".equals(segment)
+                || "keyType".equals(segment)
+                || "valueType".equals(segment)
+                || "value".equals(segment)
+                || "blueId".equals(segment)
+                || "blue".equals(segment);
     }
 
     private static boolean isArrayIndexSegment(String segment) {
