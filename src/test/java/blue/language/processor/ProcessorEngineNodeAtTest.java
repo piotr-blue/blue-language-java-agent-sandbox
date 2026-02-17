@@ -50,6 +50,25 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtSupportsBuiltInTypeAndBlueTraversal() {
+        Node root = new Node()
+                .type(new Node().name("TypeRoot"))
+                .blue(new Node().name("BlueRoot"));
+
+        assertEquals("TypeRoot", ProcessorEngine.nodeAt(root, "/type").getName());
+        assertEquals("BlueRoot", ProcessorEngine.nodeAt(root, "/blue").getName());
+    }
+
+    @Test
+    void nodeAtPrefersPropertyOverBuiltInTypeSegment() {
+        Node root = new Node()
+                .type(new Node().name("BuiltInType"))
+                .properties("type", new Node().value("property-type"));
+
+        assertEquals("property-type", ProcessorEngine.nodeAt(root, "/type").getValue());
+    }
+
+    @Test
     void nodeAtPreservesTrailingEmptySegments() {
         Node root = new Node().properties("scope", new Node().value("value"));
         assertNull(ProcessorEngine.nodeAt(root, "/scope/"));

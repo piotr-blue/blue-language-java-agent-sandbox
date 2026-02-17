@@ -201,6 +201,27 @@ final class ProcessorEngine {
                 continue;
             }
 
+            if ("type".equals(segment)) {
+                current = current.getType();
+                continue;
+            }
+            if ("itemType".equals(segment)) {
+                current = current.getItemType();
+                continue;
+            }
+            if ("keyType".equals(segment)) {
+                current = current.getKeyType();
+                continue;
+            }
+            if ("valueType".equals(segment)) {
+                current = current.getValueType();
+                continue;
+            }
+            if ("blue".equals(segment)) {
+                current = current.getBlue();
+                continue;
+            }
+
             return null;
         }
         return current;
