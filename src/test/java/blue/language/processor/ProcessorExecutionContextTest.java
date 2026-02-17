@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -191,5 +192,17 @@ final class ProcessorExecutionContextTest {
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
         assertThrows(IllegalArgumentException.class, () -> context.resolvePointer("child"));
+    }
+
+    @Test
+    void bundleLookupTreatsNullAndEmptyScopeAsRoot() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        ContractBundle root = execution.bundleForScope("/");
+        assertNotNull(root);
+        assertSame(root, execution.bundleForScope(""));
+        assertSame(root, execution.bundleForScope(null));
     }
 }

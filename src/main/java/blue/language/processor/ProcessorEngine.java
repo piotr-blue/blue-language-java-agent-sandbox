@@ -413,7 +413,7 @@ final class ProcessorEngine {
         }
 
         ContractBundle bundleForScope(String scopePath) {
-            return bundles.get(scopePath);
+            return bundles.get(ProcessorEngine.normalizeScope(scopePath));
         }
 
         void recordPendingTermination(String scopePath,
