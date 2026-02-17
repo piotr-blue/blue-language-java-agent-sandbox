@@ -200,6 +200,9 @@ public final class ContractBundle {
                     if (trimmed.isEmpty()) {
                         continue;
                     }
+                    if (trimmed.charAt(0) != '/') {
+                        throw new IllegalArgumentException("Embedded path must start with '/': " + path);
+                    }
                     normalizedPaths.add(PointerUtils.normalizePointer(trimmed));
                 }
                 embeddedPaths.addAll(normalizedPaths);

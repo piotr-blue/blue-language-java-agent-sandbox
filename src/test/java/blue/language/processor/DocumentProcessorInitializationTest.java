@@ -434,6 +434,24 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenProcessEmbeddedPathIsNonPointer() {
+        String yaml = "name: Non Pointer Embedded Marker Path\n" +
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: ProcessEmbedded\n" +
+                "    paths:\n" +
+                "      - child\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("Embedded path must start with '/'"));
+    }
+
+    @Test
     void initializationFailsWhenDocumentUpdateChannelPathIsBlank() {
         String yaml = "name: Blank Update Channel Path\n" +
                 "contracts:\n" +

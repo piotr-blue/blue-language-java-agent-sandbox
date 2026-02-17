@@ -16,7 +16,6 @@ class ContractBundleBuilderTest {
     @Test
     void setEmbeddedNormalizesAndDeduplicatesPaths() {
         ProcessEmbedded embedded = new ProcessEmbedded()
-                .addPath("child")
                 .addPath("/child")
                 .addPath("/a~1b");
 
@@ -42,9 +41,18 @@ class ContractBundleBuilderTest {
     }
 
     @Test
+    void setEmbeddedRejectsNonPointerPaths() {
+        ProcessEmbedded embedded = new ProcessEmbedded()
+                .addPath("child");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> ContractBundle.builder().setEmbedded(embedded).build());
+    }
+
+    @Test
     void setEmbeddedTrimsWhitespaceAndSkipsBlankEntries() {
         ProcessEmbedded embedded = new ProcessEmbedded()
-                .addPath("  child  ")
+                .addPath("  /child  ")
                 .addPath("   ")
                 .addPath("\t/next\t");
 
