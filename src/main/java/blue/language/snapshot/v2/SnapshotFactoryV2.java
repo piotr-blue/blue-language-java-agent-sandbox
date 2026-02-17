@@ -5,6 +5,7 @@ import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.blueid.v2.BlueIdIndex;
 import blue.language.blueid.v2.MapBlueIdIndex;
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -93,6 +94,6 @@ public final class SnapshotFactoryV2 {
     }
 
     private String escapeJsonPointerSegment(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
+        return PointerUtils.escapePointerSegment(segment);
     }
 }

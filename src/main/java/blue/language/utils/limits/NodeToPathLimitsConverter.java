@@ -1,6 +1,7 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.Map;
 
@@ -38,6 +39,6 @@ public class NodeToPathLimitsConverter {
     }
 
     private static String escapeJsonPointerSegment(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
+        return PointerUtils.escapePointerSegment(segment);
     }
 }

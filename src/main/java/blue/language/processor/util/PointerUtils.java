@@ -76,6 +76,13 @@ public final class PointerUtils {
         return decoded.toString();
     }
 
+    public static String escapePointerSegment(String segment) {
+        if (segment == null) {
+            throw new IllegalArgumentException("JSON pointer segment cannot be null");
+        }
+        return segment.replace("~", "~0").replace("/", "~1");
+    }
+
     public static boolean isArrayIndexSegment(String segment) {
         if (segment == null || segment.isEmpty()) {
             return false;

@@ -104,7 +104,7 @@ public class PathLimits implements Limits {
     }
 
     private String escapeJsonPointerSegment(String segment) {
-        return segment.replace("~", "~0").replace("/", "~1");
+        return PointerUtils.escapePointerSegment(segment);
     }
 
     public static class Builder {

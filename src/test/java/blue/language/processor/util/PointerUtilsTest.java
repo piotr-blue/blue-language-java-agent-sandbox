@@ -106,4 +106,11 @@ class PointerUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.validatePointerEscapes("a~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.validatePointerEscapes("/a~2"));
     }
+
+    @Test
+    void escapePointerSegmentEncodesSlashAndTildeAndRejectsNull() {
+        assertEquals("a~1b", PointerUtils.escapePointerSegment("a/b"));
+        assertEquals("a~0b", PointerUtils.escapePointerSegment("a~b"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.escapePointerSegment(null));
+    }
 }
