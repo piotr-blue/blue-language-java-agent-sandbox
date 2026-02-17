@@ -1,5 +1,7 @@
 package blue.language.blueid;
 
+import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.utils.Base58Sha256Provider;
@@ -11,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.OBJECT_BLUE_ID;
 import static blue.language.utils.Properties.OBJECT_DESCRIPTION;
@@ -25,9 +28,13 @@ public final class BlueIdCalculator {
     }
 
     public static String calculateSemanticBlueId(Node canonicalNode) {
-        Objects.requireNonNull(canonicalNode, "canonicalNode");
-        Object canonical = Canonicalizer.toCanonicalObject(canonicalNode);
-        return calculateCanonical(canonical);
+        return calculateCanonicalBlueId(canonicalNode);
+    }
+
+    public static String calculateSemanticBlueId(Node authoringNode, NodeProvider nodeProvider) {
+        Objects.requireNonNull(authoringNode, "authoringNode");
+        Objects.requireNonNull(nodeProvider, "nodeProvider");
+        return new Blue(nodeProvider).calculateSemanticBlueId(authoringNode.clone());
     }
 
     public static String calculateBlueId(Node node) {
@@ -35,13 +42,33 @@ public final class BlueIdCalculator {
     }
 
     public static String calculateSemanticBlueId(List<Node> canonicalDocs) {
-        Objects.requireNonNull(canonicalDocs, "canonicalDocs");
-        Object canonical = Canonicalizer.toCanonicalObject(canonicalDocs);
-        return calculateCanonical(canonical);
+        return calculateCanonicalBlueId(canonicalDocs);
+    }
+
+    public static String calculateSemanticBlueId(List<Node> authoringDocs, NodeProvider nodeProvider) {
+        Objects.requireNonNull(authoringDocs, "authoringDocs");
+        Objects.requireNonNull(nodeProvider, "nodeProvider");
+        Blue blue = new Blue(nodeProvider);
+        List<Node> canonicalDocs = authoringDocs.stream()
+                .map(node -> blue.resolveToSnapshot(node).canonicalRoot().toNode())
+                .collect(Collectors.toList());
+        return calculateCanonicalBlueId(canonicalDocs);
     }
 
     public static String calculateBlueId(List<Node> nodes) {
         return calculateSemanticBlueId(nodes);
+    }
+
+    public static String calculateCanonicalBlueId(Node canonicalNode) {
+        Objects.requireNonNull(canonicalNode, "canonicalNode");
+        Object canonical = Canonicalizer.toCanonicalObject(canonicalNode);
+        return calculateCanonical(canonical);
+    }
+
+    public static String calculateCanonicalBlueId(List<Node> canonicalDocs) {
+        Objects.requireNonNull(canonicalDocs, "canonicalDocs");
+        Object canonical = Canonicalizer.toCanonicalObject(canonicalDocs);
+        return calculateCanonical(canonical);
     }
 
     public static boolean isPureReferenceNode(Node node) {
@@ -71,7 +98,7 @@ public final class BlueIdCalculator {
             throw new IllegalArgumentException("Path not found in canonical node: "
                     + PointerUtils.normalizePointer(jsonPointer));
         }
-        return calculateSemanticBlueId(target);
+        return calculateCanonicalBlueId(target);
     }
 
     private static String calculateCanonical(Object value) {

@@ -89,9 +89,15 @@ public class MergeReverser {
                                     Function<Node, Node> typeGetter,
                                     BiConsumer<Node, Node> typeSetter) {
         Node mergedType = typeGetter.apply(merged);
-        if (mergedType != null && (fromType == null || typeGetter.apply(fromType) == null ||
-                                   !typeGetter.apply(fromType).getBlueId().equals(mergedType.getBlueId()))) {
-            Node typeNode = new Node().blueId(mergedType.getBlueId());
+        Node inheritedType = fromType != null ? typeGetter.apply(fromType) : null;
+        String mergedTypeBlueId = mergedType != null ? mergedType.getBlueId() : null;
+        String inheritedTypeBlueId = inheritedType != null ? inheritedType.getBlueId() : null;
+
+        if (mergedType != null && (inheritedType == null ||
+                                   !Objects.equals(inheritedTypeBlueId, mergedTypeBlueId))) {
+            Node typeNode = mergedTypeBlueId != null
+                    ? new Node().blueId(mergedTypeBlueId)
+                    : mergedType.clone();
             typeSetter.accept(minimal, typeNode);
         }
     }

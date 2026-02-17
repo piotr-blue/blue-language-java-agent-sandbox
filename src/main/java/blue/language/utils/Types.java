@@ -20,15 +20,15 @@ public class Types {
     }
 
     public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
-        String subtypeBlueId = identityForSubtypeCheck(subtype);
-        String supertypeBlueId = identityForSubtypeCheck(supertype);
+        String subtypeBlueId = identityForSubtypeCheck(subtype, nodeProvider);
+        String supertypeBlueId = identityForSubtypeCheck(supertype, nodeProvider);
         if (subtypeBlueId.equals(supertypeBlueId))
             return true;
 
         if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
             Node current = supertype;
             while (current != null) {
-                String currentBlueId = identityForSubtypeCheck(current);
+                String currentBlueId = identityForSubtypeCheck(current, nodeProvider);
                 if (currentBlueId.equals(subtypeBlueId))
                     return true;
                 current = getType(current, nodeProvider);
@@ -38,7 +38,7 @@ public class Types {
 
         Node current = getType(subtype, nodeProvider);
         while (current != null) {
-            String blueId = identityForSubtypeCheck(current);
+            String blueId = identityForSubtypeCheck(current, nodeProvider);
             if (blueId.equals(supertypeBlueId))
                 return true;
             current = getType(current, nodeProvider);
@@ -121,9 +121,12 @@ public class Types {
         return isSubtype(typeNode, new Node().blueId(DICTIONARY_TYPE_BLUE_ID), nodeProvider);
     }
 
-    private static String identityForSubtypeCheck(Node node) {
+    private static String identityForSubtypeCheck(Node node, NodeProvider nodeProvider) {
         if (node.getBlueId() != null) {
             return node.getBlueId();
+        }
+        if (nodeProvider != null) {
+            return BlueIdCalculator.calculateSemanticBlueId(node, nodeProvider);
         }
         return BlueIdCalculator.calculateSemanticBlueId(node);
     }

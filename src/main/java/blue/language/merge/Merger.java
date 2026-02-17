@@ -98,8 +98,8 @@ public class Merger implements NodeResolver {
                 limits.exitPathSegment();
                 continue;
             }
-            String sourceBlueId = BlueIdCalculator.calculateSemanticBlueId(sourceChildren.get(i));
-            String targetBlueId = BlueIdCalculator.calculateSemanticBlueId(targetChildren.get(i));
+            String sourceBlueId = BlueIdCalculator.calculateSemanticBlueId(sourceChildren.get(i), nodeProvider);
+            String targetBlueId = BlueIdCalculator.calculateSemanticBlueId(targetChildren.get(i), nodeProvider);
             if (!sourceBlueId.equals(targetBlueId))
                 throw new IllegalArgumentException(String.format(
                         "Mismatched items at index %d: source item has blueId '%s', but target item has blueId '%s'.",
