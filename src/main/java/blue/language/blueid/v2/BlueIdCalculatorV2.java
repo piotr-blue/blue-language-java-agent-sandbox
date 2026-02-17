@@ -171,7 +171,7 @@ public final class BlueIdCalculatorV2 {
         if ("/".equals(pointer)) {
             return root;
         }
-        String[] segments = pointer.substring(1).split("/");
+        String[] segments = pointer.substring(1).split("/", -1);
         Node current = root;
         for (String rawSegment : segments) {
             String segment = unescapePointerSegment(rawSegment);
