@@ -235,7 +235,29 @@ public final class WorkingDocumentV2 {
     }
 
     private String unescapePointerSegment(String segment) {
-        return segment.replace("~1", "/").replace("~0", "~");
+        if (segment == null || segment.isEmpty()) {
+            return segment;
+        }
+        StringBuilder decoded = new StringBuilder(segment.length());
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c != '~') {
+                decoded.append(c);
+                continue;
+            }
+            if (i + 1 >= segment.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+            char next = segment.charAt(++i);
+            if (next == '0') {
+                decoded.append('~');
+            } else if (next == '1') {
+                decoded.append('/');
+            } else {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+        }
+        return decoded.toString();
     }
 
     private Map<String, Node> ensureMutableProperties(Node node) {
@@ -252,6 +274,9 @@ public final class WorkingDocumentV2 {
     }
 
     private int parseArrayIndex(String segment, String path) {
+        if (!isArrayIndexSegment(segment)) {
+            throw new IllegalStateException("Expected numeric array index in path: " + path);
+        }
         try {
             int index = Integer.parseInt(segment);
             if (index < 0) {
@@ -261,5 +286,18 @@ public final class WorkingDocumentV2 {
         } catch (NumberFormatException ex) {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
+    }
+
+    private boolean isArrayIndexSegment(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return "0".equals(value) || value.charAt(0) != '0';
     }
 }
