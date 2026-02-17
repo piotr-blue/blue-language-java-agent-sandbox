@@ -22,6 +22,7 @@ import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ListTest {
 
@@ -352,6 +353,21 @@ public class ListTest {
                 .items(a, b, c);
 
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
+    public void unknownMergePolicyIsRejected() {
+        x = new Node()
+                .name("Base")
+                .mergePolicy("not-a-policy")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(a, b);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+        assertTrue(ex.getMessage().contains("Unknown mergePolicy"));
     }
 
     private Node preprocessAndExtend(String doc) {
