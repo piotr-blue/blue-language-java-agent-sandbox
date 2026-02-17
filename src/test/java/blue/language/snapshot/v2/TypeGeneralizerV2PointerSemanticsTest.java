@@ -70,6 +70,8 @@ class TypeGeneralizerV2PointerSemanticsTest {
         assertThrows(IllegalArgumentException.class,
                 () -> generalizer.generalizeToSoundness(blue, resolved, "/list/~2bad/value"));
         assertThrows(IllegalArgumentException.class,
+                () -> generalizer.generalizeToSoundness(blue, resolved, "/~2bad"));
+        assertThrows(IllegalArgumentException.class,
                 () -> generalizer.generalizeToSoundness(blue, resolved, "list/0/value"));
     }
 
