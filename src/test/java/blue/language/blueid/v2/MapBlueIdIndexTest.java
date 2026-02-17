@@ -7,6 +7,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MapBlueIdIndexTest {
 
@@ -39,5 +40,23 @@ class MapBlueIdIndexTest {
         MapBlueIdIndex index = MapBlueIdIndex.from(ids);
         assertEquals("scope-id", index.blueIdAt("/scope"));
         assertEquals("scope-empty-child-id", index.blueIdAt("/scope/"));
+    }
+
+    @Test
+    void fromNormalizesStoredEmptyRootKey() {
+        Map<String, String> ids = new LinkedHashMap<String, String>();
+        ids.put("", "root-blue-id");
+
+        MapBlueIdIndex index = MapBlueIdIndex.from(ids);
+        assertEquals("root-blue-id", index.blueIdAt("/"));
+        assertTrue(index.asMap().containsKey("/"));
+    }
+
+    @Test
+    void fromRejectsInvalidStoredPointerKeys() {
+        Map<String, String> ids = new LinkedHashMap<String, String>();
+        ids.put("root", "bad");
+
+        assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
     }
 }

@@ -22,7 +22,11 @@ public final class MapBlueIdIndex implements BlueIdIndex {
         if (source == null || source.isEmpty()) {
             return empty();
         }
-        return new MapBlueIdIndex(source);
+        Map<String, String> normalized = new LinkedHashMap<String, String>();
+        for (Map.Entry<String, String> entry : source.entrySet()) {
+            normalized.put(normalizePointer(entry.getKey()), entry.getValue());
+        }
+        return new MapBlueIdIndex(normalized);
     }
 
     @Override
@@ -35,7 +39,7 @@ public final class MapBlueIdIndex implements BlueIdIndex {
         return index;
     }
 
-    private String normalizePointer(String pointer) {
+    private static String normalizePointer(String pointer) {
         if (pointer == null || pointer.isEmpty()) {
             return "/";
         }
