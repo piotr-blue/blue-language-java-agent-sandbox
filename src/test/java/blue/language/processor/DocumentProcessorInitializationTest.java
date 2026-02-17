@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
@@ -44,7 +44,7 @@ class DocumentProcessorInitializationTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String expectedDocumentId = BlueIdCalculatorV2.calculateSemanticBlueId(original.clone());
+        String expectedDocumentId = BlueIdCalculator.calculateSemanticBlueId(original.clone());
 
         assertFalse(blue.isInitialized(original));
 

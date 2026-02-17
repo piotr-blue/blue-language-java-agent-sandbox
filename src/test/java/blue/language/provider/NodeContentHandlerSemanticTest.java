@@ -1,7 +1,7 @@
 package blue.language.provider;
 
 import blue.language.Blue;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
@@ -9,9 +9,12 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class NodeContentHandlerV2Test {
+class NodeContentHandlerSemanticTest {
 
     @Test
     void semanticBlueIdNormalizesRedundantOverrides() {
@@ -56,28 +59,28 @@ class NodeContentHandlerV2Test {
     }
 
     @Test
-    void parseAndCalculateBlueIdSingleNodeUsesSemanticV2() {
+    void parseAndCalculateBlueIdSingleNodeUsesSemanticHashing() {
         Node node = new Node().name("SemanticSingle").properties("x", new Node().value(1));
 
         NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(node, Function.identity());
 
-        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(node), parsed.blueId);
+        assertEquals(BlueIdCalculator.calculateSemanticBlueId(node), parsed.blueId);
         assertFalse(parsed.isMultipleDocuments);
     }
 
     @Test
-    void parseAndCalculateBlueIdSingleDocStringUsesSemanticV2() {
+    void parseAndCalculateBlueIdSingleDocStringUsesSemanticHashing() {
         String yaml = "name: SemanticSingle\nx: 1\n";
         Node node = YAML_MAPPER.readValue(yaml, Node.class);
 
         NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(yaml, Function.identity());
 
-        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(node), parsed.blueId);
+        assertEquals(BlueIdCalculator.calculateSemanticBlueId(node), parsed.blueId);
         assertFalse(parsed.isMultipleDocuments);
     }
 
     @Test
-    void parseAndCalculateBlueIdListUsesSemanticV2() {
+    void parseAndCalculateBlueIdListUsesSemanticHashing() {
         Node nodeA = new Node().name("A").properties("v", new Node().value(1));
         Node nodeB = new Node().name("B").properties("v", new Node().value(2));
 
@@ -86,7 +89,7 @@ class NodeContentHandlerV2Test {
                 Function.identity()
         );
 
-        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(Arrays.asList(nodeA, nodeB)), parsed.blueId);
+        assertEquals(BlueIdCalculator.calculateSemanticBlueId(Arrays.asList(nodeA, nodeB)), parsed.blueId);
         assertTrue(parsed.isMultipleDocuments);
         assertTrue(parsed.content.isArray());
         assertEquals(2, parsed.content.size());

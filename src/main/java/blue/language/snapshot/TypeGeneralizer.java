@@ -80,9 +80,6 @@ public final class TypeGeneralizer {
             }
         }
 
-        if (targetType.getBlueId() != null && !targetType.getBlueId().equals(node.getBlueId())) {
-            return false;
-        }
         if (targetType.getValue() != null && !targetType.getValue().equals(node.getValue())) {
             return false;
         }

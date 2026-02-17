@@ -5,7 +5,6 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.preprocess.TransformationProcessor;
 import blue.language.preprocess.TransformationProcessorProvider;
 import blue.language.provider.BootstrapProvider;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeTransformer;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;

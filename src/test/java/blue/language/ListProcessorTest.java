@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.Properties.CORE_TYPE_BLUE_ID_TO_NAME_MAP;
 import static org.junit.jupiter.api.Assertions.*;
 

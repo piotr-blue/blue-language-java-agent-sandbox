@@ -5,7 +5,6 @@ import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.snapshot.ResolvedSnapshot;
-import blue.language.snapshot.v2.ResolvedSnapshotV2;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -95,7 +94,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
                 .forEach(this::processNode);
     }
 
-    public String addSingleDocsV2(String yaml) {
+    public String addSingleDocsSemantic(String yaml) {
         Blue blue = new Blue(this);
         Node authoring = YAML_MAPPER.readValue(yaml, Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(authoring);
@@ -104,10 +103,10 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         return snapshot.rootBlueId();
     }
 
-    public String addMultipleDocsV2(String yaml) {
+    public String addMultipleDocsSemantic(String yaml) {
         JsonNode jsonNode = YAML_MAPPER.readTree(yaml);
         if (!jsonNode.isArray()) {
-            return addSingleDocsV2(yaml);
+            return addSingleDocsSemantic(yaml);
         }
 
         Blue blue = new Blue(this);
@@ -157,12 +156,8 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         processNodeList(list);
     }
 
-    public Optional<ResolvedSnapshotV2> findSnapshotBySemanticBlueId(String semanticBlueId) {
-        ResolvedSnapshot snapshot = semanticBlueIdToSnapshotMap.get(semanticBlueId);
-        if (snapshot == null) {
-            return Optional.empty();
-        }
-        return Optional.of(toLegacySnapshot(snapshot));
+    public Optional<ResolvedSnapshot> findSnapshotBySemanticBlueId(String semanticBlueId) {
+        return Optional.ofNullable(semanticBlueIdToSnapshotMap.get(semanticBlueId));
     }
 
     private void storeParsedContent(NodeContentHandler.ParsedContent parsedContent) {
@@ -183,14 +178,5 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         blueIdToContentMap.put(semanticBlueId, canonicalJson);
         blueIdToMultipleDocumentsMap.put(semanticBlueId, isMultipleDocuments);
         semanticBlueIdToSnapshotMap.put(semanticBlueId, snapshot);
-    }
-
-    private ResolvedSnapshotV2 toLegacySnapshot(ResolvedSnapshot snapshot) {
-        return new ResolvedSnapshotV2(
-                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.canonicalRoot().toNode()),
-                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.resolvedRoot().toNode()),
-                snapshot.rootBlueId(),
-                blue.language.blueid.v2.MapBlueIdIndex.from(snapshot.blueIdsByPointer().asMap())
-        );
     }
 }

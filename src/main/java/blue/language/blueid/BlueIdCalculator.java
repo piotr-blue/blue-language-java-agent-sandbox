@@ -30,10 +30,18 @@ public final class BlueIdCalculator {
         return calculateCanonical(canonical);
     }
 
+    public static String calculateBlueId(Node node) {
+        return calculateSemanticBlueId(node);
+    }
+
     public static String calculateSemanticBlueId(List<Node> canonicalDocs) {
         Objects.requireNonNull(canonicalDocs, "canonicalDocs");
         Object canonical = Canonicalizer.toCanonicalObject(canonicalDocs);
         return calculateCanonical(canonical);
+    }
+
+    public static String calculateBlueId(List<Node> nodes) {
+        return calculateSemanticBlueId(nodes);
     }
 
     public static boolean isPureReferenceNode(Node node) {

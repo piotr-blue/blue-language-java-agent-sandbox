@@ -1,7 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.contracts.CutOffProbeContractProcessor;
@@ -54,9 +54,9 @@ class ProcessEmbeddedTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String rootId = BlueIdCalculatorV2.calculateSemanticBlueId(original.clone());
+        String rootId = BlueIdCalculator.calculateSemanticBlueId(original.clone());
         Node originalChildNode = original.getProperties().get("x");
-        String childId = BlueIdCalculatorV2.calculateSemanticBlueId(originalChildNode.clone());
+        String childId = BlueIdCalculator.calculateSemanticBlueId(originalChildNode.clone());
 
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();

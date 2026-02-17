@@ -1,4 +1,4 @@
-package blue.language.blueid.v2;
+package blue.language.blueid;
 
 import org.junit.jupiter.api.Test;
 

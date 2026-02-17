@@ -1,9 +1,9 @@
-package blue.language.v2;
+package blue.language.transport;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.snapshot.v2.SnapshotTrustV2;
+import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.snapshot.SnapshotTrust;
 import blue.language.utils.UncheckedObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -11,9 +11,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class V2Usage_CanonicalWebhookShapeTest {
+class CanonicalWebhookShapeTest {
 
     @Test
     void canonicalShapeIsSmallerThanResolvedExplosion() {
@@ -21,7 +23,7 @@ class V2Usage_CanonicalWebhookShapeTest {
         String fixtureJson = loadFixture("fixtures/counter-webhook.json");
         Node resolvedWebhook = UncheckedObjectMapper.JSON_MAPPER.readValue(fixtureJson, Node.class);
 
-        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(resolvedWebhook, SnapshotTrustV2.BLIND_TRUST_RESOLVED);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(resolvedWebhook, SnapshotTrust.BLIND_TRUST_RESOLVED);
         String resolvedJson = blue.nodeToJson(resolvedWebhook);
         String canonicalJson = blue.nodeToJson(snapshot.canonicalRoot().toNode());
 

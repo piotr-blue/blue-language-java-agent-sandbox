@@ -3,7 +3,7 @@ package blue.language.utils.limits;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NodeToPathLimitsConverterTest {

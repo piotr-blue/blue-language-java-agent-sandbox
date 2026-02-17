@@ -1,7 +1,6 @@
 package blue.language.samples.ipfs;
 
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
 import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
@@ -10,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 public class PrintAllBlueIdsAndCanonicalJsons {

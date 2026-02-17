@@ -1,12 +1,9 @@
-package blue.language.v2;
+package blue.language.snapshot;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.model.JsonPatch;
-import blue.language.snapshot.v2.PatchReport;
-import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.snapshot.v2.WorkingDocumentV2;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -15,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class V2Spec_Generalization_CurrencyExampleTest {
+class TypeGeneralizationCurrencyExampleTest {
 
     @Test
     void patchingCurrencyMustTriggerTypeGeneralization() {
@@ -45,8 +42,8 @@ class V2Spec_Generalization_CurrencyExampleTest {
                         "  amount: 10\n"
         );
 
-        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
-        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(doc);
+        WorkingDocument workingDocument = WorkingDocument.forSnapshot(blue, snapshot);
         PatchReport report = workingDocument.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
 
         assertTrue(report.generalizationReport().hasGeneralizations());
@@ -54,7 +51,7 @@ class V2Spec_Generalization_CurrencyExampleTest {
         assertFalse(generalizations.isEmpty());
         assertTrue(generalizations.get(0).startsWith("/price"));
 
-        ResolvedSnapshotV2 committed = workingDocument.commit();
+        ResolvedSnapshot committed = workingDocument.commit();
         assertEquals(priceBlueId, committed.resolvedRoot().toNode().getAsText("/price/type/blueId"));
     }
 
@@ -85,17 +82,36 @@ class V2Spec_Generalization_CurrencyExampleTest {
                         "  currency: EUR\n" +
                         "  amount: 10\n"
         );
-        ResolvedSnapshotV2 snapshot = bootstrapBlue.resolveToSnapshotV2(doc);
+        ResolvedSnapshot snapshot = bootstrapBlue.resolveToSnapshot(doc);
 
         Blue noLookupBlue = new Blue(blueId -> {
             throw new AssertionError("Unexpected provider lookup for blueId: " + blueId);
         });
-        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(noLookupBlue, snapshot);
+        WorkingDocument workingDocument = WorkingDocument.forSnapshot(noLookupBlue, snapshot);
 
         PatchReport report = workingDocument.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
         assertTrue(report.generalizationReport().hasGeneralizations());
 
-        ResolvedSnapshotV2 committed = workingDocument.commit();
+        ResolvedSnapshot committed = workingDocument.commit();
         assertEquals(priceBlueId, committed.resolvedRoot().toNode().getAsText("/price/type/blueId"));
+    }
+
+    @Test
+    void typeBlueIdOnTypeNodeDoesNotRequireMatchingInstanceBlueId() {
+        Blue blue = new Blue();
+        Node doc = new Node()
+                .properties("price", new Node()
+                        .type(new Node()
+                                .name("SpecificPrice")
+                                .blueId("type-blue-id")
+                                .type(new Node().name("GeneralPrice")))
+                        .properties("currency", new Node().value("USD")));
+
+        TypeGeneralizer generalizer = new TypeGeneralizer();
+        GeneralizationReport report = generalizer.generalizeToSoundness(blue, doc, "/price/currency");
+
+        assertTrue(report.generalizations().isEmpty(),
+                "Type conformance must not compare type.blueId to instance blueId");
+        assertEquals("SpecificPrice", doc.getAsNode("/price/type").getName());
     }
 }

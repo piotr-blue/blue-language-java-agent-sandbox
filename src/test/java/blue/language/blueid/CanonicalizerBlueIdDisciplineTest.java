@@ -1,19 +1,20 @@
-package blue.language.v2;
+package blue.language.blueid;
 
-import blue.language.blueid.v2.CanonicalizerV2;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class V2Spec_CanonicalizerBlueIdDisciplineTest {
+class CanonicalizerBlueIdDisciplineTest {
 
     @Test
     void pureReferenceKeepsBlueId() {
         Node reference = new Node().blueId("ReferenceOnly");
-        Object canonical = CanonicalizerV2.toCanonicalObject(reference);
+        Object canonical = Canonicalizer.toCanonicalObject(reference);
 
         assertTrue(canonical instanceof Map);
         Map<?, ?> map = (Map<?, ?>) canonical;
@@ -27,7 +28,7 @@ class V2Spec_CanonicalizerBlueIdDisciplineTest {
                 .blueId("NotAllowedOnPayloadNode")
                 .properties("x", new Node().value(1));
 
-        Object canonical = CanonicalizerV2.toCanonicalObject(mixed);
+        Object canonical = Canonicalizer.toCanonicalObject(mixed);
         assertTrue(canonical instanceof Map);
         Map<?, ?> map = (Map<?, ?>) canonical;
         assertFalse(map.containsKey("blueId"));

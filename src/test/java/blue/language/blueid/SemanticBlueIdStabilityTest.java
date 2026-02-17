@@ -1,18 +1,16 @@
-package blue.language.v2;
+package blue.language.blueid;
 
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-class V2Spec_SemanticBlueIdStabilityTest {
+class SemanticBlueIdStabilityTest {
 
     @Test
     void redundantInheritedOverrideDoesNotChangeSemanticBlueId() {
@@ -38,18 +36,14 @@ class V2Spec_SemanticBlueIdStabilityTest {
                         "x: 1\n"
         );
 
-        String leanId = blue.calculateSemanticBlueIdV2(leanAuthoring);
-        String noisyId = blue.calculateSemanticBlueIdV2(noisyAuthoring);
-
-        assertEquals(leanId, noisyId);
-
-        String legacyLeanId = BlueIdCalculator.calculateBlueId(leanAuthoring);
-        String legacyNoisyId = BlueIdCalculator.calculateBlueId(noisyAuthoring);
-        assertNotEquals(legacyLeanId, legacyNoisyId);
+        assertEquals(
+                blue.calculateSemanticBlueId(leanAuthoring),
+                blue.calculateSemanticBlueId(noisyAuthoring)
+        );
     }
 
     @Test
-    void publicCalculateBlueIdDelegatesToSemanticV2ForNodeAndObject() {
+    void publicCalculateBlueIdDelegatesToSemanticForNodeAndObject() {
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
                 "name: BaseType\n" +
@@ -66,7 +60,7 @@ class V2Spec_SemanticBlueIdStabilityTest {
                         "x: 1\n"
         );
 
-        String semanticId = blue.calculateSemanticBlueIdV2(noisyAuthoring);
+        String semanticId = blue.calculateSemanticBlueId(noisyAuthoring);
         assertEquals(semanticId, blue.calculateBlueId(noisyAuthoring));
 
         Map<String, Object> objectAuthoring = new LinkedHashMap<String, Object>();

@@ -1,12 +1,11 @@
-package blue.language.v2;
+package blue.language.blueid;
 
-import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-class V2Spec_BlueIdReferenceOnlyShortCircuitTest {
+class BlueIdReferenceOnlyShortCircuitTest {
 
     @Test
     void mixedBlueIdObjectMustNotShortCircuit() {
@@ -15,8 +14,8 @@ class V2Spec_BlueIdReferenceOnlyShortCircuitTest {
                 .blueId("RefBlueId")
                 .properties("value", new Node().value(1));
 
-        String referenceId = BlueIdCalculatorV2.calculateSemanticBlueId(pureReference);
-        String mixedId = BlueIdCalculatorV2.calculateSemanticBlueId(mixed);
+        String referenceId = BlueIdCalculator.calculateSemanticBlueId(pureReference);
+        String mixedId = BlueIdCalculator.calculateSemanticBlueId(mixed);
 
         assertNotEquals(referenceId, mixedId);
     }

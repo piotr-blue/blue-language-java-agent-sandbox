@@ -14,8 +14,6 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.snapshot.SnapshotFactory;
 import blue.language.snapshot.SnapshotTrust;
-import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.snapshot.v2.SnapshotTrustV2;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
@@ -196,29 +194,6 @@ public class Blue implements NodeResolver {
                 .rootBlueId();
     }
 
-    @Deprecated
-    public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring) {
-        return resolveToSnapshotV2(authoring, SnapshotTrustV2.RESOLVE);
-    }
-
-    @Deprecated
-    public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring, SnapshotTrustV2 trust) {
-        SnapshotTrust mappedTrust = trust == SnapshotTrustV2.BLIND_TRUST_RESOLVED
-                ? SnapshotTrust.BLIND_TRUST_RESOLVED
-                : SnapshotTrust.RESOLVE;
-        return toLegacySnapshot(resolveToSnapshot(authoring, mappedTrust));
-    }
-
-    @Deprecated
-    public String calculateSemanticBlueIdV2(Node authoring) {
-        return calculateSemanticBlueId(authoring);
-    }
-
-    @Deprecated
-    public String calculateSemanticBlueIdV2FromResolved(Node resolved) {
-        return calculateSemanticBlueIdFromResolved(resolved);
-    }
-
     public void addPreprocessingAliases(Map<String, String> aliases) {
         preprocessingAliases.putAll(aliases);
     }
@@ -365,15 +340,6 @@ public class Blue implements NodeResolver {
                         new ConstraintsVerifier(),
                         new BasicTypesVerifier()
                 )
-        );
-    }
-
-    private ResolvedSnapshotV2 toLegacySnapshot(ResolvedSnapshot snapshot) {
-        return new ResolvedSnapshotV2(
-                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.canonicalRoot().toNode()),
-                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.resolvedRoot().toNode()),
-                snapshot.rootBlueId(),
-                blue.language.blueid.v2.MapBlueIdIndex.from(snapshot.blueIdsByPointer().asMap())
         );
     }
 

@@ -1,17 +1,18 @@
-package blue.language.v2;
+package blue.language.transport;
 
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.transport.v2.WebhookEnvelopeV2;
+import blue.language.snapshot.ResolvedSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class V2Usage_WebhookEnvelopeTest {
+class WebhookEnvelopeTest {
 
     @Test
     void createsCanonicalWebhookEnvelopeFromSnapshot() {
@@ -21,8 +22,8 @@ class V2Usage_WebhookEnvelopeTest {
                         "counter: 1\n"
         );
 
-        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
-        WebhookEnvelopeV2 envelope = WebhookEnvelopeV2.fromSnapshot(snapshot);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(doc);
+        WebhookEnvelope envelope = WebhookEnvelope.fromSnapshot(snapshot);
 
         assertEquals(snapshot.rootBlueId(), envelope.rootBlueId());
         assertTrue(envelope.canonical() instanceof Map);
@@ -46,8 +47,8 @@ class V2Usage_WebhookEnvelopeTest {
                         "  blueId: " + baseTypeBlueId + "\n"
         );
 
-        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
-        WebhookEnvelopeV2 envelope = WebhookEnvelopeV2.fromSnapshot(snapshot, blue);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(doc);
+        WebhookEnvelope envelope = WebhookEnvelope.fromSnapshot(snapshot, blue);
 
         assertFalse(envelope.bundle().isEmpty());
         assertTrue(envelope.bundle().containsKey(baseTypeBlueId));
@@ -81,8 +82,8 @@ class V2Usage_WebhookEnvelopeTest {
                         "  blueId: " + leafTypeBlueId + "\n"
         );
 
-        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
-        WebhookEnvelopeV2 envelope = WebhookEnvelopeV2.fromSnapshot(snapshot, blue);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(doc);
+        WebhookEnvelope envelope = WebhookEnvelope.fromSnapshot(snapshot, blue);
 
         assertTrue(envelope.bundle().containsKey(leafTypeBlueId));
         assertTrue(envelope.bundle().containsKey(midTypeBlueId));

@@ -1,4 +1,4 @@
-package blue.language.blueid.v2;
+package blue.language.blueid;
 
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
@@ -11,7 +11,7 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class BlueIdTreeHasherV2Test {
+class BlueIdTreeHasherTest {
 
     @Test
     void hashAndIndexMatchesSemanticHashAndPointerRehashes() {
@@ -28,9 +28,9 @@ class BlueIdTreeHasherV2Test {
                 .properties("list", new Node()
                         .items(listItems));
 
-        BlueIdTreeHasherV2.BlueIdTreeHashResult result = BlueIdTreeHasherV2.hashAndIndex(canonicalRoot);
+        BlueIdTreeHasher.BlueIdTreeHashResult result = BlueIdTreeHasher.hashAndIndex(canonicalRoot);
 
-        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot), result.rootBlueId());
+        assertEquals(BlueIdCalculator.calculateSemanticBlueId(canonicalRoot), result.rootBlueId());
         assertPointerHashMatchesRehash(canonicalRoot, result, "/");
         assertPointerHashMatchesRehash(canonicalRoot, result, "/type");
         assertPointerHashMatchesRehash(canonicalRoot, result, "/plain");
@@ -52,16 +52,16 @@ class BlueIdTreeHasherV2Test {
         AtomicInteger calls = new AtomicInteger();
         Function<Object, String> countingHashProvider = value -> "h" + calls.incrementAndGet();
 
-        BlueIdTreeHasherV2.hashAndIndex(canonicalRoot, countingHashProvider);
+        BlueIdTreeHasher.hashAndIndex(canonicalRoot, countingHashProvider);
 
         assertTrue(calls.get() <= 305, "Expected linear hash calls but got " + calls.get());
     }
 
     private void assertPointerHashMatchesRehash(Node canonicalRoot,
-                                                BlueIdTreeHasherV2.BlueIdTreeHashResult result,
+                                                BlueIdTreeHasher.BlueIdTreeHashResult result,
                                                 String pointer) {
         assertEquals(
-                BlueIdCalculatorV2.rehashPath(canonicalRoot, pointer),
+                BlueIdCalculator.rehashPath(canonicalRoot, pointer),
                 result.index().blueIdAt(pointer)
         );
     }

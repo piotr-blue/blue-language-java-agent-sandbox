@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.language.blueid.v2.BlueIdCalculatorV2.calculateSemanticBlueId;
+import static blue.language.blueid.BlueIdCalculator.calculateSemanticBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

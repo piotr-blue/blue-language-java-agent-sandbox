@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.blueid.legacy.LegacyBlueIdCalculator;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
@@ -175,7 +176,7 @@ public class BlueIdCalculatorTest {
         }
 
         @Test
-        public void testBigIntegerV2() {
+        public void testBigIntegerWithExplicitIntegerType() {
                 String yaml = "num:\n" +
                                 "  value: '36928735469874359687345908673940586739458679548679034857690345876905238476903485769'\n"
                                 +
@@ -291,6 +292,16 @@ public class BlueIdCalculatorTest {
 
         private static Function<Object, String> fakeHashValueProvider() {
                 return obj -> "hash(" + obj + ")";
+        }
+
+        private static final class BlueIdCalculator extends LegacyBlueIdCalculator {
+                private BlueIdCalculator(Function<Object, String> hashProvider) {
+                        super(hashProvider);
+                }
+
+                public static String calculateBlueId(Node node) {
+                        return LegacyBlueIdCalculator.calculateBlueId(node);
+                }
         }
 
 }

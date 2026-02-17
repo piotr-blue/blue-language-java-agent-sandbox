@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Iterator;
 import java.util.stream.Collectors;
 
 import static blue.language.utils.Properties.OBJECT_BLUE;
@@ -47,20 +48,22 @@ public final class Canonicalizer {
     }
 
     private static Object canonicalizeNode(Node node) {
+        Map<String, Object> canonicalConstraints = canonicalConstraints(node);
+
         if (BlueIdCalculator.isPureReferenceNode(node)) {
             Map<String, Object> reference = new LinkedHashMap<String, Object>();
             reference.put(OBJECT_BLUE_ID, node.getBlueId());
             return reference;
         }
 
-        if (node.getValue() != null && isSimpleValueNode(node)) {
+        if (node.getValue() != null && isSimpleValueNode(node, canonicalConstraints)) {
             return canonicalizeSimpleValue(node.getValue());
         }
 
         if (node.getItems() != null && node.getName() == null && node.getDescription() == null &&
                 node.getType() == null && node.getItemType() == null && node.getKeyType() == null &&
                 node.getValueType() == null && node.getValue() == null && node.getProperties() == null &&
-                node.getConstraints() == null && node.getBlue() == null) {
+                canonicalConstraints == null && node.getBlue() == null) {
             List<Object> items = new ArrayList<Object>();
             for (Node item : node.getItems()) {
                 items.add(canonicalizeNode(item));
@@ -98,8 +101,8 @@ public final class Canonicalizer {
             }
             result.put(OBJECT_ITEMS, items);
         }
-        if (node.getConstraints() != null) {
-            result.put(OBJECT_CONSTRAINTS, constraintsToMap(node.getConstraints()));
+        if (canonicalConstraints != null) {
+            result.put(OBJECT_CONSTRAINTS, canonicalConstraints);
         }
         if (node.getBlue() != null) {
             result.put(OBJECT_BLUE, canonicalizeNode(node.getBlue()));
@@ -113,7 +116,7 @@ public final class Canonicalizer {
         return result;
     }
 
-    private static boolean isSimpleValueNode(Node node) {
+    private static boolean isSimpleValueNode(Node node, Map<String, Object> canonicalConstraints) {
         return node.getName() == null &&
                 node.getDescription() == null &&
                 node.getType() == null &&
@@ -122,7 +125,7 @@ public final class Canonicalizer {
                 node.getValueType() == null &&
                 node.getItems() == null &&
                 node.getProperties() == null &&
-                node.getConstraints() == null &&
+                canonicalConstraints == null &&
                 node.getBlue() == null &&
                 node.getBlueId() == null;
     }
@@ -138,7 +141,43 @@ public final class Canonicalizer {
     }
 
     private static Map<String, Object> constraintsToMap(Constraints constraints) {
-        return YAML_MAPPER.convertValue(constraints, new TypeReference<Map<String, Object>>() {
+        Map<String, Object> map = YAML_MAPPER.convertValue(constraints, new TypeReference<Map<String, Object>>() {
         });
+        pruneEmptyEntries(map);
+        return map;
+    }
+
+    private static Map<String, Object> canonicalConstraints(Node node) {
+        if (node.getConstraints() == null) {
+            return null;
+        }
+        Map<String, Object> constraintsMap = constraintsToMap(node.getConstraints());
+        return constraintsMap.isEmpty() ? null : constraintsMap;
+    }
+
+    private static void pruneEmptyEntries(Map<String, Object> map) {
+        Iterator<Map.Entry<String, Object>> iterator = map.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Object> entry = iterator.next();
+            Object value = entry.getValue();
+            if (value == null) {
+                iterator.remove();
+                continue;
+            }
+            if (value instanceof Map) {
+                Map<String, Object> nested = (Map<String, Object>) value;
+                pruneEmptyEntries(nested);
+                if (nested.isEmpty()) {
+                    iterator.remove();
+                }
+                continue;
+            }
+            if (value instanceof List) {
+                List<Object> list = (List<Object>) value;
+                if (list.isEmpty()) {
+                    iterator.remove();
+                }
+            }
+        }
     }
 }

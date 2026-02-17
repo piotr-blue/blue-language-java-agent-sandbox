@@ -5,7 +5,7 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.blueid.v2.BlueIdCalculatorV2.calculateSemanticBlueId;
+import static blue.language.blueid.BlueIdCalculator.calculateSemanticBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -131,10 +131,10 @@ public class ListTest {
 
     @Test
     public void testDifferentFlavoursOfAList() throws Exception {
-        String abBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(asList(a, b));
-        String abcBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(asList(a, b, c));
+        String abBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(a, b));
+        String abcBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(a, b, c));
         Node abReference = new Node().blueId(abBlueId);
-        String abPlusCBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(asList(abReference, c));
+        String abPlusCBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(abReference, c));
 
         Node x1 = new Node()
                 .name("X")
@@ -194,11 +194,11 @@ public class ListTest {
         nodeProvider.addSingleNodes(aNode, bNode, cNode);
 
         List<Node> ab = Arrays.asList(aNode, bNode);
-        String abId = BlueIdCalculatorV2.calculateSemanticBlueId(ab);
+        String abId = BlueIdCalculator.calculateSemanticBlueId(ab);
         nodeProvider.addListAndItsItems(ab);
 
         List<Node> abc = Arrays.asList(aNode, bNode, cNode);
-        String abcId = BlueIdCalculatorV2.calculateSemanticBlueId(abc);
+        String abcId = BlueIdCalculator.calculateSemanticBlueId(abc);
         nodeProvider.addListAndItsItems(abc);
 
         String x1 = "name: X1\n" +
