@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -54,5 +55,36 @@ final class ProcessorExecutionContextTest {
         ScopeRuntimeContext scopeRuntime = execution.runtime().scope("/");
         assertEquals(1, scopeRuntime.triggeredQueue().size());
         assertTrue(execution.runtime().totalGas() >= 20L);
+    }
+
+    @Test
+    void documentHelpersSupportEscapedAndListPointers() {
+        Node document = new Node()
+                .properties("a/b", new Node().value("slash"))
+                .properties("list", new Node().items(
+                        new Node().value("zero"),
+                        new Node().value("one")))
+                .properties("box", new Node().properties("01", new Node().value("leading-zero")));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("slash", context.documentAt("/a~1b").getValue());
+        assertEquals("one", context.documentAt("/list/1").getValue());
+        assertTrue(context.documentContains("/box/01"));
+        assertFalse(context.documentContains("/list/01"));
+    }
+
+    @Test
+    void documentHelpersRejectMalformedEscapedPointers() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertThrows(IllegalArgumentException.class, () -> context.documentAt("/x~"));
+        assertThrows(IllegalArgumentException.class, () -> context.documentContains("/x~2"));
     }
 }
