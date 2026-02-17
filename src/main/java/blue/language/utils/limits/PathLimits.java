@@ -198,7 +198,15 @@ public class PathLimits implements Limits {
     }
 
     public static PathLimits withMaxDepth(int maxDepth) {
-        return new PathLimits.Builder().setMaxDepth(maxDepth).addPath("*").build();
+        Builder builder = new PathLimits.Builder().setMaxDepth(maxDepth);
+        if (maxDepth <= 0) {
+            return builder.addPath("/").build();
+        }
+        StringBuilder wildcardPath = new StringBuilder();
+        for (int i = 0; i < maxDepth; i++) {
+            wildcardPath.append("/*");
+        }
+        return builder.addPath(wildcardPath.toString()).build();
     }
 
     public static PathLimits withSinglePath(String path) {

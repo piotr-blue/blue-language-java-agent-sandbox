@@ -57,6 +57,25 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testWithMaxDepthAllowsAnySegmentsUpToDepth() {
+        PathLimits limits = PathLimits.withMaxDepth(3);
+
+        assertTrue(limits.shouldExtendPathSegment("any", mockNode));
+        limits.enterPathSegment("any", mockNode);
+        assertTrue(limits.shouldExtendPathSegment("branch", mockNode));
+        limits.enterPathSegment("branch", mockNode);
+        assertTrue(limits.shouldExtendPathSegment("leaf", mockNode));
+        limits.enterPathSegment("leaf", mockNode);
+        assertFalse(limits.shouldExtendPathSegment("tooDeep", mockNode));
+    }
+
+    @Test
+    public void testWithMaxDepthZeroDisallowsTraversal() {
+        PathLimits limits = PathLimits.withMaxDepth(0);
+        assertFalse(limits.shouldExtendPathSegment("any", mockNode));
+    }
+
+    @Test
     public void testMaxDepth() {
         pathLimits.enterPathSegment("a");
         pathLimits.enterPathSegment("b");
