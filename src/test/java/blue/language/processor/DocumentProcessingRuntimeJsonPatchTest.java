@@ -269,6 +269,15 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void rejectsNonNumericArrayIndexSegments() {
+        Node document = arrayDocument("nums", 7, 8);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        assertThrows(IllegalStateException.class,
+                () -> runtime.applyPatch("/", JsonPatch.add("/nums/key", new Node().value(80))));
+    }
+
+    @Test
     void allowsNumericLookingPropertySegmentsWhenParentIsObject() {
         Node document = new Node().properties("box", new Node());
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
@@ -292,6 +301,37 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
         Node mixedAfter = property(document, "mixed");
         assertEquals("property-updated", property(mixedAfter, "0").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
+
+    @Test
+    void removePrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("0", new Node().value("property-zero"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.remove("/mixed/0"));
+
+        Node mixedAfter = property(document, "mixed");
+        assertFalse(mixedAfter.getProperties().containsKey("0"));
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
+
+    @Test
+    void addUsesPropertyBranchForNonNumericLeafOnMixedParent() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.add("/mixed/key", new Node().value("property-value")));
+
+        Node mixedAfter = property(document, "mixed");
+        assertEquals("property-value", property(mixedAfter, "key").getValue());
+        assertEquals("keep", property(mixedAfter, "existing").getValue());
         assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
     }
 

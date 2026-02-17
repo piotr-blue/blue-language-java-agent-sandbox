@@ -107,18 +107,23 @@ final class PatchEngine {
             }
 
             List<Node> items = parent.getItems();
-            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
-                List<Node> mutable = ensureMutableItems(parent);
-                if ("-".equals(leaf)) {
-                    mutable.add(value);
+            if (items != null) {
+                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                    List<Node> mutable = ensureMutableItems(parent);
+                    if ("-".equals(leaf)) {
+                        mutable.add(value);
+                        return;
+                    }
+                    int index = parseArrayIndex(leaf, path);
+                    if (index < 0 || index > mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for add: " + path);
+                    }
+                    mutable.add(index, value);
                     return;
                 }
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index > mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for add: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.add(index, value);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -144,17 +149,22 @@ final class PatchEngine {
             }
 
             List<Node> items = parent.getItems();
-            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
-                if ("-".equals(leaf)) {
-                    throw new IllegalStateException("Replace does not support append token at path: " + path);
+            if (items != null) {
+                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                    if ("-".equals(leaf)) {
+                        throw new IllegalStateException("Replace does not support append token at path: " + path);
+                    }
+                    List<Node> mutable = ensureMutableItems(parent);
+                    int index = parseArrayIndex(leaf, path);
+                    if (index < 0 || index >= mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                    }
+                    mutable.set(index, value);
+                    return;
                 }
-                List<Node> mutable = ensureMutableItems(parent);
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index >= mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.set(index, value);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -180,17 +190,22 @@ final class PatchEngine {
             }
 
             List<Node> items = parent.getItems();
-            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
-                if ("-".equals(leaf)) {
-                    throw new IllegalStateException("Remove does not support append token at path: " + path);
+            if (items != null) {
+                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                    if ("-".equals(leaf)) {
+                        throw new IllegalStateException("Remove does not support append token at path: " + path);
+                    }
+                    List<Node> mutable = ensureMutableItems(parent);
+                    int index = parseArrayIndex(leaf, path);
+                    if (index < 0 || index >= mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                    }
+                    mutable.remove(index);
+                    return;
                 }
-                List<Node> mutable = ensureMutableItems(parent);
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index >= mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.remove(index);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -241,7 +256,7 @@ final class PatchEngine {
         }
 
         List<Node> items = current.getItems();
-        if (items != null) {
+        if (items != null && ("-".equals(segment) || isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 if (!last) {
                     throw new IllegalStateException("Append token '-' must be final segment: " + path);
@@ -324,6 +339,9 @@ final class PatchEngine {
                 }
             }
             return child;
+        }
+        if (items != null && properties == null) {
+            throw new IllegalStateException("Expected numeric array index in path: " + fullPath);
         }
 
         if (properties == null && current.getValue() != null) {
