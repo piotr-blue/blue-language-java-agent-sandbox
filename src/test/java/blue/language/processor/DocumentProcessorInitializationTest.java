@@ -484,6 +484,26 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenHandlerReferencesMissingChannel() {
+        String yaml = "name: Missing Channel Ref\n" +
+                "contracts:\n" +
+                "  setX:\n" +
+                "    channel: missing\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("missing channel"));
+    }
+
+    @Test
     void childLifecycleIsBridgedToParent() {
         String yaml = "name: Embedded Lifecycle\n" +
                 "child:\n" +

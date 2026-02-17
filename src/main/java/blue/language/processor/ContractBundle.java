@@ -172,8 +172,10 @@ public final class ContractBundle {
 
         public Builder addHandler(String key, HandlerContract contract) {
             String normalizedKey = validateContractKey(key, "Handler");
+            String channelKey = normalizeChannelKey(contract.getChannelKey(), normalizedKey);
+            contract.setChannelKey(channelKey);
             handlersByChannel
-                    .computeIfAbsent(contract.getChannelKey(), k -> new ArrayList<>())
+                    .computeIfAbsent(channelKey, k -> new ArrayList<>())
                     .add(new HandlerBinding(normalizedKey, contract));
             return this;
         }
@@ -222,6 +224,11 @@ public final class ContractBundle {
         }
 
         public ContractBundle build() {
+            for (String channelKey : handlersByChannel.keySet()) {
+                if (!channels.containsKey(channelKey)) {
+                    throw new IllegalStateException("Handler references missing channel: " + channelKey);
+                }
+            }
             return new ContractBundle(channels, handlersByChannel, markers, embeddedPaths, checkpointDeclared);
         }
 
@@ -230,6 +237,17 @@ public final class ContractBundle {
                 throw new IllegalStateException(contractKind + " contract key must not be blank");
             }
             return key;
+        }
+
+        private String normalizeChannelKey(String channelKey, String handlerKey) {
+            if (channelKey == null) {
+                throw new IllegalStateException("Handler " + handlerKey + " must declare channel");
+            }
+            String normalized = channelKey.trim();
+            if (normalized.isEmpty()) {
+                throw new IllegalStateException("Handler " + handlerKey + " must declare channel");
+            }
+            return normalized;
         }
     }
 }

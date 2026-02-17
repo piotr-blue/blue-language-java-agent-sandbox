@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.SetProperty;
 import org.junit.jupiter.api.Test;
@@ -62,5 +63,27 @@ class ContractBundleBuilderTest {
                 () -> ContractBundle.builder().addHandler("   ", new SetProperty()));
         assertThrows(IllegalStateException.class,
                 () -> ContractBundle.builder().addMarker("   ", new ProcessEmbedded()));
+    }
+
+    @Test
+    void builderTrimsHandlerChannelReferences() {
+        SetProperty handler = new SetProperty();
+        handler.setChannelKey(" life ");
+
+        ContractBundle bundle = ContractBundle.builder()
+                .addChannel("life", new LifecycleChannel())
+                .addHandler("setX", handler)
+                .build();
+
+        assertEquals(1, bundle.handlersFor("life").size());
+    }
+
+    @Test
+    void builderRejectsHandlersForMissingChannels() {
+        SetProperty handler = new SetProperty();
+        handler.setChannelKey("missing");
+
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder().addHandler("setX", handler).build());
     }
 }
