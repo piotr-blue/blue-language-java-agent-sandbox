@@ -49,6 +49,14 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtResolvesTrailingEmptySegmentWhenPropertyExists() {
+        Node root = new Node().properties("scope", new Node()
+                .properties("", new Node().value("empty-key")));
+
+        assertEquals("empty-key", ProcessorEngine.nodeAt(root, "/scope/").getValue());
+    }
+
+    @Test
     void nodeAtRejectsMalformedEscapesAndPointers() {
         Node root = new Node().properties("x", new Node().value("y"));
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "/x~"));
