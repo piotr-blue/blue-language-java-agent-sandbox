@@ -22,6 +22,7 @@ public class Node implements Cloneable {
     private Node itemType;
     private Node keyType;
     private Node valueType;
+    private String mergePolicy;
     private Object value;
     private List<Node> items;
     private Map<String, Node> properties;
@@ -53,6 +54,10 @@ public class Node implements Cloneable {
 
     public Node getValueType() {
         return valueType;
+    }
+
+    public String getMergePolicy() {
+        return mergePolicy;
     }
 
     public Object getValue() {
@@ -162,6 +167,11 @@ public class Node implements Cloneable {
 
     public Node valueType(String valueType) {
         this.valueType = new Node().value(valueType).inlineValue(true);
+        return this;
+    }
+
+    public Node mergePolicy(String mergePolicy) {
+        this.mergePolicy = mergePolicy;
         return this;
     }
 
@@ -336,6 +346,7 @@ public class Node implements Cloneable {
             cloned.description = this.description;
             cloned.value = this.value;
             cloned.computedBlueId = this.computedBlueId;
+            cloned.mergePolicy = this.mergePolicy;
 
             if (this.type != null) {
                 cloned.type = this.type.clone();
@@ -392,6 +403,7 @@ public class Node implements Cloneable {
                ", itemType=" + itemType +
                ", keyType=" + keyType +
                ", valueType=" + valueType +
+               ", mergePolicy='" + mergePolicy + '\'' +
                ", value=" + value +
                ", items=" + items +
                ", properties=" + properties +

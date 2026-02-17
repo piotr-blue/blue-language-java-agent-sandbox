@@ -232,6 +232,28 @@ public class ListTest {
 
     }
 
+    @Test
+    public void testPositionalMergePolicyRejectsAdditionalSubtypeItems() {
+        x = new Node()
+                .name("X")
+                .mergePolicy("positional")
+                .items(
+                        a,
+                        b
+                );
+        xId = calculateSemanticBlueId(x);
+        y = new Node()
+                .name("Y")
+                .type(x.clone())
+                .items(
+                        a,
+                        b,
+                        c
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
     private Node preprocessAndExtend(String doc) {
         return preprocessAndExtend(YAML_MAPPER.readValue(doc, Node.class));
     }

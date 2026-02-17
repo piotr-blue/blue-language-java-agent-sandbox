@@ -61,6 +61,8 @@ public class NodeToMapListOrValue {
             result.put(OBJECT_KEY_TYPE, get(node.getKeyType()));
         if (node.getValueType() != null)
             result.put(OBJECT_VALUE_TYPE, get(node.getValueType()));
+        if (node.getMergePolicy() != null)
+            result.put(OBJECT_MERGE_POLICY, node.getMergePolicy());
         if (node.getValue() != null)
             result.put(OBJECT_VALUE, handleValue(node.getValue()));
         if (items != null)

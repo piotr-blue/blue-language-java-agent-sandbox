@@ -20,6 +20,7 @@ public class NodeDeserializerTest {
         String doc = "name: name\n" +
                      "description: description\n" +
                      "type: type\n" +
+                     "mergePolicy: append-only\n" +
                      "value: value\n" +
                      "blueId: blueId\n" +
                      "x: x\n" +
@@ -32,6 +33,7 @@ public class NodeDeserializerTest {
         assertEquals("name", node.getName());
         assertEquals("description", node.getDescription());
         assertEquals("type", node.getType().getValue());
+        assertEquals("append-only", node.getMergePolicy());
         assertEquals("value", node.getValue());
         assertEquals("blueId", node.getBlueId());
         assertEquals("x", node.getProperties().get("x").getValue());

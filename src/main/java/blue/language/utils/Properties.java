@@ -14,6 +14,7 @@ public class Properties {
     public static final String OBJECT_ITEM_TYPE = "itemType";
     public static final String OBJECT_KEY_TYPE = "keyType";
     public static final String OBJECT_VALUE_TYPE = "valueType";
+    public static final String OBJECT_MERGE_POLICY = "mergePolicy";
     public static final String OBJECT_CONSTRAINTS = "constraints";
     public static final String OBJECT_SCHEMA = "schema";
     public static final String OBJECT_VALUE = "value";

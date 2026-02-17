@@ -15,6 +15,9 @@ import java.util.stream.Collectors;
 
 public class Merger implements NodeResolver {
 
+    private static final String MERGE_POLICY_APPEND_ONLY = "append-only";
+    private static final String MERGE_POLICY_POSITIONAL = "positional";
+
     private MergingProcessor mergingProcessor;
     private NodeProvider nodeProvider;
 
@@ -44,6 +47,9 @@ public class Merger implements NodeResolver {
     private void mergeObject(Node target, Node source, Limits limits) {
 
         mergingProcessor.process(target, source, nodeProvider, this);
+        if (source.getMergePolicy() != null) {
+            target.mergePolicy(source.getMergePolicy());
+        }
 
         List<Node> children = source.getItems();
         if (children != null) {
@@ -82,7 +88,17 @@ public class Merger implements NodeResolver {
                     .collect(Collectors.toList());
             target.items(targetChildren);
             return;
-        } else if (sourceChildren.size() < targetChildren.size())
+        }
+
+        String mergePolicy = target.getMergePolicy() == null ? MERGE_POLICY_APPEND_ONLY : target.getMergePolicy();
+        if (MERGE_POLICY_POSITIONAL.equals(mergePolicy) && sourceChildren.size() != targetChildren.size()) {
+            throw new IllegalArgumentException(String.format(
+                    "Positional mergePolicy requires the same number of items in subtype (%d) and supertype (%d).",
+                    sourceChildren.size(), targetChildren.size()
+            ));
+        }
+
+        if (sourceChildren.size() < targetChildren.size())
             throw new IllegalArgumentException(String.format(
                     "Subtype of element must not have more items (%d) than the element itself (%d).",
                     targetChildren.size(), sourceChildren.size()

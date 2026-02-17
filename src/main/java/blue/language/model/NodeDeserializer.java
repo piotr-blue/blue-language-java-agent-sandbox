@@ -56,6 +56,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                     case OBJECT_VALUE_TYPE:
                         obj.valueType(handleNode(value));
                         break;
+                    case OBJECT_MERGE_POLICY:
+                        obj.mergePolicy(value.isNull() ? null : value.asText());
+                        break;
                     case OBJECT_VALUE:
                         obj.value(handleValue(value));
                         break;

@@ -22,6 +22,7 @@ public class NodeToMapListOrValueTest {
                 .name("nameA")
                 .description("descriptionA")
                 .type(new Node().name("nameB").description("descriptionB"))
+                .mergePolicy("append-only")
                 .properties(
                         "a", new Node().value("xyz1"),
                         "b", new Node().value("xyz2").description("descriptionXyz2")
@@ -33,6 +34,7 @@ public class NodeToMapListOrValueTest {
 
         assertEquals("nameA", result.get("name"));
         assertEquals("descriptionA", result.get("description"));
+        assertEquals("append-only", result.get("mergePolicy"));
 
         Map<String, Object> type = (Map<String, Object>) result.get("type");
         assertNotNull(type);
