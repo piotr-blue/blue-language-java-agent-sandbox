@@ -5,12 +5,13 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
 import blue.language.snapshot.v2.WorkingDocumentV2;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import java.util.Map;
 
-@Disabled("Enabled in Phase 5 when minimize-by-construction is implemented")
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 class V2Spec_MinimizeByConstruction_NoOpOverrideTest {
 
     @Test
@@ -28,6 +29,7 @@ class V2Spec_MinimizeByConstruction_NoOpOverrideTest {
         workingDocument.applyPatch(JsonPatch.replace("/x", new Node().value(1)));
 
         Node canonical = workingDocument.commit().canonicalRoot().toNode();
-        assertFalse(canonical.getProperties().containsKey("x"));
+        Map<String, Node> properties = canonical.getProperties();
+        assertTrue(properties == null || !properties.containsKey("x"));
     }
 }

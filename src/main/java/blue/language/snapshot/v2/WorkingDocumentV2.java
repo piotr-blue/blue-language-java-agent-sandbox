@@ -47,6 +47,7 @@ public final class WorkingDocumentV2 {
 
         Node resolved = current.resolvedRoot().toNode();
         String normalizedPath = PointerUtils.normalizePointer(patch.getPath());
+        validateMutationPath(normalizedPath, patch.getOp());
         applyPatchInPlace(resolved, patch, normalizedPath);
 
         GeneralizationReport generalizationReport =
@@ -86,6 +87,25 @@ public final class WorkingDocumentV2 {
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported op: " + patch.getOp());
+        }
+    }
+
+    private void validateMutationPath(String normalizedPath, JsonPatch.Op op) {
+        List<String> segments = splitPointer(normalizedPath);
+        for (int i = 0; i < segments.size(); i++) {
+            String segment = segments.get(i);
+            boolean last = i == segments.size() - 1;
+
+            if ("blueId".equals(segment) && last) {
+                throw new UnsupportedOperationException("Mutating /blueId is forbidden in WorkingDocumentV2");
+            }
+            if ("type".equals(segment) && !last) {
+                throw new UnsupportedOperationException("Mutating nested members under /type is forbidden");
+            }
+        }
+
+        if (!segments.isEmpty() && "type".equals(segments.get(segments.size() - 1)) && op != JsonPatch.Op.REPLACE) {
+            throw new UnsupportedOperationException("Only REPLACE is allowed for /type mutations");
         }
     }
 
