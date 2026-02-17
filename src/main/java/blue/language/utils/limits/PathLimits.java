@@ -69,7 +69,7 @@ public class PathLimits implements Limits {
         String segment = pathSegment == null ? "" : pathSegment;
         if (segment.startsWith("/")) {
             validatePointerEscapes(segment);
-            currentPath.push(segment.replaceAll("^/+", ""));
+            currentPath.push(segment.substring(1));
             return;
         }
         currentPath.push(escapeJsonPointerSegment(segment));
@@ -89,24 +89,14 @@ public class PathLimits implements Limits {
     private String buildPotentialPath(String pathSegment) {
         String segment = pathSegment == null ? "" : pathSegment;
         if (segment.startsWith("/")) {
-            return normalizePath(getCurrentFullPath() + segment);
+            return segment;
         }
         String escapedSegment = escapeJsonPointerSegment(segment);
-        return normalizePath(getCurrentFullPath() + "/" + escapedSegment);
-    }
-
-    private String normalizePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return "/";
+        String current = getCurrentFullPath();
+        if ("/".equals(current)) {
+            return "/" + escapedSegment;
         }
-        String normalized = path;
-        while (normalized.startsWith("//")) {
-            normalized = normalized.substring(1);
-        }
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        return normalized;
+        return current + "/" + escapedSegment;
     }
 
     private String escapeJsonPointerSegment(String segment) {
@@ -170,12 +160,6 @@ public class PathLimits implements Limits {
             String normalized = path.trim();
             if (normalized.isEmpty()) {
                 throw new IllegalArgumentException("Allowed path cannot be empty");
-            }
-            if (!normalized.startsWith("/")) {
-                normalized = "/" + normalized;
-            }
-            while (normalized.startsWith("//")) {
-                normalized = normalized.substring(1);
             }
             if (!normalized.startsWith("/")) {
                 normalized = "/" + normalized;

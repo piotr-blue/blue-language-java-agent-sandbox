@@ -257,6 +257,19 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testAbsoluteSegmentsPreserveLeadingEmptyPointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("//a/x")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("//a", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("/a", mockNode));
+
+        pathLimits.enterPathSegment("//a", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+    }
+
+    @Test
     public void testTrailingEmptyAllowedPathSegmentIsDistinctFromParentPath() {
         pathLimits = new PathLimits.Builder()
                 .addPath("/scope/")
