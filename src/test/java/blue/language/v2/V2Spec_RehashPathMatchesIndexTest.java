@@ -52,6 +52,18 @@ class V2Spec_RehashPathMatchesIndexTest {
     }
 
     @Test
+    void rehashPathTreatsNullPointerAsRoot() {
+        Blue blue = new Blue();
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        assertEquals(
+                snapshot.rootBlueId(),
+                BlueIdCalculatorV2.rehashPath(canonicalRoot, null)
+        );
+    }
+
+    @Test
     void rehashPathRejectsInvalidOrMissingPointers() {
         Blue blue = new Blue();
         ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
@@ -83,5 +95,27 @@ class V2Spec_RehashPathMatchesIndexTest {
 
         String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a/b"));
         assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~1b"));
+    }
+
+    @Test
+    void rehashPathPrefersPropertyWhenNumericSegmentCollidesWithListIndex() {
+        Blue blue = new Blue();
+        Node withNumericProperty = new Node()
+                .name("Root")
+                .items(
+                        new Node().name("Item0"),
+                        new Node().name("Item1")
+                )
+                .properties("0", new Node().value("zero-property"));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(withNumericProperty);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String propertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("0"));
+        String listItemHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getItems().get(0));
+
+        assertEquals(propertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/0"));
+        assertEquals(propertyHash, snapshot.blueIdsByPointer().blueIdAt("/0"));
+        assertNotEquals(listItemHash, propertyHash);
     }
 }
