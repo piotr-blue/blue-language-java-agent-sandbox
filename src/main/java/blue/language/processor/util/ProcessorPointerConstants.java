@@ -37,6 +37,9 @@ public final class ProcessorPointerConstants {
         if (segment == null) {
             throw new IllegalArgumentException("Pointer segment cannot be null");
         }
+        if (segment.isEmpty()) {
+            throw new IllegalArgumentException("Pointer segment cannot be empty");
+        }
         return segment.replace("~", "~0").replace("/", "~1");
     }
 }

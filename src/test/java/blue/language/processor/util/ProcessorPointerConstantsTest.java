@@ -45,6 +45,9 @@ class ProcessorPointerConstantsTest {
         assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeContractsEntry(null));
         assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastEvent("checkpoint", null));
         assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastSignature("checkpoint", null));
+        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeContractsEntry(""));
+        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastEvent("", "channelA"));
+        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastSignature("checkpoint", ""));
     }
 }
 
