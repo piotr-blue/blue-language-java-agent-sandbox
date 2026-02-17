@@ -61,28 +61,29 @@ public final class TypeGeneralizerV2 {
     }
 
     private List<String> parentPointers(String changedPointer) {
-        String normalized = PointerUtils.normalizePointer(changedPointer);
-        if ("/".equals(normalized)) {
+        String[] segments = PointerUtils.splitPointerSegments(changedPointer);
+        if (segments.length == 0) {
             List<String> rootOnly = new ArrayList<String>();
             rootOnly.add("/");
             return rootOnly;
         }
 
         List<String> pointers = new ArrayList<String>();
-        String current = normalized;
-        while (true) {
-            int idx = current.lastIndexOf('/');
-            if (idx <= 0) {
-                pointers.add("/");
-                break;
-            }
-            current = current.substring(0, idx);
-            pointers.add(current);
-            if ("/".equals(current)) {
-                break;
-            }
+        for (int length = segments.length - 1; length >= 0; length--) {
+            pointers.add(pointerFromSegments(segments, length));
         }
         return pointers;
+    }
+
+    private String pointerFromSegments(String[] segments, int length) {
+        if (length <= 0) {
+            return "/";
+        }
+        StringBuilder pointer = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            pointer.append('/').append(PointerUtils.escapePointerSegment(segments[i]));
+        }
+        return pointer.toString();
     }
 
     private Node nodeAt(Node root, String pointer) {
