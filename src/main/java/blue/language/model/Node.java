@@ -184,6 +184,9 @@ public class Node implements Cloneable {
     }
 
     public Node value(double value) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException("Non-finite numeric value is not supported: " + value);
+        }
         this.value = BigDecimal.valueOf(value);
         return this;
     }

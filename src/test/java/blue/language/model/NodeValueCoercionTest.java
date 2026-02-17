@@ -42,4 +42,10 @@ class NodeValueCoercionTest {
         assertThrows(IllegalArgumentException.class, () -> new Node().value(Double.POSITIVE_INFINITY));
         assertThrows(IllegalArgumentException.class, () -> new Node().value(Float.NEGATIVE_INFINITY));
     }
+
+    @Test
+    void valuePrimitiveDoubleRejectsNonFiniteNumbers() {
+        assertThrows(IllegalArgumentException.class, () -> new Node().value(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> new Node().value(Double.NEGATIVE_INFINITY));
+    }
 }
