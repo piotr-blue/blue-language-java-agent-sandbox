@@ -368,6 +368,22 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void leadingZeroNumericLeafUsesPropertyBranchWhenMixedParentHasPropertyMap() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"), new Node().value("item-one"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.replace("/mixed/01", new Node().value("property-leading-zero")));
+
+        Node mixedAfter = property(document, "mixed");
+        assertEquals("property-leading-zero", property(mixedAfter, "01").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+        assertEquals("item-one", mixedAfter.getItems().get(1).getValue());
+    }
+
+    @Test
     void addUsesPropertyBranchForNonNumericLeafOnMixedParent() {
         Node mixed = new Node()
                 .items(new Node().value("item-zero"))

@@ -204,6 +204,26 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
     }
 
     @Test
+    void leadingZeroNumericLeafUsesPropertyBranchWhenMixedParentHasPropertyMap() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("mixed", new Node()
+                        .items(new Node().value("item-zero"), new Node().value("item-one"))
+                        .properties("existing", new Node().value("keep")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/mixed/01", new Node().value("property-leading-zero")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
+        assertEquals("property-leading-zero", mixed.getProperties().get("01").getValue());
+        assertEquals("item-zero", mixed.getItems().get(0).getValue());
+        assertEquals("item-one", mixed.getItems().get(1).getValue());
+    }
+
+    @Test
     void rejectsNonNumericArrayIndexSegments() {
         Blue blue = new Blue();
         Node node = blue.yamlToNode(

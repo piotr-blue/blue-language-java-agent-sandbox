@@ -126,6 +126,22 @@ class DocumentProcessingRuntimeDirectWriteTest {
     }
 
     @Test
+    void directWriteLeadingZeroNumericLeafUsesPropertyBranchWhenMixedParentHasPropertyMap() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"), new Node().value("item-one"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.directWrite("/mixed/01", new Node().value("property-leading-zero"));
+
+        Node mixedAfter = document.getProperties().get("mixed");
+        assertEquals("property-leading-zero", mixedAfter.getProperties().get("01").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+        assertEquals("item-one", mixedAfter.getItems().get(1).getValue());
+    }
+
+    @Test
     void directWriteUsesPropertyBranchForNonNumericLeafOnMixedParent() {
         Node mixed = new Node()
                 .items(new Node().value("item-zero"))
