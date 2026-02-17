@@ -11,6 +11,7 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.util.PointerUtils;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -597,7 +598,7 @@ class ProcessEmbeddedTest {
     }
 
     private Node terminatedMarker(Node document, String scopePath) {
-        String contractsPointer = ProcessorEngine.resolvePointer(scopePath, "/contracts");
+        String contractsPointer = PointerUtils.resolvePointer(scopePath, "/contracts");
         try {
             Node contracts = document.getAsNode(contractsPointer);
             if (contracts == null || contracts.getProperties() == null) {

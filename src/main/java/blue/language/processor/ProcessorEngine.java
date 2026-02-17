@@ -60,7 +60,7 @@ final class ProcessorEngine {
 
     static boolean isInitialized(DocumentProcessor owner, Node document) {
         Objects.requireNonNull(document, "document");
-        String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = PointerUtils.resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker = null;
         try {
             marker = nodeAt(document, pointer);
@@ -71,30 +71,6 @@ final class ProcessorEngine {
         }
         validateInitializationMarker(marker, pointer);
         return true;
-    }
-
-    static String resolvePointer(String scopePath, String relativePointer) {
-        return PointerUtils.resolvePointer(scopePath, relativePointer);
-    }
-
-    static String normalizeScope(String scopePath) {
-        return PointerUtils.normalizeScope(scopePath);
-    }
-
-    static String normalizePointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
-    }
-
-    static String joinRelativePointers(String base, String tail) {
-        return PointerUtils.joinRelativePointers(base, tail);
-    }
-
-    static String relativizePointer(String scopePath, String absolutePath) {
-        return PointerUtils.relativizePointer(scopePath, absolutePath);
-    }
-
-    static String stripSlashes(String value) {
-        return PointerUtils.stripSlashes(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -145,7 +121,7 @@ final class ProcessorEngine {
     }
 
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
-        String relativePath = relativizePointer(scopePath, data.path());
+        String relativePath = PointerUtils.relativizePointer(scopePath, data.path());
         Node event = new Node().properties("type", new Node().value("Document Update"));
         event.properties("op", new Node().value(data.op().name().toLowerCase()));
         Node beforeNode = data.before() != null ? data.before().clone() : new Node().value(null);
@@ -231,7 +207,7 @@ final class ProcessorEngine {
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
-        String pointer = resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker;
         try {
             marker = nodeAt(root, pointer);

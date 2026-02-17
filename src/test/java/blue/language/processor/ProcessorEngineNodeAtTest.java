@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -126,25 +127,25 @@ final class ProcessorEngineNodeAtTest {
 
     @Test
     void normalizePointerRejectsNonPointerPaths() {
-        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizePointer("x"));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizePointer("/x~2"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("x"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~2"));
     }
 
     @Test
     void normalizePointerTreatsNullAndEmptyAsRoot() {
-        assertEquals("/", ProcessorEngine.normalizePointer(null));
-        assertEquals("/", ProcessorEngine.normalizePointer(""));
+        assertEquals("/", PointerUtils.normalizePointer(null));
+        assertEquals("/", PointerUtils.normalizePointer(""));
     }
 
     @Test
     void normalizeScopeTreatsNullAndEmptyAsRoot() {
-        assertEquals("/", ProcessorEngine.normalizeScope(null));
-        assertEquals("/", ProcessorEngine.normalizeScope(""));
+        assertEquals("/", PointerUtils.normalizeScope(null));
+        assertEquals("/", PointerUtils.normalizeScope(""));
     }
 
     @Test
     void normalizeScopeRejectsInvalidInputs() {
-        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizeScope("scope"));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizeScope("/scope~2"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("scope"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("/scope~2"));
     }
 }
