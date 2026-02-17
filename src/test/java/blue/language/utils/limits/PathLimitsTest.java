@@ -247,6 +247,16 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testEnterPathSegmentAcceptsValidEscapedAbsolutePointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/a~1b/x")
+                .build();
+
+        pathLimits.enterPathSegment("/a~1b", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+    }
+
+    @Test
     public void testTrailingEmptyAllowedPathSegmentIsDistinctFromParentPath() {
         pathLimits = new PathLimits.Builder()
                 .addPath("/scope/")
