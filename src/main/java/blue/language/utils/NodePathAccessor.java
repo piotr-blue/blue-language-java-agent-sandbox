@@ -70,22 +70,42 @@ public class NodePathAccessor {
                 return new Node().value(blueId);
         }
 
-        if (segment.matches("\\d+")) {
-            int itemIndex = Integer.parseInt(segment);
+        Map<String, Node> properties = node.getProperties();
+        if (properties != null && properties.containsKey(segment)) {
+            result = properties.get(segment);
+        } else if (isArrayIndexSegment(segment)) {
+            int itemIndex = parseArrayIndex(segment);
             List<Node> items = node.getItems();
-            if (items == null || itemIndex >= items.size()) {
-                throw new IllegalArgumentException("Invalid item index: " + itemIndex);
+            if (items == null || itemIndex < 0 || itemIndex >= items.size()) {
+                throw new IllegalArgumentException("Invalid item index: " + segment);
             }
             result = items.get(itemIndex);
         } else {
-            Map<String, Node> properties = node.getProperties();
-            if (properties == null || !properties.containsKey(segment)) {
-                throw new IllegalArgumentException("Property not found: " + segment);
-            }
-            result = properties.get(segment);
+            throw new IllegalArgumentException("Property not found: " + segment);
         }
 
         return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
+    }
+
+    private static boolean isArrayIndexSegment(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return "0".equals(segment) || segment.charAt(0) != '0';
+    }
+
+    private static int parseArrayIndex(String segment) {
+        try {
+            return Integer.parseInt(segment);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {

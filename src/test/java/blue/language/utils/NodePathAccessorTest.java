@@ -91,4 +91,28 @@ class NodePathAccessorTest {
         assertTrue(NodePathAccessor.get(nodeWithoutValue, "/") instanceof Node);
         assertEquals("Test", NodePathAccessor.get(nodeWithoutValue, "/name"));
     }
+
+    @Test
+    void testNumericPropertyTakesPrecedenceOverListIndex() {
+        Node node = new Node()
+                .items(new Node().value("list-zero"))
+                .properties("0", new Node().value("property-zero"));
+
+        assertEquals("property-zero", NodePathAccessor.get(node, "/0"));
+    }
+
+    @Test
+    void testLeadingZeroPropertyKeyIsAccessible() {
+        Node node = new Node()
+                .properties("01", new Node().value("leading-zero"));
+
+        assertEquals("leading-zero", NodePathAccessor.get(node, "/01"));
+    }
+
+    @Test
+    void testOversizedNumericSegmentIsRejectedAsInvalidIndex() {
+        Node node = new Node().items(new Node().value("only"));
+        assertThrows(IllegalArgumentException.class,
+                () -> NodePathAccessor.get(node, "/999999999999999999999999"));
+    }
 }
