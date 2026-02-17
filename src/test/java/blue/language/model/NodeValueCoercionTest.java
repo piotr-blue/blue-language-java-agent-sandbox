@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,5 +25,13 @@ class NodeValueCoercionTest {
 
         assertTrue(node.getValue() instanceof BigDecimal);
         assertEquals(BigDecimal.valueOf(1.5d), node.getValue());
+    }
+
+    @Test
+    void valueObjectConvertsGenericNumberToBigInteger() {
+        Node node = new Node().value(new AtomicLong(42L));
+
+        assertTrue(node.getValue() instanceof BigInteger);
+        assertEquals(BigInteger.valueOf(42L), node.getValue());
     }
 }
