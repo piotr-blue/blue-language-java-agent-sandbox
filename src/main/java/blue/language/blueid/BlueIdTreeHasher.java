@@ -41,7 +41,7 @@ public final class BlueIdTreeHasher {
         return hashAndIndex(canonicalRoot, HASH_PROVIDER);
     }
 
-    static BlueIdTreeHashResult hashAndIndex(Node canonicalRoot, Function<Object, String> hashProvider) {
+    public static BlueIdTreeHashResult hashAndIndex(Node canonicalRoot, Function<Object, String> hashProvider) {
         Objects.requireNonNull(canonicalRoot, "canonicalRoot");
         Objects.requireNonNull(hashProvider, "hashProvider");
         Map<String, String> index = new LinkedHashMap<String, String>();
