@@ -303,9 +303,10 @@ public class Node implements Cloneable {
             }
         } else if (value instanceof BigDecimal) {
             BigDecimal bdValue = (BigDecimal) value;
-            if (bdValue.scale() == 0) {
+            BigDecimal integralCandidate = bdValue.stripTrailingZeros();
+            if (integralCandidate.scale() <= 0) {
                 try {
-                    return bdValue.intValueExact();
+                    return integralCandidate.intValueExact();
                 } catch (ArithmeticException ex) {
                     throw new IllegalArgumentException("Value at path " + path + " is out of Integer range: " + value, ex);
                 }

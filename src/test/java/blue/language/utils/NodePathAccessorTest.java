@@ -246,4 +246,14 @@ class NodePathAccessorTest {
         assertThrows(IllegalArgumentException.class, () -> node.getAsInteger("/tooLarge"));
         assertThrows(IllegalArgumentException.class, () -> node.getAsInteger("/tooLargeDecimal"));
     }
+
+    @Test
+    void testGetAsIntegerAcceptsIntegralBigDecimalWithTrailingZeros() {
+        Node node = new Node()
+                .properties("integralDecimal", new Node().value(new java.math.BigDecimal("7.000")))
+                .properties("nonIntegralDecimal", new Node().value(new java.math.BigDecimal("7.100")));
+
+        assertEquals(Integer.valueOf(7), node.getAsInteger("/integralDecimal"));
+        assertThrows(IllegalArgumentException.class, () -> node.getAsInteger("/nonIntegralDecimal"));
+    }
 }
