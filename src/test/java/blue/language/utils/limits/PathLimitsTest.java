@@ -192,6 +192,18 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testShouldExtendRejectsMalformedAbsolutePointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/x/*")
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.shouldExtendPathSegment("/x~2", mockNode));
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.shouldExtendPathSegment("/x~", mockNode));
+    }
+
+    @Test
     public void testTrailingEmptyAllowedPathSegmentIsDistinctFromParentPath() {
         pathLimits = new PathLimits.Builder()
                 .addPath("/scope/")

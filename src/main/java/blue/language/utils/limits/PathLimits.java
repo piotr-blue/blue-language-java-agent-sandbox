@@ -116,11 +116,29 @@ public class PathLimits implements Limits {
         if (pointerPath == null || pointerPath.isEmpty() || "/".equals(pointerPath)) {
             return new String[0];
         }
+        validatePointerEscapes(pointerPath);
         String normalized = pointerPath.startsWith("/") ? pointerPath.substring(1) : pointerPath;
         if (normalized.isEmpty()) {
             return new String[0];
         }
         return normalized.split("/", -1);
+    }
+
+    private void validatePointerEscapes(String pointer) {
+        int start = pointer.startsWith("/") ? 1 : 0;
+        for (int i = start; i < pointer.length(); i++) {
+            char c = pointer.charAt(i);
+            if (c != '~') {
+                continue;
+            }
+            if (i + 1 >= pointer.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in path: " + pointer);
+            }
+            char next = pointer.charAt(++i);
+            if (next != '0' && next != '1') {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in path: " + pointer);
+            }
+        }
     }
 
     public static class Builder {
