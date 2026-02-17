@@ -108,35 +108,6 @@ public final class PointerUtils {
         return index;
     }
 
-    public static String stripSlashes(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return "";
-        }
-        String stripped = value.trim();
-        while (stripped.startsWith("/")) {
-            stripped = stripped.substring(1);
-        }
-        while (stripped.endsWith("/")) {
-            stripped = stripped.substring(0, stripped.length() - 1);
-        }
-        return stripped;
-    }
-
-    public static String joinRelativePointers(String base, String tail) {
-        String basePart = stripSlashes(base);
-        String tailPart = stripSlashes(tail);
-        if (basePart.isEmpty() && tailPart.isEmpty()) {
-            return "/";
-        }
-        if (basePart.isEmpty()) {
-            return "/" + tailPart;
-        }
-        if (tailPart.isEmpty()) {
-            return "/" + basePart;
-        }
-        return "/" + basePart + "/" + tailPart;
-    }
-
     public static String resolvePointer(String scopePath, String relativePointer) {
         String normalizedScope = normalizeScope(scopePath);
         String normalizedPointer = normalizePointer(relativePointer);
