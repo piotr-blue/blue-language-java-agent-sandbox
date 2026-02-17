@@ -55,4 +55,11 @@ class PointerUtilsTest {
         assertEquals("/scope", PointerUtils.resolvePointer("/scope", ""));
         assertEquals("/x", PointerUtils.resolvePointer(null, "/x"));
     }
+
+    @Test
+    void relativizePointerRejectsMalformedEscapes() {
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.relativizePointer("/scope", "/x~"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.relativizePointer("/scope", "/x~2"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.relativizePointer("/scope~", "/scope/value"));
+    }
 }
