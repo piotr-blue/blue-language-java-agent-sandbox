@@ -87,8 +87,7 @@ final class GasMeter {
     }
 
     private int scopeDepth(String scopePath) {
-        String normalized = PointerUtils.normalizeScope(scopePath);
-        return PointerUtils.splitPointerSegments(normalized).length;
+        return PointerUtils.splitPointerSegments(scopePath).length;
     }
 
     private static final class GasCharges {
