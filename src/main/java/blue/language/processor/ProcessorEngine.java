@@ -149,12 +149,7 @@ final class ProcessorEngine {
 
     static Node nodeAt(Node root, String pointer) {
         Objects.requireNonNull(root, "root");
-        String normalizedPointer = PointerUtils.normalizePointer(pointer);
-        if ("/".equals(normalizedPointer)) {
-            return root;
-        }
-
-        String[] segments = PointerUtils.splitPointerSegments(normalizedPointer);
+        String[] segments = PointerUtils.splitPointerSegments(pointer);
         Node current = root;
         for (String segment : segments) {
             if (current == null) {
