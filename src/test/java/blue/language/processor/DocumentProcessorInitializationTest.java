@@ -484,6 +484,25 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenNormalizedContractKeysCollide() {
+        String yaml = "name: Duplicate Normalized Keys\n" +
+                "contracts:\n" +
+                "  \" lifecycle \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  lifecycle:\n" +
+                "    type:\n" +
+                "      blueId: TriggeredEventChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("Duplicate normalized contract key"));
+    }
+
+    @Test
     void initializationFailsWhenHandlerReferencesMissingChannel() {
         String yaml = "name: Missing Channel Ref\n" +
                 "contracts:\n" +

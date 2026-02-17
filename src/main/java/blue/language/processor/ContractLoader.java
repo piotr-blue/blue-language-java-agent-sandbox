@@ -14,6 +14,8 @@ import blue.language.processor.util.PointerUtils;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -39,8 +41,13 @@ final class ContractLoader {
             return builder.build();
         }
 
+        Set<String> normalizedKeys = new LinkedHashSet<>();
         for (Map.Entry<String, Node> entry : contractsNode.getProperties().entrySet()) {
             String key = normalizeContractKey(entry.getKey(), scopePath);
+            if (!normalizedKeys.add(key)) {
+                throw new IllegalStateException(
+                        "Duplicate normalized contract key '" + key + "' at scope " + scopePath);
+            }
             Contract contract = converter.convertWithType(entry.getValue(), Contract.class, false);
             if (contract == null) {
                 continue;
