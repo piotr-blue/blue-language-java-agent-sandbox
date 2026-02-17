@@ -44,9 +44,9 @@ public final class WorkingDocument {
     public PatchReport applyPatch(JsonPatch patch) {
         Objects.requireNonNull(patch, "patch");
 
-        Node resolved = current.resolvedRoot().toNode();
         String normalizedPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
         validateMutationPath(normalizedPath, patch.getOp());
+        Node resolved = cloneResolvedRootForPatch(normalizedPath, patch.getOp());
         applyPatchInPlace(resolved, patch, normalizedPath);
 
         GeneralizationReport generalizationReport = typeGeneralizer.generalizeToSoundness(blue, resolved, normalizedPath);
@@ -62,6 +62,17 @@ public final class WorkingDocument {
 
     public PatchReport lastPatchReport() {
         return lastPatchReport;
+    }
+
+    private Node cloneResolvedRootForPatch(String normalizedPath, JsonPatch.Op op) {
+        List<String> segments = PointerUtils.splitPointerSegmentsList(normalizedPath);
+        Node originalRoot = current.resolvedRoot().internalNode();
+        Node clonedRoot = shallowCloneNode(originalRoot);
+        if (!segments.isEmpty()) {
+            boolean createMissing = op != JsonPatch.Op.REMOVE;
+            copyPathToParent(originalRoot, clonedRoot, segments, createMissing, normalizedPath);
+        }
+        return clonedRoot;
     }
 
     private void applyPatchInPlace(Node root, JsonPatch patch, String normalizedPath) {
@@ -276,6 +287,109 @@ public final class WorkingDocument {
             return node.getProperties();
         }
         return properties;
+    }
+
+    private void copyPathToParent(Node originalRoot,
+                                  Node clonedRoot,
+                                  List<String> segments,
+                                  boolean createMissing,
+                                  String path) {
+        Node originalNode = originalRoot;
+        Node clonedNode = clonedRoot;
+
+        for (int i = 0; i < segments.size() - 1; i++) {
+            String segment = segments.get(i);
+            Map<String, Node> originalProperties = originalNode != null ? originalNode.getProperties() : null;
+            if (originalProperties != null && originalProperties.containsKey(segment)) {
+                Map<String, Node> mutableProperties = ensureMutablePropertiesForCopy(clonedNode, originalProperties);
+                Node originalChild = originalProperties.get(segment);
+                Node clonedChild = shallowCloneNode(originalChild);
+                mutableProperties.put(segment, clonedChild);
+                originalNode = originalChild;
+                clonedNode = clonedChild;
+                continue;
+            }
+
+            List<Node> originalItems = originalNode != null ? originalNode.getItems() : null;
+            if (originalItems != null) {
+                if ("-".equals(segment)) {
+                    throw new IllegalStateException("Append token '-' is only allowed on final segment: " + path);
+                }
+                if (PointerUtils.isArrayIndexSegment(segment)) {
+                    int index = PointerUtils.parseArrayIndexOrThrow(segment, path);
+                    if (index < 0 || index >= originalItems.size()) {
+                        throw new IllegalStateException("Array index out of bounds: " + path);
+                    }
+                    List<Node> mutableItems = ensureMutableItemsForCopy(clonedNode, originalItems);
+                    Node originalChild = originalItems.get(index);
+                    Node clonedChild = originalChild != null ? shallowCloneNode(originalChild) : new Node();
+                    mutableItems.set(index, clonedChild);
+                    originalNode = originalChild;
+                    clonedNode = clonedChild;
+                    continue;
+                }
+                if (originalProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
+                }
+            }
+
+            Map<String, Node> mutableProperties = ensureMutablePropertiesForCopy(clonedNode, originalProperties);
+            Node originalChild = originalProperties != null ? originalProperties.get(segment) : null;
+            if (originalChild == null && !createMissing) {
+                throw new IllegalStateException("Path does not exist: " + path);
+            }
+            Node clonedChild = originalChild != null ? shallowCloneNode(originalChild) : new Node();
+            mutableProperties.put(segment, clonedChild);
+            originalNode = originalChild;
+            clonedNode = clonedChild;
+        }
+    }
+
+    private Map<String, Node> ensureMutablePropertiesForCopy(Node clonedNode, Map<String, Node> originalProperties) {
+        Map<String, Node> properties = clonedNode.getProperties();
+        if (properties == null) {
+            properties = new LinkedHashMap<String, Node>();
+            clonedNode.properties(properties);
+            return properties;
+        }
+        if (properties == originalProperties || !(properties instanceof LinkedHashMap)) {
+            properties = new LinkedHashMap<String, Node>(properties);
+            clonedNode.properties(properties);
+            return properties;
+        }
+        return properties;
+    }
+
+    private List<Node> ensureMutableItemsForCopy(Node clonedNode, List<Node> originalItems) {
+        List<Node> items = clonedNode.getItems();
+        if (items == null) {
+            items = new java.util.ArrayList<Node>();
+            clonedNode.items(items);
+            return items;
+        }
+        if (items == originalItems || !(items instanceof java.util.ArrayList)) {
+            items = new java.util.ArrayList<Node>(items);
+            clonedNode.items(items);
+            return items;
+        }
+        return items;
+    }
+
+    private Node shallowCloneNode(Node source) {
+        Node clone = new Node();
+        clone.name(source.getName());
+        clone.description(source.getDescription());
+        clone.type(source.getType());
+        clone.itemType(source.getItemType());
+        clone.keyType(source.getKeyType());
+        clone.valueType(source.getValueType());
+        clone.value(source.getValue());
+        clone.items(source.getItems());
+        clone.properties(source.getProperties());
+        clone.constraints(source.getConstraints());
+        clone.blueId(source.getBlueId());
+        clone.blue(source.getBlue());
+        return clone;
     }
 
 }

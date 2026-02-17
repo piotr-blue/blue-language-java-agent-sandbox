@@ -26,6 +26,10 @@ public final class FrozenNode {
         return node.clone();
     }
 
+    Node internalNode() {
+        return node;
+    }
+
     public Optional<String> cachedBlueId() {
         return Optional.ofNullable(cachedBlueId);
     }
