@@ -5,6 +5,7 @@ import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.snapshot.SnapshotTrust;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -98,6 +99,15 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
         Blue blue = new Blue(this);
         Node authoring = YAML_MAPPER.readValue(yaml, Node.class);
         ResolvedSnapshot snapshot = blue.resolveToSnapshot(authoring);
+        storeSemanticSnapshot(snapshot, false);
+        addNodeToNameMap(JSON_MAPPER.valueToTree(snapshot.resolvedRoot().toNode()), snapshot.rootBlueId());
+        return snapshot.rootBlueId();
+    }
+
+    public String addSingleDocsSemanticResolved(String yaml) {
+        Blue blue = new Blue(this);
+        Node resolved = YAML_MAPPER.readValue(yaml, Node.class);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(resolved, SnapshotTrust.BLIND_TRUST_RESOLVED);
         storeSemanticSnapshot(snapshot, false);
         addNodeToNameMap(JSON_MAPPER.valueToTree(snapshot.resolvedRoot().toNode()), snapshot.rootBlueId());
         return snapshot.rootBlueId();
