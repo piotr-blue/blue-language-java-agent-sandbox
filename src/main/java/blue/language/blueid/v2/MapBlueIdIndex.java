@@ -28,7 +28,7 @@ public final class MapBlueIdIndex implements BlueIdIndex {
             if (normalized.containsKey(normalizedKey)) {
                 throw new IllegalArgumentException("Duplicate normalized pointer key: " + normalizedKey);
             }
-            normalized.put(normalizedKey, entry.getValue());
+            normalized.put(normalizedKey, normalizeBlueId(entry.getValue(), normalizedKey));
         }
         return new MapBlueIdIndex(normalized);
     }
@@ -68,5 +68,12 @@ public final class MapBlueIdIndex implements BlueIdIndex {
                 throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
             }
         }
+    }
+
+    private static String normalizeBlueId(String blueId, String pointer) {
+        if (blueId == null || blueId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Missing blueId value for pointer: " + pointer);
+        }
+        return blueId.trim();
     }
 }

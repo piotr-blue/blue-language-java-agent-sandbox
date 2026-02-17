@@ -73,4 +73,15 @@ class MapBlueIdIndexTest {
 
         assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
     }
+
+    @Test
+    void fromRejectsMissingBlueIdValues() {
+        Map<String, String> ids = new LinkedHashMap<String, String>();
+        ids.put("/", null);
+        assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
+
+        ids.clear();
+        ids.put("/", "   ");
+        assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
+    }
 }
