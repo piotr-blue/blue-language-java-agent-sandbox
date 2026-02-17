@@ -25,6 +25,7 @@ class V2Spec_RehashPathMatchesIndexTest {
                     new Node().name("Second")
             )
             .properties("a/b", new Node().value("slash"))
+            .properties("a~b", new Node().value("tilde"))
             .properties("type", new Node().value("property-overrides-type-segment"));
 
     @Test
@@ -74,6 +75,8 @@ class V2Spec_RehashPathMatchesIndexTest {
 
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "type"));
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/does-not-exist"));
+        assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~2b"));
+        assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~"));
     }
 
     @Test
@@ -98,6 +101,16 @@ class V2Spec_RehashPathMatchesIndexTest {
 
         String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a/b"));
         assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~1b"));
+    }
+
+    @Test
+    void rehashPathResolvesEscapedTildeSegments() {
+        Blue blue = new Blue();
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a~b"));
+        assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~0b"));
     }
 
     @Test
