@@ -2,6 +2,7 @@ package blue.language.utils;
 
 import blue.language.model.Node;
 import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -18,12 +19,7 @@ public class NodePathAccessor {
     }
 
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        if (path == null || path.isEmpty()) {
-            path = "/";
-        }
-        if (!path.startsWith("/")) {
-            throw new IllegalArgumentException("Invalid path: " + path);
-        }
+        path = PointerUtils.normalizePointer(path);
 
         if (path.equals("/")) {
             if (!resolveFinalLink) {
@@ -33,11 +29,7 @@ public class NodePathAccessor {
             return resolved.getValue() != null ? resolved.getValue() : resolved;
         }
 
-        String[] rawSegments = path.substring(1).split("/", -1);
-        String[] segments = new String[rawSegments.length];
-        for (int i = 0; i < rawSegments.length; i++) {
-            segments[i] = unescapePointerSegment(rawSegments[i]);
-        }
+        String[] segments = PointerUtils.splitPointerSegments(path);
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
@@ -65,8 +57,8 @@ public class NodePathAccessor {
         Map<String, Node> properties = node.getProperties();
         if (properties != null && properties.containsKey(segment)) {
             result = properties.get(segment);
-        } else if (isArrayIndexSegment(segment)) {
-            int itemIndex = parseArrayIndex(segment);
+        } else if (PointerUtils.isArrayIndexSegment(segment)) {
+            int itemIndex = PointerUtils.parseArrayIndex(segment);
             List<Node> items = node.getItems();
             if (items == null || itemIndex < 0 || itemIndex >= items.size()) {
                 throw new IllegalArgumentException("Invalid item index: " + segment);
@@ -125,53 +117,6 @@ public class NodePathAccessor {
                 || "value".equals(segment)
                 || "blueId".equals(segment)
                 || "blue".equals(segment);
-    }
-
-    private static boolean isArrayIndexSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return "0".equals(segment) || segment.charAt(0) != '0';
-    }
-
-    private static int parseArrayIndex(String segment) {
-        try {
-            return Integer.parseInt(segment);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
-    private static String unescapePointerSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return segment;
-        }
-        StringBuilder decoded = new StringBuilder(segment.length());
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c != '~') {
-                decoded.append(c);
-                continue;
-            }
-            if (i + 1 >= segment.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-            char next = segment.charAt(++i);
-            if (next == '0') {
-                decoded.append('~');
-            } else if (next == '1') {
-                decoded.append('/');
-            } else {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-        }
-        return decoded.toString();
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {

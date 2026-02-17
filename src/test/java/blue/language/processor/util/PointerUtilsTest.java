@@ -68,4 +68,30 @@ class PointerUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.relativizePointer("/scope", "/x~2"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.relativizePointer("/scope~", "/scope/value"));
     }
+
+    @Test
+    void splitPointerSegmentsUnescapesAndPreservesEmptySegments() {
+        assertEquals(0, PointerUtils.splitPointerSegments("/").length);
+        assertEquals("", PointerUtils.splitPointerSegments("//")[0]);
+        assertEquals("a/b", PointerUtils.splitPointerSegments("/a~1b//")[0]);
+        assertEquals("", PointerUtils.splitPointerSegments("/a~1b//")[1]);
+        assertEquals("", PointerUtils.splitPointerSegments("/a~1b//")[2]);
+    }
+
+    @Test
+    void arrayIndexHelpersApplyStrictJsonPointerArrayRules() {
+        assertEquals(0, PointerUtils.parseArrayIndex("0"));
+        assertEquals(12, PointerUtils.parseArrayIndex("12"));
+        assertEquals(-1, PointerUtils.parseArrayIndex("01"));
+        assertEquals(-1, PointerUtils.parseArrayIndex("x"));
+        assertEquals(-1, PointerUtils.parseArrayIndex("999999999999999999999"));
+    }
+
+    @Test
+    void validatePointerEscapesSupportsRelativeSegmentsAndRejectsMalformedOnes() {
+        PointerUtils.validatePointerEscapes("a~1b");
+        PointerUtils.validatePointerEscapes("/a~1b");
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.validatePointerEscapes("a~"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.validatePointerEscapes("/a~2"));
+    }
 }

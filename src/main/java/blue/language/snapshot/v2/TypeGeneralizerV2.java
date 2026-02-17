@@ -2,6 +2,7 @@ package blue.language.snapshot.v2;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,18 +90,17 @@ public final class TypeGeneralizerV2 {
             return root;
         }
 
-        String[] segments = pointer.substring(1).split("/", -1);
+        String[] segments = PointerUtils.splitPointerSegments(pointer);
         Node current = root;
-        for (String rawSegment : segments) {
-            String segment = unescape(rawSegment);
+        for (String segment : segments) {
             Map<String, Node> properties = current.getProperties();
             if (properties != null && properties.containsKey(segment)) {
                 current = properties.get(segment);
-            } else if (isArrayIndexSegment(segment)) {
+            } else if (PointerUtils.isArrayIndexSegment(segment)) {
                 if (current.getItems() == null) {
                     return null;
                 }
-                int index = parseArrayIndex(segment);
+                int index = PointerUtils.parseArrayIndex(segment);
                 if (index < 0 || index >= current.getItems().size()) {
                     return null;
                 }
@@ -137,82 +137,6 @@ public final class TypeGeneralizerV2 {
     }
 
     private String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        if (pointer.charAt(0) != '/') {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
-        }
-        validatePointerEscapes(pointer);
-        return pointer;
-    }
-
-    private void validatePointerEscapes(String pointer) {
-        for (int i = 1; i < pointer.length(); i++) {
-            char c = pointer.charAt(i);
-            if (c != '~') {
-                continue;
-            }
-            if (i + 1 >= pointer.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
-            }
-            char next = pointer.charAt(++i);
-            if (next != '0' && next != '1') {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
-            }
-        }
-    }
-
-    private String unescape(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return segment;
-        }
-        StringBuilder decoded = new StringBuilder(segment.length());
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c != '~') {
-                decoded.append(c);
-                continue;
-            }
-            if (i + 1 >= segment.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-            char next = segment.charAt(++i);
-            if (next == '0') {
-                decoded.append('~');
-            } else if (next == '1') {
-                decoded.append('/');
-            } else {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-        }
-        return decoded.toString();
-    }
-
-    private boolean isArrayIndexSegment(String segment) {
-        if (!isNonNegativeInteger(segment)) {
-            return false;
-        }
-        return "0".equals(segment) || segment.charAt(0) != '0';
-    }
-
-    private boolean isNonNegativeInteger(String segment) {
-        if (segment.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < segment.length(); i++) {
-            if (!Character.isDigit(segment.charAt(i))) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private int parseArrayIndex(String segment) {
-        try {
-            return Integer.parseInt(segment);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
+        return PointerUtils.normalizePointer(pointer);
     }
 }

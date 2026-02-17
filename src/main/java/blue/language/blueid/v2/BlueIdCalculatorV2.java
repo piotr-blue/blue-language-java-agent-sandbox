@@ -1,6 +1,7 @@
 package blue.language.blueid.v2;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 import blue.language.utils.Base58Sha256Provider;
 
 import java.util.Arrays;
@@ -155,43 +156,16 @@ public final class BlueIdCalculatorV2 {
     }
 
     private static String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        if ("/".equals(pointer)) {
-            return pointer;
-        }
-        if (!pointer.startsWith("/")) {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
-        }
-        validatePointerEscapes(pointer);
-        return pointer;
-    }
-
-    private static void validatePointerEscapes(String pointer) {
-        for (int i = 1; i < pointer.length(); i++) {
-            char c = pointer.charAt(i);
-            if (c != '~') {
-                continue;
-            }
-            if (i + 1 >= pointer.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
-            }
-            char next = pointer.charAt(++i);
-            if (next != '0' && next != '1') {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
-            }
-        }
+        return PointerUtils.normalizePointer(pointer);
     }
 
     private static Node nodeAt(Node root, String pointer) {
         if ("/".equals(pointer)) {
             return root;
         }
-        String[] segments = pointer.substring(1).split("/", -1);
+        String[] segments = PointerUtils.splitPointerSegments(pointer);
         Node current = root;
-        for (String rawSegment : segments) {
-            String segment = unescapePointerSegment(rawSegment);
+        for (String segment : segments) {
             current = descend(current, segment);
             if (current == null) {
                 return null;
@@ -210,10 +184,10 @@ public final class BlueIdCalculatorV2 {
             return properties.get(segment);
         }
 
-        if (isArrayIndexSegment(segment)) {
+        if (PointerUtils.isArrayIndexSegment(segment)) {
             List<Node> items = current.getItems();
             if (items != null) {
-                int index = parseArrayIndex(segment);
+                int index = PointerUtils.parseArrayIndex(segment);
                 if (index >= 0 && index < items.size()) {
                     return items.get(index);
                 }
@@ -239,57 +213,4 @@ public final class BlueIdCalculatorV2 {
         return null;
     }
 
-    private static String unescapePointerSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return segment;
-        }
-        StringBuilder decoded = new StringBuilder(segment.length());
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c != '~') {
-                decoded.append(c);
-                continue;
-            }
-            if (i + 1 >= segment.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-            char next = segment.charAt(++i);
-            if (next == '0') {
-                decoded.append('~');
-            } else if (next == '1') {
-                decoded.append('/');
-            } else {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-        }
-        return decoded.toString();
-    }
-
-    private static boolean isNonNegativeInteger(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean isArrayIndexSegment(String value) {
-        if (!isNonNegativeInteger(value)) {
-            return false;
-        }
-        return "0".equals(value) || value.charAt(0) != '0';
-    }
-
-    private static int parseArrayIndex(String segment) {
-        try {
-            return Integer.parseInt(segment);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
 }

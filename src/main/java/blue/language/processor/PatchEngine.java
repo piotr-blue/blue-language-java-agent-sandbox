@@ -413,44 +413,22 @@ final class PatchEngine {
     }
 
     private int parseArrayIndex(String segment, String path) {
-        if (!isArrayIndexSegment(segment)) {
+        int index = PointerUtils.parseArrayIndex(segment);
+        if (index < 0) {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
-        try {
-            return Integer.parseInt(segment);
-        } catch (NumberFormatException ex) {
-            throw new IllegalStateException("Expected numeric array index in path: " + path);
-        }
+        return index;
     }
 
     private boolean isArrayIndexSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return false;
-        }
-        if (segment.length() > 1 && segment.charAt(0) == '0') {
-            return false;
-        }
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return true;
+        return PointerUtils.isArrayIndexSegment(segment);
     }
 
     private List<String> splitPointer(String path) {
-        if ("/".equals(path)) {
-            return new ArrayList<>();
-        }
-        String raw = path.substring(1);
-        if (raw.isEmpty()) {
-            return new ArrayList<>();
-        }
-        String[] parts = raw.split("/", -1);
+        String[] parts = PointerUtils.splitPointerSegments(path);
         List<String> segments = new ArrayList<>(parts.length);
         for (String part : parts) {
-            segments.add(unescapePointerSegment(part));
+            segments.add(part);
         }
         return segments;
     }
@@ -460,32 +438,6 @@ final class PatchEngine {
             throw new IllegalArgumentException("Patch path must be a JSON pointer starting with '/': " + path);
         }
         return PointerUtils.normalizePointer(path);
-    }
-
-    private String unescapePointerSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return segment;
-        }
-        StringBuilder decoded = new StringBuilder(segment.length());
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c != '~') {
-                decoded.append(c);
-                continue;
-            }
-            if (i + 1 >= segment.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-            char next = segment.charAt(++i);
-            if (next == '0') {
-                decoded.append('~');
-            } else if (next == '1') {
-                decoded.append('/');
-            } else {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-        }
-        return decoded.toString();
     }
 
     private String pointerPrefix(List<String> segments, int length) {

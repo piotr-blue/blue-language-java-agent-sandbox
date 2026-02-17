@@ -30,6 +30,69 @@ public final class PointerUtils {
         return pointer;
     }
 
+    public static String[] splitPointerSegments(String pointer) {
+        String normalized = normalizePointer(pointer);
+        if ("/".equals(normalized)) {
+            return new String[0];
+        }
+        String[] rawSegments = normalized.substring(1).split("/", -1);
+        String[] decoded = new String[rawSegments.length];
+        for (int i = 0; i < rawSegments.length; i++) {
+            decoded[i] = unescapePointerSegment(rawSegments[i]);
+        }
+        return decoded;
+    }
+
+    public static String unescapePointerSegment(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return segment;
+        }
+        StringBuilder decoded = new StringBuilder(segment.length());
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c != '~') {
+                decoded.append(c);
+                continue;
+            }
+            if (i + 1 >= segment.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+            char next = segment.charAt(++i);
+            if (next == '0') {
+                decoded.append('~');
+            } else if (next == '1') {
+                decoded.append('/');
+            } else {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+        }
+        return decoded.toString();
+    }
+
+    public static boolean isArrayIndexSegment(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return "0".equals(segment) || segment.charAt(0) != '0';
+    }
+
+    public static int parseArrayIndex(String segment) {
+        if (!isArrayIndexSegment(segment)) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(segment);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
     public static String stripSlashes(String value) {
         if (value == null || value.trim().isEmpty()) {
             return "";
@@ -100,8 +163,12 @@ public final class PointerUtils {
         return remainder.startsWith("/") ? remainder : "/" + remainder;
     }
 
-    private static void validatePointerEscapes(String pointer) {
-        for (int i = 1; i < pointer.length(); i++) {
+    public static void validatePointerEscapes(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return;
+        }
+        int start = pointer.charAt(0) == '/' ? 1 : 0;
+        for (int i = start; i < pointer.length(); i++) {
             char c = pointer.charAt(i);
             if (c != '~') {
                 continue;

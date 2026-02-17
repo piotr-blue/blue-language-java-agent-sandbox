@@ -1,6 +1,7 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -119,20 +120,7 @@ public class PathLimits implements Limits {
     }
 
     private void validatePointerEscapes(String pointer) {
-        int start = pointer.startsWith("/") ? 1 : 0;
-        for (int i = start; i < pointer.length(); i++) {
-            char c = pointer.charAt(i);
-            if (c != '~') {
-                continue;
-            }
-            if (i + 1 >= pointer.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in path: " + pointer);
-            }
-            char next = pointer.charAt(++i);
-            if (next != '0' && next != '1') {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in path: " + pointer);
-            }
-        }
+        PointerUtils.validatePointerEscapes(pointer);
     }
 
     public static class Builder {

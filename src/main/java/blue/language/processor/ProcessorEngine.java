@@ -190,21 +190,20 @@ final class ProcessorEngine {
             return root;
         }
 
-        String[] segments = normalizedPointer.substring(1).split("/", -1);
+        String[] segments = PointerUtils.splitPointerSegments(normalizedPointer);
         Node current = root;
-        for (String rawSegment : segments) {
+        for (String segment : segments) {
             if (current == null) {
                 return null;
             }
-            String segment = unescapePointerSegment(rawSegment);
             Map<String, Node> props = current.getProperties();
             if (props != null && props.containsKey(segment)) {
                 current = props.get(segment);
                 continue;
             }
 
-            if (isArrayIndexSegment(segment)) {
-                int index = parseArrayIndex(segment);
+            if (PointerUtils.isArrayIndexSegment(segment)) {
+                int index = PointerUtils.parseArrayIndex(segment);
                 List<Node> items = current.getItems();
                 if (items == null || index < 0 || index >= items.size()) {
                     return null;
@@ -240,60 +239,7 @@ final class ProcessorEngine {
     }
 
     private static String normalizeNodeAtPointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        if (!pointer.startsWith("/")) {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
-        }
-        return pointer;
-    }
-
-    private static String unescapePointerSegment(String segment) {
-        if (segment == null || segment.isEmpty()) {
-            return segment;
-        }
-        StringBuilder decoded = new StringBuilder(segment.length());
-        for (int i = 0; i < segment.length(); i++) {
-            char c = segment.charAt(i);
-            if (c != '~') {
-                decoded.append(c);
-                continue;
-            }
-            if (i + 1 >= segment.length()) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-            char next = segment.charAt(++i);
-            if (next == '0') {
-                decoded.append('~');
-            } else if (next == '1') {
-                decoded.append('/');
-            } else {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
-            }
-        }
-        return decoded.toString();
-    }
-
-    private static boolean isArrayIndexSegment(String value) {
-        if (value == null || value.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            if (c < '0' || c > '9') {
-                return false;
-            }
-        }
-        return "0".equals(value) || value.charAt(0) != '0';
-    }
-
-    private static int parseArrayIndex(String value) {
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
+        return PointerUtils.normalizePointer(pointer);
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
