@@ -19,6 +19,7 @@ public class Nodes {
         KEY_TYPE,
         VALUE_TYPE,
         ITEM_TYPE,
+        MERGE_POLICY,
         VALUE,
         PROPERTIES,
         BLUE,
@@ -82,6 +83,7 @@ public class Nodes {
             case KEY_TYPE: return node.getKeyType();
             case VALUE_TYPE: return node.getValueType();
             case ITEM_TYPE: return node.getItemType();
+            case MERGE_POLICY: return node.getMergePolicy();
             case BLUE_ID: return node.getBlueId();
             default: throw new IllegalArgumentException("Unknown field: " + field);
         }

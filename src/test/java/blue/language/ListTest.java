@@ -254,6 +254,90 @@ public class ListTest {
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
     }
 
+    @Test
+    public void listControlsRequirePreviousAnchorAsFirstItem() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$pos", new Node().value(1)).name("B"),
+                        new Node().properties("$previous", new Node().value(true))
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
+    public void listControlsRejectOutOfRangePos() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(true)),
+                        new Node().properties("$pos", new Node().value(5)).name("B")
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
+    public void listControlsRejectDuplicatePosOverlays() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(true)),
+                        new Node().properties("$pos", new Node().value(1)).name("B"),
+                        new Node().properties("$pos", new Node().value(1)).name("B")
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
+    public void listControlsAllowPositionalOverlayAndAppend() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(true)),
+                        new Node().properties("$pos", new Node().value(1)).name("B"),
+                        c
+                );
+
+        Node resolved = merger.resolve(y, Limits.NO_LIMITS);
+        assertEquals(3, resolved.getItems().size());
+    }
+
+    @Test
+    public void emptyControlMarkerIsTreatedAsContent() {
+        x = new Node()
+                .name("Base")
+                .items(a);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(true)),
+                        new Node().properties("$empty", new Node().value(true))
+                );
+
+        Node resolved = merger.resolve(y, Limits.NO_LIMITS);
+        assertEquals(2, resolved.getItems().size());
+    }
+
     private Node preprocessAndExtend(String doc) {
         return preprocessAndExtend(YAML_MAPPER.readValue(doc, Node.class));
     }
