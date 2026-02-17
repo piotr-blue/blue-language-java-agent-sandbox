@@ -112,4 +112,16 @@ final class ProcessorEngineNodeAtTest {
         assertEquals("/", ProcessorEngine.normalizePointer(null));
         assertEquals("/", ProcessorEngine.normalizePointer(""));
     }
+
+    @Test
+    void normalizeScopeTreatsNullAndEmptyAsRoot() {
+        assertEquals("/", ProcessorEngine.normalizeScope(null));
+        assertEquals("/", ProcessorEngine.normalizeScope(""));
+    }
+
+    @Test
+    void normalizeScopeRejectsInvalidInputs() {
+        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizeScope("scope"));
+        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizeScope("/scope~2"));
+    }
 }

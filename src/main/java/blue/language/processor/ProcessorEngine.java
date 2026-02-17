@@ -78,6 +78,12 @@ final class ProcessorEngine {
     }
 
     static String normalizeScope(String scopePath) {
+        if (scopePath == null || scopePath.isEmpty()) {
+            return "/";
+        }
+        if (scopePath.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + scopePath);
+        }
         return PointerUtils.normalizeScope(scopePath);
     }
 
