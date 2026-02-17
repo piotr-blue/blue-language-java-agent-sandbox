@@ -27,11 +27,21 @@ public final class MapBlueIdIndex implements BlueIdIndex {
 
     @Override
     public String blueIdAt(String jsonPointer) {
-        return index.get(jsonPointer);
+        return index.get(normalizePointer(jsonPointer));
     }
 
     @Override
     public Map<String, String> asMap() {
         return index;
+    }
+
+    private String normalizePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        if (!pointer.startsWith("/")) {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
+        return pointer;
     }
 }
