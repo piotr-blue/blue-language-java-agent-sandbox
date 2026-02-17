@@ -132,11 +132,9 @@ public class PathLimits implements Limits {
             if (normalized.isEmpty()) {
                 throw new IllegalArgumentException("Allowed path cannot be empty");
             }
-            if (!normalized.startsWith("/")) {
-                normalized = "/" + normalized;
-            }
             try {
-                PointerUtils.validatePointerEscapes(normalized);
+                normalized = PointerUtils.normalizePointer(
+                        normalized.startsWith("/") ? normalized : "/" + normalized);
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + normalized);
             }
