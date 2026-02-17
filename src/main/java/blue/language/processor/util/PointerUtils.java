@@ -177,16 +177,13 @@ public final class PointerUtils {
             return normalizedAbsolute;
         }
         String remainder = normalizedAbsolute.substring(normalizedScope.length());
-        if (remainder.isEmpty()) {
-            return "/";
-        }
         if ("/".equals(remainder)) {
             // Relative "/" already denotes scope root in processor APIs.
             // Preserve absolute path so trailing-empty descendants are not
             // collapsed into ambiguous root markers.
             return normalizedAbsolute;
         }
-        return remainder.startsWith("/") ? remainder : "/" + remainder;
+        return remainder;
     }
 
     public static void validatePointerEscapes(String pointer) {
