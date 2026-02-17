@@ -3,6 +3,7 @@ package blue.language.v2;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
+import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,8 +40,8 @@ class V2Spec_SemanticBlueIdStabilityTest {
 
         assertEquals(leanId, noisyId);
 
-        String legacyLeanId = blue.calculateBlueId(leanAuthoring);
-        String legacyNoisyId = blue.calculateBlueId(noisyAuthoring);
+        String legacyLeanId = BlueIdCalculator.calculateBlueId(leanAuthoring);
+        String legacyNoisyId = BlueIdCalculator.calculateBlueId(noisyAuthoring);
         assertNotEquals(legacyLeanId, legacyNoisyId);
     }
 }

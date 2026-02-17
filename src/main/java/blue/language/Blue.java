@@ -166,7 +166,7 @@ public class Blue implements NodeResolver {
     }
 
     public String calculateBlueId(Node node) {
-        return BlueIdCalculator.calculateBlueId(node);
+        return calculateSemanticBlueIdV2(node);
     }
 
     public String calculateBlueId(Object object) {
