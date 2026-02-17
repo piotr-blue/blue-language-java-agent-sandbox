@@ -7,6 +7,7 @@ import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeValueCoercionTest {
@@ -33,5 +34,12 @@ class NodeValueCoercionTest {
 
         assertTrue(node.getValue() instanceof BigInteger);
         assertEquals(BigInteger.valueOf(42L), node.getValue());
+    }
+
+    @Test
+    void valueObjectRejectsNonFiniteFloatingPointNumbers() {
+        assertThrows(IllegalArgumentException.class, () -> new Node().value(Double.NaN));
+        assertThrows(IllegalArgumentException.class, () -> new Node().value(Double.POSITIVE_INFINITY));
+        assertThrows(IllegalArgumentException.class, () -> new Node().value(Float.NEGATIVE_INFINITY));
     }
 }

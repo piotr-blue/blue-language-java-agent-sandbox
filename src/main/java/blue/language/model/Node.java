@@ -165,7 +165,11 @@ public class Node implements Cloneable {
         if (value instanceof BigInteger || value instanceof BigDecimal) {
             this.value = value;
         } else if (value instanceof Float || value instanceof Double) {
-            this.value = BigDecimal.valueOf(((Number) value).doubleValue());
+            double decimalValue = ((Number) value).doubleValue();
+            if (!Double.isFinite(decimalValue)) {
+                throw new IllegalArgumentException("Non-finite numeric value is not supported: " + value);
+            }
+            this.value = BigDecimal.valueOf(decimalValue);
         } else if (value instanceof Number) {
             this.value = BigInteger.valueOf(((Number) value).longValue());
         } else {
