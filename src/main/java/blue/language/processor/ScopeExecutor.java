@@ -9,6 +9,7 @@ import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.processor.util.PointerUtils;
 import blue.language.blueid.v2.BlueIdCalculatorV2;
 
 import java.util.LinkedHashSet;
@@ -375,7 +376,7 @@ final class ScopeExecutor {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = ProcessorEngine.normalizePointer(patch.getPath());
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
 
         if (targetPath.equals(normalizedScope)) {
             throw new ProcessorEngine.BoundaryViolationException("Self-root mutation is forbidden at scope " + normalizedScope);
@@ -404,7 +405,7 @@ final class ScopeExecutor {
             return;
         }
         String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = ProcessorEngine.normalizePointer(patch.getPath());
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
         for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
             String reservedPointer = ProcessorEngine.resolvePointer(normalizedScope, ProcessorPointerConstants.relativeContractsEntry(key));
             if (targetPath.equals(reservedPointer) || targetPath.startsWith(reservedPointer + "/")) {
