@@ -196,7 +196,7 @@ public final class BlueIdCalculatorV2 {
         if (isNonNegativeInteger(segment)) {
             List<Node> items = current.getItems();
             if (items != null) {
-                int index = Integer.parseInt(segment);
+                int index = parseArrayIndex(segment);
                 if (index >= 0 && index < items.size()) {
                     return items.get(index);
                 }
@@ -259,5 +259,13 @@ public final class BlueIdCalculatorV2 {
             }
         }
         return true;
+    }
+
+    private static int parseArrayIndex(String segment) {
+        try {
+            return Integer.parseInt(segment);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 }
