@@ -60,6 +60,18 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtSupportsBuiltInAuxiliaryTypeSegments() {
+        Node root = new Node()
+                .itemType(new Node().name("ItemTypeRoot"))
+                .keyType(new Node().name("KeyTypeRoot"))
+                .valueType(new Node().name("ValueTypeRoot"));
+
+        assertEquals("ItemTypeRoot", ProcessorEngine.nodeAt(root, "/itemType").getName());
+        assertEquals("KeyTypeRoot", ProcessorEngine.nodeAt(root, "/keyType").getName());
+        assertEquals("ValueTypeRoot", ProcessorEngine.nodeAt(root, "/valueType").getName());
+    }
+
+    @Test
     void nodeAtPrefersPropertyOverBuiltInTypeSegment() {
         Node root = new Node()
                 .type(new Node().name("BuiltInType"))

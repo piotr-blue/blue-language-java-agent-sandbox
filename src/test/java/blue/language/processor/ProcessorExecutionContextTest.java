@@ -78,6 +78,22 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void documentHelpersSupportBuiltInTypeAndBluePointers() {
+        Node document = new Node()
+                .type(new Node().name("TypeRoot"))
+                .blue(new Node().name("BlueRoot"))
+                .properties("type", new Node().value("property-type"));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("property-type", context.documentAt("/type").getValue());
+        assertEquals("BlueRoot", context.documentAt("/blue").getName());
+    }
+
+    @Test
     void documentHelpersRejectMalformedEscapedPointers() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
