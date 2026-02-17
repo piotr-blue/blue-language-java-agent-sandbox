@@ -323,7 +323,8 @@ final class PatchEngine {
                                     List<String> segments,
                                     List<CreatedNode> createdNodes) {
         if (current == null) {
-            throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index));
+            throw new IllegalStateException("Path does not exist: "
+                    + PointerUtils.pointerFromSegments(segments, index));
         }
 
         Map<String, Node> properties = ensureMutableProperties(current, false);
@@ -338,7 +339,8 @@ final class PatchEngine {
             }
             int arrayIndex = PointerUtils.parseArrayIndexOrThrow(segment, fullPath);
             if (arrayIndex < 0 || arrayIndex >= items.size()) {
-                throw new IllegalStateException("Array index out of bounds: " + pointerPrefix(segments, index + 1));
+                throw new IllegalStateException("Array index out of bounds: "
+                        + PointerUtils.pointerFromSegments(segments, index + 1));
             }
             Node child = items.get(arrayIndex);
             if (child == null) {
@@ -350,7 +352,8 @@ final class PatchEngine {
                         createdNodes.add(CreatedNode.forArray(current, arrayIndex));
                     }
                 } else {
-                    throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index + 1));
+                    throw new IllegalStateException("Path does not exist: "
+                            + PointerUtils.pointerFromSegments(segments, index + 1));
                 }
             }
             return child;
@@ -360,12 +363,14 @@ final class PatchEngine {
         }
 
         if (properties == null && current.getValue() != null) {
-            throw new IllegalStateException("Cannot traverse into scalar at path: " + pointerPrefix(segments, index + 1));
+            throw new IllegalStateException("Cannot traverse into scalar at path: "
+                    + PointerUtils.pointerFromSegments(segments, index + 1));
         }
         Node child = properties != null ? properties.get(segment) : null;
         if (child == null) {
             if (!createMissingObjects) {
-                throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index + 1));
+                throw new IllegalStateException("Path does not exist: "
+                        + PointerUtils.pointerFromSegments(segments, index + 1));
             }
             child = new Node();
             boolean mapWasAbsent = properties == null;
@@ -419,10 +424,6 @@ final class PatchEngine {
             segments.add(part);
         }
         return segments;
-    }
-
-    private String pointerPrefix(List<String> segments, int length) {
-        return PointerUtils.pointerFromSegments(segments, length);
     }
 
     private Node cloneNode(Node node) {
