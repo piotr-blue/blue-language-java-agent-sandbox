@@ -126,16 +126,21 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf)) {
-                items.add(incoming);
+            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf)) {
+                    items.add(incoming);
+                    return;
+                }
+                int index = parseArrayIndex(leaf, path);
+                if (index < 0 || index > items.size()) {
+                    throw new IllegalStateException("Array index out of bounds for add: " + path);
+                }
+                items.add(index, incoming);
                 return;
             }
-            int index = parseArrayIndex(leaf, path);
-            if (index < 0 || index > items.size()) {
-                throw new IllegalStateException("Array index out of bounds for add: " + path);
+            if (properties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + path);
             }
-            items.add(index, incoming);
-            return;
         }
 
         if ("-".equals(leaf)) {
@@ -156,15 +161,20 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf)) {
-                throw new IllegalStateException("Replace does not support append token at path: " + path);
+            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf)) {
+                    throw new IllegalStateException("Replace does not support append token at path: " + path);
+                }
+                int index = parseArrayIndex(leaf, path);
+                if (index < 0 || index >= items.size()) {
+                    throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                }
+                items.set(index, incoming);
+                return;
             }
-            int index = parseArrayIndex(leaf, path);
-            if (index < 0 || index >= items.size()) {
-                throw new IllegalStateException("Array index out of bounds for replace: " + path);
+            if (properties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + path);
             }
-            items.set(index, incoming);
-            return;
         }
 
         if ("-".equals(leaf)) {
@@ -183,15 +193,20 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf)) {
-                throw new IllegalStateException("Remove does not support append token at path: " + path);
+            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf)) {
+                    throw new IllegalStateException("Remove does not support append token at path: " + path);
+                }
+                int index = parseArrayIndex(leaf, path);
+                if (index < 0 || index >= items.size()) {
+                    throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                }
+                items.remove(index);
+                return;
             }
-            int index = parseArrayIndex(leaf, path);
-            if (index < 0 || index >= items.size()) {
-                throw new IllegalStateException("Array index out of bounds for remove: " + path);
+            if (properties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + path);
             }
-            items.remove(index);
-            return;
         }
 
         if ("-".equals(leaf)) {
@@ -226,19 +241,24 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = currentNode.getItems();
         if (items != null) {
-            if ("-".equals(segment)) {
-                throw new IllegalStateException("Append token '-' is only allowed on final segment: " + path);
+            if ("-".equals(segment) || isArrayIndexSegment(segment)) {
+                if ("-".equals(segment)) {
+                    throw new IllegalStateException("Append token '-' is only allowed on final segment: " + path);
+                }
+                int index = parseArrayIndex(segment, path);
+                if (index < 0 || index >= items.size()) {
+                    throw new IllegalStateException("Array index out of bounds: " + path);
+                }
+                Node child = items.get(index);
+                if (child == null && createMissing) {
+                    child = new Node();
+                    items.set(index, child);
+                }
+                return child;
             }
-            int index = parseArrayIndex(segment, path);
-            if (index < 0 || index >= items.size()) {
-                throw new IllegalStateException("Array index out of bounds: " + path);
+            if (properties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + path);
             }
-            Node child = items.get(index);
-            if (child == null && createMissing) {
-                child = new Node();
-                items.set(index, child);
-            }
-            return child;
         }
 
         properties = ensureMutableProperties(currentNode);

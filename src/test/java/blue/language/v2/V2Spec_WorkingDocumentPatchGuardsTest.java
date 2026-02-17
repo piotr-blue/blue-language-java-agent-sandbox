@@ -124,6 +124,42 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
     }
 
     @Test
+    void rejectsNonNumericArrayIndexSegments() {
+        Blue blue = new Blue();
+        Node node = blue.yamlToNode(
+                "name: Guarded\n" +
+                        "list:\n" +
+                        "  - 1\n" +
+                        "  - 2\n"
+        );
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        assertThrows(IllegalStateException.class,
+                () -> workingDocument.applyPatch(JsonPatch.add("/list/key", new Node().value(99))));
+    }
+
+    @Test
+    void addUsesPropertyBranchForNonNumericLeafOnMixedParent() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("mixed", new Node()
+                        .items(new Node().value("item-zero"))
+                        .properties("existing", new Node().value("keep")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.add("/mixed/key", new Node().value("property-value")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
+        assertEquals("property-value", mixed.getProperties().get("key").getValue());
+        assertEquals("keep", mixed.getProperties().get("existing").getValue());
+        assertEquals("item-zero", mixed.getItems().get(0).getValue());
+    }
+
+    @Test
     void allowsEscapedPropertyPointerSegments() {
         Blue blue = new Blue();
         Node node = new Node()
