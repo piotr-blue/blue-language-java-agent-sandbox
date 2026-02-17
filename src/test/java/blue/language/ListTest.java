@@ -61,6 +61,7 @@ public class ListTest {
     public void testSubtypeHasMoreItemsThanParentType() throws Exception {
         x = new Node()
                 .name("X")
+                .mergePolicy("append-only")
                 .items(
                         a,
                         b
@@ -307,6 +308,7 @@ public class ListTest {
     public void listControlsAllowPositionalOverlayAndAppend() {
         x = new Node()
                 .name("Base")
+                .mergePolicy("append-only")
                 .items(a, b);
         y = new Node()
                 .name("Derived")
@@ -325,6 +327,7 @@ public class ListTest {
     public void emptyControlMarkerIsTreatedAsContent() {
         x = new Node()
                 .name("Base")
+                .mergePolicy("append-only")
                 .items(a);
         y = new Node()
                 .name("Derived")
@@ -336,6 +339,19 @@ public class ListTest {
 
         Node resolved = merger.resolve(y, Limits.NO_LIMITS);
         assertEquals(2, resolved.getItems().size());
+    }
+
+    @Test
+    public void positionalIsDefaultMergePolicy() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(a, b, c);
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
     }
 
     private Node preprocessAndExtend(String doc) {

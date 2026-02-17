@@ -143,8 +143,10 @@ public class MergeReverserTest {
 
         String base = "name: Base\n" +
                       "list:\n" +
-                      "  - A\n" +
-                      "  - B\n" +
+                      "  mergePolicy: append-only\n" +
+                      "  items:\n" +
+                      "    - A\n" +
+                      "    - B\n" +
                       "map:\n" +
                       "  key1: value1\n" +
                       "  key2: value2";

@@ -133,6 +133,7 @@ public class NodeExtender {
         target.itemType(source.getItemType());
         target.keyType(source.getKeyType());
         target.valueType(source.getValueType());
+        target.mergePolicy(source.getMergePolicy());
         target.value(source.getValue());
         target.items(source.getItems());
         target.properties(source.getProperties());

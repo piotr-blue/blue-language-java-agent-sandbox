@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 
 public class Merger implements NodeResolver {
 
-    private static final String MERGE_POLICY_APPEND_ONLY = "append-only";
     private static final String MERGE_POLICY_POSITIONAL = "positional";
+    private static final String MERGE_POLICY_APPEND_ONLY = "append-only";
     private static final String LIST_CONTROL_PREVIOUS = "$previous";
     private static final String LIST_CONTROL_POS = "$pos";
 
@@ -97,7 +97,11 @@ public class Merger implements NodeResolver {
             return;
         }
 
-        String mergePolicy = target.getMergePolicy() == null ? MERGE_POLICY_APPEND_ONLY : target.getMergePolicy();
+        String mergePolicy = target.getMergePolicy() == null ? MERGE_POLICY_POSITIONAL : target.getMergePolicy();
+        if (!MERGE_POLICY_POSITIONAL.equals(mergePolicy) && !MERGE_POLICY_APPEND_ONLY.equals(mergePolicy)) {
+            throw new IllegalArgumentException("Unknown mergePolicy: " + mergePolicy);
+        }
+
         if (MERGE_POLICY_POSITIONAL.equals(mergePolicy) && effectiveSourceChildren.size() != targetChildren.size()) {
             throw new IllegalArgumentException(String.format(
                     "Positional mergePolicy requires the same number of items in subtype (%d) and supertype (%d).",

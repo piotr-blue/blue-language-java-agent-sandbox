@@ -53,6 +53,9 @@ public class MergeReverser {
                 start = fromType.getItems().size();
             }
             if (merged.getItems().size() > start) {
+                if (start > 0) {
+                    minimal.mergePolicy("append-only");
+                }
                 for (int i = start; i < merged.getItems().size(); i++) {
                     Node item = merged.getItems().get(i);
                     Node minimalItem = new Node();
