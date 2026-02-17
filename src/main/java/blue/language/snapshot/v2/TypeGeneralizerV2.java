@@ -92,15 +92,11 @@ public final class TypeGeneralizerV2 {
         Node current = root;
         for (String rawSegment : segments) {
             String segment = unescape(rawSegment);
-            if (segment.isEmpty()) {
-                continue;
-            }
-
-            if (isNumeric(segment)) {
+            if (isArrayIndexSegment(segment)) {
                 if (current.getItems() == null) {
                     return null;
                 }
-                int index = Integer.parseInt(segment);
+                int index = parseArrayIndex(segment);
                 if (index < 0 || index >= current.getItems().size()) {
                     return null;
                 }
@@ -147,10 +143,39 @@ public final class TypeGeneralizerV2 {
     }
 
     private String unescape(String segment) {
-        return segment.replace("~1", "/").replace("~0", "~");
+        if (segment == null || segment.isEmpty()) {
+            return segment;
+        }
+        StringBuilder decoded = new StringBuilder(segment.length());
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c != '~') {
+                decoded.append(c);
+                continue;
+            }
+            if (i + 1 >= segment.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+            char next = segment.charAt(++i);
+            if (next == '0') {
+                decoded.append('~');
+            } else if (next == '1') {
+                decoded.append('/');
+            } else {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+        }
+        return decoded.toString();
     }
 
-    private boolean isNumeric(String segment) {
+    private boolean isArrayIndexSegment(String segment) {
+        if (!isNonNegativeInteger(segment)) {
+            return false;
+        }
+        return "0".equals(segment) || segment.charAt(0) != '0';
+    }
+
+    private boolean isNonNegativeInteger(String segment) {
         if (segment.isEmpty()) {
             return false;
         }
@@ -160,5 +185,13 @@ public final class TypeGeneralizerV2 {
             }
         }
         return true;
+    }
+
+    private int parseArrayIndex(String segment) {
+        try {
+            return Integer.parseInt(segment);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 }
