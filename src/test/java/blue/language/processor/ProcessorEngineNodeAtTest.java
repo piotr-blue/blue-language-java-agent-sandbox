@@ -20,6 +20,29 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtSupportsArrayTraversalWithStrictIndexSemantics() {
+        Node root = new Node()
+                .properties("list", new Node()
+                        .items(
+                                new Node().value("zero"),
+                                new Node().value("one")
+                        ));
+
+        assertEquals("one", ProcessorEngine.nodeAt(root, "/list/1").getValue());
+        assertNull(ProcessorEngine.nodeAt(root, "/list/01"));
+    }
+
+    @Test
+    void nodeAtPrefersNumericPropertyOverArrayIndex() {
+        Node root = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"))
+                        .properties("0", new Node().value("property-zero")));
+
+        assertEquals("property-zero", ProcessorEngine.nodeAt(root, "/list/0").getValue());
+    }
+
+    @Test
     void nodeAtPreservesTrailingEmptySegments() {
         Node root = new Node().properties("scope", new Node().value("value"));
         assertNull(ProcessorEngine.nodeAt(root, "/scope/"));

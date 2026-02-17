@@ -12,6 +12,7 @@ import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -180,15 +181,27 @@ final class ProcessorEngine {
         String[] segments = normalizedPointer.substring(1).split("/", -1);
         Node current = root;
         for (String rawSegment : segments) {
-            String segment = unescapePointerSegment(rawSegment);
-            Map<String, Node> props = current.getProperties();
-            if (props == null) {
-                return null;
-            }
-            current = props.get(segment);
             if (current == null) {
                 return null;
             }
+            String segment = unescapePointerSegment(rawSegment);
+            Map<String, Node> props = current.getProperties();
+            if (props != null && props.containsKey(segment)) {
+                current = props.get(segment);
+                continue;
+            }
+
+            if (isArrayIndexSegment(segment)) {
+                int index = parseArrayIndex(segment);
+                List<Node> items = current.getItems();
+                if (items == null || index < 0 || index >= items.size()) {
+                    return null;
+                }
+                current = items.get(index);
+                continue;
+            }
+
+            return null;
         }
         return current;
     }
@@ -227,6 +240,27 @@ final class ProcessorEngine {
             }
         }
         return decoded.toString();
+    }
+
+    private static boolean isArrayIndexSegment(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return "0".equals(value) || value.charAt(0) != '0';
+    }
+
+    private static int parseArrayIndex(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
