@@ -103,4 +103,35 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
         assertTrue(box.getProperties().containsKey("01"));
         assertEquals("after", box.getProperties().get("01").getValue());
     }
+
+    @Test
+    void allowsEscapedPropertyPointerSegments() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("a/b", new Node().value("before"));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/a~1b", new Node().value("after")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        assertEquals("after", committed.resolvedRoot().toNode().getProperties().get("a/b").getValue());
+    }
+
+    @Test
+    void allowsTrailingEmptyPropertySegmentWhenKeyExists() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("scope", new Node().properties("", new Node().value("before")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/scope/", new Node().value("after")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        assertEquals("after",
+                committed.resolvedRoot().toNode().getProperties().get("scope").getProperties().get("").getValue());
+    }
 }
