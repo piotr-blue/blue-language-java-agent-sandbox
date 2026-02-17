@@ -326,7 +326,7 @@ final class ProcessorEngine {
         }
 
         boolean isScopeInactive(String scopePath) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             return cutOffScopes.contains(normalized)
                     || pendingTerminations.containsKey(normalized)
                     || runtime.isScopeTerminated(normalized);
@@ -344,7 +344,7 @@ final class ProcessorEngine {
                                ContractBundle bundle,
                                ScopeRuntimeContext.TerminationKind kind,
                                String reason) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             if (pendingTerminations.containsKey(normalized) || runtime.isScopeTerminated(normalized)) {
                 return;
             }
@@ -353,21 +353,21 @@ final class ProcessorEngine {
         }
 
         ContractBundle bundleForScope(String scopePath) {
-            return bundles.get(ProcessorEngine.normalizeScope(scopePath));
+            return bundles.get(PointerUtils.normalizeScope(scopePath));
         }
 
         void recordPendingTermination(String scopePath,
                                       ScopeRuntimeContext.TerminationKind kind,
                                       String reason) {
-            pendingTerminations.put(ProcessorEngine.normalizeScope(scopePath), new PendingTermination(kind, reason));
+            pendingTerminations.put(PointerUtils.normalizeScope(scopePath), new PendingTermination(kind, reason));
         }
 
         void clearPendingTermination(String scopePath) {
-            pendingTerminations.remove(ProcessorEngine.normalizeScope(scopePath));
+            pendingTerminations.remove(PointerUtils.normalizeScope(scopePath));
         }
 
         void markCutOff(String scopePath) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             if (cutOffScopes.add(normalized)) {
                 ScopeRuntimeContext context = runtime.existingScope(normalized);
                 if (context != null) {
@@ -377,11 +377,11 @@ final class ProcessorEngine {
         }
 
         String normalizeScope(String scopePath) {
-            return ProcessorEngine.normalizeScope(scopePath);
+            return PointerUtils.normalizeScope(scopePath);
         }
 
         String resolvePointer(String scopePath, String relativePointer) {
-            return ProcessorEngine.resolvePointer(scopePath, relativePointer);
+            return PointerUtils.resolvePointer(scopePath, relativePointer);
         }
 
         String fatalReason(Throwable throwable, String defaultReason) {
