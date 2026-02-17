@@ -68,6 +68,7 @@ public class PathLimits implements Limits {
     public void enterPathSegment(String pathSegment, Node noe) {
         String segment = pathSegment == null ? "" : pathSegment;
         if (segment.startsWith("/")) {
+            validatePointerEscapes(segment);
             currentPath.push(segment.replaceAll("^/+", ""));
             return;
         }
