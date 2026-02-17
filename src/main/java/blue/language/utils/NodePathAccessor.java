@@ -19,17 +19,14 @@ public class NodePathAccessor {
     }
 
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        path = PointerUtils.normalizePointer(path);
-
-        if (path.equals("/")) {
+        String[] segments = PointerUtils.splitPointerSegments(path);
+        if (segments.length == 0) {
             if (!resolveFinalLink) {
                 return node;
             }
             Node resolved = linkingProvider != null ? link(node, linkingProvider) : node;
             return resolved.getValue() != null ? resolved.getValue() : resolved;
         }
-
-        String[] segments = PointerUtils.splitPointerSegments(path);
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
