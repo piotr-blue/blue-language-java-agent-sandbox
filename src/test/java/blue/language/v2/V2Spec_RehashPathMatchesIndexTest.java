@@ -118,4 +118,32 @@ class V2Spec_RehashPathMatchesIndexTest {
         assertEquals(propertyHash, snapshot.blueIdsByPointer().blueIdAt("/0"));
         assertNotEquals(listItemHash, propertyHash);
     }
+
+    @Test
+    void rehashPathUsesBuiltInTypeSegmentWhenNoPropertyCollisionExists() {
+        Blue blue = new Blue();
+        Node withoutTypePropertyCollision = new Node()
+                .name("Root")
+                .type(new Node().name("CoreType"));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(withoutTypePropertyCollision);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String typeHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getType());
+        assertEquals(typeHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/type"));
+        assertEquals(typeHash, snapshot.blueIdsByPointer().blueIdAt("/type"));
+    }
+
+    @Test
+    void rehashPathRejectsOutOfBoundsListIndex() {
+        Blue blue = new Blue();
+        Node withItems = new Node()
+                .name("Root")
+                .items(new Node().name("only-item"));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(withItems);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/1"));
+    }
 }
