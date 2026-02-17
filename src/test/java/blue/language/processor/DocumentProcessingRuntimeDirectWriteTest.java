@@ -36,4 +36,44 @@ class DocumentProcessingRuntimeDirectWriteTest {
         assertEquals("slash", document.getProperties().get("a/b").getValue());
         assertEquals("tilde", document.getProperties().get("a~b").getValue());
     }
+
+    @Test
+    void directWriteRejectsNonNumericArraySegments() {
+        Node document = new Node().properties("list", new Node().items(new Node().value("x")));
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        assertThrows(IllegalStateException.class, () -> runtime.directWrite("/list/key", new Node().value("y")));
+        assertThrows(IllegalStateException.class, () -> runtime.directWrite("/list/01", new Node().value("y")));
+    }
+
+    @Test
+    void directWritePrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("0", new Node().value("property-zero"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.directWrite("/mixed/0", new Node().value("property-updated"));
+
+        Node mixedAfter = document.getProperties().get("mixed");
+        assertEquals("property-updated", mixedAfter.getProperties().get("0").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
+
+    @Test
+    void directWriteUsesPropertyBranchForNonNumericLeafOnMixedParent() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.directWrite("/mixed/key", new Node().value("property-value"));
+
+        Node mixedAfter = document.getProperties().get("mixed");
+        assertEquals("property-value", mixedAfter.getProperties().get("key").getValue());
+        assertEquals("keep", mixedAfter.getProperties().get("existing").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
 }

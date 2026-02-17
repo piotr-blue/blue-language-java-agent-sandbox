@@ -62,28 +62,43 @@ final class PatchEngine {
         Node parent = ctx.parent;
         String leaf = ctx.leaf;
 
+        Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+        if (existingProperties != null && existingProperties.containsKey(leaf)) {
+            if (value == null) {
+                existingProperties.remove(leaf);
+            } else {
+                ensureMutableProperties(parent).put(leaf, value.clone());
+            }
+            return;
+        }
+
         List<Node> items = parent.getItems();
         if (items != null) {
             if ("-".equals(leaf)) {
                 throw new IllegalArgumentException("Direct write does not support append token '-' for path " + normalized);
             }
-            List<Node> mutable = ensureMutableItems(parent);
-            int index = parseArrayIndex(leaf, normalized);
-            if (value == null) {
-                if (index < 0 || index >= mutable.size()) {
-                    return;
-                }
-                mutable.remove(index);
-            } else {
-                if (index == mutable.size()) {
-                    mutable.add(value.clone());
-                } else if (index >= 0 && index < mutable.size()) {
-                    mutable.set(index, value.clone());
+            if (isArrayIndexSegment(leaf)) {
+                List<Node> mutable = ensureMutableItems(parent);
+                int index = parseArrayIndex(leaf, normalized);
+                if (value == null) {
+                    if (index < 0 || index >= mutable.size()) {
+                        return;
+                    }
+                    mutable.remove(index);
                 } else {
-                    throw new IllegalStateException("Array index out of bounds for direct write: " + normalized);
+                    if (index == mutable.size()) {
+                        mutable.add(value.clone());
+                    } else if (index >= 0 && index < mutable.size()) {
+                        mutable.set(index, value.clone());
+                    } else {
+                        throw new IllegalStateException("Array index out of bounds for direct write: " + normalized);
+                    }
                 }
+                return;
             }
-            return;
+            if (existingProperties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + normalized);
+            }
         }
 
         Map<String, Node> properties = ensureMutableProperties(parent);
