@@ -25,7 +25,7 @@ public class NodeToPathLimitsConverter {
 
         if (node.getProperties() != null) {
             for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
-                String newPath = currentPath + "/" + escapeJsonPointerSegment(entry.getKey());
+                String newPath = currentPath + "/" + PointerUtils.escapePointerSegment(entry.getKey());
                 traverseNode(entry.getValue(), newPath, builder);
             }
         }
@@ -38,7 +38,4 @@ public class NodeToPathLimitsConverter {
         }
     }
 
-    private static String escapeJsonPointerSegment(String segment) {
-        return PointerUtils.escapePointerSegment(segment);
-    }
 }

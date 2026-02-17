@@ -75,7 +75,7 @@ public final class SnapshotFactoryV2 {
         Map<String, Node> properties = node.getProperties();
         if (properties != null) {
             for (Map.Entry<String, Node> entry : properties.entrySet()) {
-                indexNode(append(pointer, escapeJsonPointerSegment(entry.getKey())), entry.getValue(), ids);
+                indexNode(append(pointer, PointerUtils.escapePointerSegment(entry.getKey())), entry.getValue(), ids);
             }
         }
     }
@@ -93,7 +93,4 @@ public final class SnapshotFactoryV2 {
         return pointer + "/" + segment;
     }
 
-    private String escapeJsonPointerSegment(String segment) {
-        return PointerUtils.escapePointerSegment(segment);
-    }
 }
