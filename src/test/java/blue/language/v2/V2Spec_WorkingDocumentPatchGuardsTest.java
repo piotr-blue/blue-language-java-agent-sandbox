@@ -144,6 +144,25 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
     }
 
     @Test
+    void numericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("mixed", new Node()
+                        .items(new Node().value("item-zero"), new Node().value("item-one"))
+                        .properties("existing", new Node().value("keep")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/mixed/1", new Node().value("item-one-updated")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
+        assertEquals("item-one-updated", mixed.getItems().get(1).getValue());
+        assertEquals("keep", mixed.getProperties().get("existing").getValue());
+    }
+
+    @Test
     void rejectsNonNumericArrayIndexSegments() {
         Blue blue = new Blue();
         Node node = blue.yamlToNode(

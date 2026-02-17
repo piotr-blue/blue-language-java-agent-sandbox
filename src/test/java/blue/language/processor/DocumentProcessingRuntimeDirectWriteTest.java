@@ -78,6 +78,21 @@ class DocumentProcessingRuntimeDirectWriteTest {
     }
 
     @Test
+    void directWriteNumericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"), new Node().value("item-one"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.directWrite("/mixed/1", new Node().value("item-one-updated"));
+
+        Node mixedAfter = document.getProperties().get("mixed");
+        assertEquals("item-one-updated", mixedAfter.getItems().get(1).getValue());
+        assertEquals("keep", mixedAfter.getProperties().get("existing").getValue());
+    }
+
+    @Test
     void directWriteUsesPropertyBranchForNonNumericLeafOnMixedParent() {
         Node mixed = new Node()
                 .items(new Node().value("item-zero"))
