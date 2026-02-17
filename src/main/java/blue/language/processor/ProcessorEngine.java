@@ -149,7 +149,7 @@ final class ProcessorEngine {
 
     static Node nodeAt(Node root, String pointer) {
         Objects.requireNonNull(root, "root");
-        String normalizedPointer = normalizeNodeAtPointer(pointer);
+        String normalizedPointer = PointerUtils.normalizePointer(pointer);
         if ("/".equals(normalizedPointer)) {
             return root;
         }
@@ -200,10 +200,6 @@ final class ProcessorEngine {
             return null;
         }
         return current;
-    }
-
-    private static String normalizeNodeAtPointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
