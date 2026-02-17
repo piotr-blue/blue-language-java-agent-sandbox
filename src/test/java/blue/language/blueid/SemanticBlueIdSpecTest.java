@@ -3,9 +3,11 @@ package blue.language.blueid;
 import blue.language.Blue;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
+import blue.language.provider.BasicNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -134,6 +136,27 @@ class SemanticBlueIdSpecTest {
         assertEquals(
                 BlueIdCalculator.calculateSemanticBlueId(compact),
                 BlueIdCalculator.calculateSemanticBlueId(withPosControl)
+        );
+    }
+
+    @Test
+    void wrappedListReferenceInsideItemsIsDistinctFromExpandedItems() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        Blue blue = new Blue(provider);
+
+        Node a = blue.yamlToNode("value: A\n");
+        Node b = blue.yamlToNode("value: B\n");
+        provider.addSingleNodes(a, b);
+        provider.addListAndItsItems(Arrays.asList(a, b));
+
+        String wrappedListBlueId = BlueIdCalculator.calculateSemanticBlueId(Arrays.asList(a, b));
+
+        Node expandedAuthoring = new Node().items(a.clone(), b.clone());
+        Node wrappedAuthoring = new Node().items(new Node().blueId(wrappedListBlueId));
+
+        assertNotEquals(
+                blue.calculateSemanticBlueId(expandedAuthoring),
+                blue.calculateSemanticBlueId(wrappedAuthoring)
         );
     }
 }
