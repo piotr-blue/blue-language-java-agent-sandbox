@@ -289,7 +289,11 @@ public class Node implements Cloneable {
     public Integer getAsInteger(String path) {
         Object value = get(path);
         if (value instanceof BigInteger) {
-            return ((BigInteger) value).intValue();
+            try {
+                return ((BigInteger) value).intValueExact();
+            } catch (ArithmeticException ex) {
+                throw new IllegalArgumentException("Value at path " + path + " is out of Integer range: " + value, ex);
+            }
         } else if (value instanceof BigDecimal) {
             BigDecimal bdValue = (BigDecimal) value;
             if (bdValue.scale() == 0) {
