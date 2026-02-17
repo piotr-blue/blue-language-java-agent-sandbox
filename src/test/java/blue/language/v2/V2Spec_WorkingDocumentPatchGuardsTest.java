@@ -134,4 +134,26 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
         assertEquals("after",
                 committed.resolvedRoot().toNode().getProperties().get("scope").getProperties().get("").getValue());
     }
+
+    @Test
+    void rejectsPatchPathWithoutLeadingSlash() {
+        Blue blue = new Blue();
+        Node node = blue.yamlToNode("name: Guarded\nx: 1\n");
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        assertThrows(IllegalArgumentException.class,
+                () -> workingDocument.applyPatch(JsonPatch.replace("x", new Node().value(2))));
+    }
+
+    @Test
+    void rejectsEmptyPatchPath() {
+        Blue blue = new Blue();
+        Node node = blue.yamlToNode("name: Guarded\nx: 1\n");
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        assertThrows(IllegalArgumentException.class,
+                () -> workingDocument.applyPatch(JsonPatch.replace("", new Node().value(2))));
+    }
 }

@@ -46,7 +46,7 @@ public final class WorkingDocumentV2 {
         Objects.requireNonNull(patch, "patch");
 
         Node resolved = current.resolvedRoot().toNode();
-        String normalizedPath = PointerUtils.normalizePointer(patch.getPath());
+        String normalizedPath = normalizeAndValidatePatchPointer(patch.getPath());
         validateMutationPath(normalizedPath, patch.getOp());
         applyPatchInPlace(resolved, patch, normalizedPath);
 
@@ -54,6 +54,13 @@ public final class WorkingDocumentV2 {
         current = snapshotFactory.fromResolved(blue, resolved, SnapshotTrustV2.BLIND_TRUST_RESOLVED);
         lastPatchReport = new PatchReport(Collections.singletonList(normalizedPath), generalizationReport);
         return lastPatchReport;
+    }
+
+    private String normalizeAndValidatePatchPointer(String path) {
+        if (path == null || path.isEmpty() || path.charAt(0) != '/') {
+            throw new IllegalArgumentException("Patch path must be a JSON pointer starting with '/': " + path);
+        }
+        return PointerUtils.normalizePointer(path);
     }
 
     public ResolvedSnapshotV2 commit() {
