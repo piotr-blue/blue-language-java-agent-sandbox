@@ -42,6 +42,9 @@ public class ConstraintsVerifier implements MergingProcessor {
         verifyMinItems(constraints.getMinItemsValue(), target.getItems());
         verifyMaxItems(constraints.getMaxItemsValue(), target.getItems());
         verifyUniqueItems(constraints.getUniqueItemsValue(), target.getItems());
+        verifyMinFields(constraints.getMinFieldsValue(), target.getProperties());
+        verifyMaxFields(constraints.getMaxFieldsValue(), target.getProperties());
+        verifyEnum(constraints.getEnumValues(), target, nodeProvider);
         verifyOptions(constraints.getOptions(), target, nodeProvider);
     }
 
@@ -150,6 +153,43 @@ public class ConstraintsVerifier implements MergingProcessor {
                     .size();
             if (items.size() != uniqueItemsCount)
                 throw new IllegalArgumentException("Unique items are required, but some items are identical. Found items: " + items);
+        }
+    }
+
+    private void verifyMinFields(Integer minFields, java.util.Map<String, Node> properties) {
+        if (minFields != null && (properties == null || properties.size() < minFields)) {
+            throw new IllegalArgumentException("Number of fields " + (properties != null ? properties.size() : 0) +
+                    " is less than the minimum required fields of " + minFields + ".");
+        }
+    }
+
+    private void verifyMaxFields(Integer maxFields, java.util.Map<String, Node> properties) {
+        if (maxFields != null && properties != null && properties.size() > maxFields) {
+            throw new IllegalArgumentException("Number of fields " + properties.size() +
+                    " is greater than the maximum allowed fields of " + maxFields + ".");
+        }
+    }
+
+    private void verifyEnum(List<Node> enumValues, Node node, NodeProvider nodeProvider) {
+        if (enumValues == null || enumValues.isEmpty()) {
+            return;
+        }
+
+        Node comparableNode = node.clone().constraints(null);
+        String targetBlueId = nodeProvider != null
+                ? BlueIdCalculator.calculateSemanticBlueId(comparableNode, nodeProvider)
+                : BlueIdCalculator.calculateSemanticBlueId(comparableNode);
+
+        boolean matched = enumValues.stream()
+                .anyMatch(enumNode -> {
+                    String enumBlueId = nodeProvider != null
+                            ? BlueIdCalculator.calculateSemanticBlueId(enumNode, nodeProvider)
+                            : BlueIdCalculator.calculateSemanticBlueId(enumNode);
+                    return enumBlueId.equals(targetBlueId);
+                });
+
+        if (!matched) {
+            throw new IllegalArgumentException("Node value is not present in enum constraints.");
         }
     }
 

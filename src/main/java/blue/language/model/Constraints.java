@@ -1,6 +1,7 @@
 package blue.language.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import java.math.BigDecimal;
@@ -27,6 +28,10 @@ public class Constraints implements Cloneable {
     private Node minItems;
     private Node maxItems;
     private Node uniqueItems;
+    private Node minFields;
+    private Node maxFields;
+    @JsonProperty("enum")
+    private List<Node> enumValues;
     private List<Node> options;
 
     public Node getRequired() {
@@ -79,6 +84,19 @@ public class Constraints implements Cloneable {
 
     public Node getUniqueItems() {
         return uniqueItems;
+    }
+
+    public Node getMinFields() {
+        return minFields;
+    }
+
+    public Node getMaxFields() {
+        return maxFields;
+    }
+
+    @JsonProperty("enum")
+    public List<Node> getEnumValues() {
+        return enumValues;
     }
 
     public List<Node> getOptions() {
@@ -137,6 +155,14 @@ public class Constraints implements Cloneable {
 
     public Boolean getUniqueItemsValue() {
         return uniqueItems == null ? null : getBooleanFromObject(uniqueItems.getValue());
+    }
+
+    public Integer getMinFieldsValue() {
+        return minFields == null ? null : getIntegerFromObject(minFields.getValue());
+    }
+
+    public Integer getMaxFieldsValue() {
+        return maxFields == null ? null : getIntegerFromObject(maxFields.getValue());
     }
 
     public Constraints required(Node required) {
@@ -204,6 +230,22 @@ public class Constraints implements Cloneable {
 
     public Constraints uniqueItems(Node uniqueItems) {
         this.uniqueItems = uniqueItems;
+        return this;
+    }
+
+    public Constraints minFields(Node minFields) {
+        this.minFields = minFields;
+        return this;
+    }
+
+    public Constraints maxFields(Node maxFields) {
+        this.maxFields = maxFields;
+        return this;
+    }
+
+    @JsonProperty("enum")
+    public Constraints enumValues(List<Node> enumValues) {
+        this.enumValues = enumValues;
         return this;
     }
 
@@ -288,6 +330,16 @@ public class Constraints implements Cloneable {
         return this;
     }
 
+    public Constraints minFields(Integer minFields) {
+        this.minFields = new Node().value(BigInteger.valueOf(minFields));
+        return this;
+    }
+
+    public Constraints maxFields(Integer maxFields) {
+        this.maxFields = new Node().value(BigInteger.valueOf(maxFields));
+        return this;
+    }
+
     @Override
     public Constraints clone() {
         try {
@@ -305,6 +357,8 @@ public class Constraints implements Cloneable {
             if (this.minItems != null) cloned.minItems = this.minItems.clone();
             if (this.maxItems != null) cloned.maxItems = this.maxItems.clone();
             if (this.uniqueItems != null) cloned.uniqueItems = this.uniqueItems.clone();
+            if (this.minFields != null) cloned.minFields = this.minFields.clone();
+            if (this.maxFields != null) cloned.maxFields = this.maxFields.clone();
 
             if (this.pattern != null) {
                 cloned.pattern = this.pattern.stream()
@@ -313,6 +367,11 @@ public class Constraints implements Cloneable {
             }
             if (this.options != null) {
                 cloned.options = this.options.stream()
+                        .map(Node::clone)
+                        .collect(Collectors.toList());
+            }
+            if (this.enumValues != null) {
+                cloned.enumValues = this.enumValues.stream()
                         .map(Node::clone)
                         .collect(Collectors.toList());
             }
@@ -339,6 +398,9 @@ public class Constraints implements Cloneable {
                 ", minItems=" + getMinItemsValue() +
                 ", maxItems=" + getMaxItemsValue() +
                 ", uniqueItems=" + getUniqueItemsValue() +
+                ", minFields=" + getMinFieldsValue() +
+                ", maxFields=" + getMaxFieldsValue() +
+                ", enumValues=" + enumValues +
                 ", options=" + options +
                 '}';
     }

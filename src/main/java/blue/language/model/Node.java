@@ -103,6 +103,10 @@ public class Node implements Cloneable {
         return constraints;
     }
 
+    public Constraints getSchema() {
+        return constraints;
+    }
+
     public Node getBlue() {
         return blue;
     }
@@ -253,6 +257,11 @@ public class Node implements Cloneable {
 
     public Node constraints(Constraints constraints) {
         this.constraints = constraints;
+        return this;
+    }
+
+    public Node schema(Constraints schema) {
+        this.constraints = schema;
         return this;
     }
 

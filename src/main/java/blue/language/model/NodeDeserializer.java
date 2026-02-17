@@ -71,6 +71,9 @@ public class NodeDeserializer extends StdDeserializer<Node> {
                     case OBJECT_CONSTRAINTS:
                         obj.constraints(handleConstraints(value));
                         break;
+                    case OBJECT_SCHEMA:
+                        obj.constraints(handleConstraints(value));
+                        break;
                     default:
                         properties.put(key, handleNode(value));
                         break;

@@ -183,4 +183,28 @@ public class NodeDeserializerTest {
         assertEquals("description2", constraints.getOptions().get(1).getDescription());
     }
 
+    @Test
+    public void testSchemaAlias() throws Exception {
+        String doc = "name: name\n" +
+                     "schema:\n" +
+                     "  minLength: 2\n" +
+                     "  maxLength: 8\n" +
+                     "  minFields: 1\n" +
+                     "  maxFields: 3\n" +
+                     "  enum:\n" +
+                     "    - value: hello\n" +
+                     "    - value: world\n";
+        Node node = YAML_MAPPER.readValue(doc, Node.class);
+
+        Constraints constraints = node.getConstraints();
+        assertNotNull(constraints);
+        assertEquals((Integer) 2, constraints.getMinLengthValue());
+        assertEquals((Integer) 8, constraints.getMaxLengthValue());
+        assertEquals((Integer) 1, constraints.getMinFieldsValue());
+        assertEquals((Integer) 3, constraints.getMaxFieldsValue());
+        assertEquals(2, constraints.getEnumValues().size());
+        assertEquals("hello", constraints.getEnumValues().get(0).getValue());
+        assertEquals("world", constraints.getEnumValues().get(1).getValue());
+    }
+
 }

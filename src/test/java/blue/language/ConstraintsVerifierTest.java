@@ -239,6 +239,56 @@ public class ConstraintsVerifierTest {
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
     }
 
+    @Test
+    public void testMinFieldsPositive() throws Exception {
+        constraints.minFields(1);
+        node.properties("a", new Node().value("x"));
+        merger.resolve(node);
+    }
+
+    @Test
+    public void testMinFieldsNegative() throws Exception {
+        constraints.minFields(2);
+        node.properties("a", new Node().value("x"));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testMaxFieldsPositive() throws Exception {
+        constraints.maxFields(2);
+        node.properties("a", new Node().value("x"));
+        node.properties("b", new Node().value("y"));
+        merger.resolve(node);
+    }
+
+    @Test
+    public void testMaxFieldsNegative() throws Exception {
+        constraints.maxFields(1);
+        node.properties("a", new Node().value("x"));
+        node.properties("b", new Node().value("y"));
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
+    @Test
+    public void testEnumPositive() throws Exception {
+        constraints.enumValues(Arrays.asList(
+                new Node().value("USD"),
+                new Node().value("EUR")
+        ));
+        node.value("USD");
+        merger.resolve(node);
+    }
+
+    @Test
+    public void testEnumNegative() throws Exception {
+        constraints.enumValues(Arrays.asList(
+                new Node().value("USD"),
+                new Node().value("EUR")
+        ));
+        node.value("JPY");
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(node));
+    }
+
 
 //
 //    @Test

@@ -3,12 +3,16 @@ package blue.language.merge.processor;
 import blue.language.merge.MergingProcessor;
 import blue.language.NodeProvider;
 import blue.language.merge.NodeResolver;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.utils.LeastCommonMultiple;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -40,6 +44,9 @@ public class ConstraintsPropagator implements MergingProcessor {
         propagateMinItems(sourceConstraints, targetConstraints);
         propagateMaxItems(sourceConstraints, targetConstraints);
         propagateUniqueItems(sourceConstraints, targetConstraints);
+        propagateMinFields(sourceConstraints, targetConstraints);
+        propagateMaxFields(sourceConstraints, targetConstraints);
+        propagateEnum(sourceConstraints, targetConstraints);
         propagateOptions(sourceConstraints, targetConstraints);
     }
 
@@ -135,7 +142,49 @@ public class ConstraintsPropagator implements MergingProcessor {
         propagateBoolean(source.getUniqueItemsValue(), target::getUniqueItemsValue, target::uniqueItems, true);
     }
 
+    private void propagateMinFields(Constraints source, Constraints target) {
+        propagateMinValue(source.getMinFieldsValue(), target::getMinFieldsValue, target::minFields);
+    }
+
+    private void propagateMaxFields(Constraints source, Constraints target) {
+        propagateMaxValue(source.getMaxFieldsValue(), target::getMaxFieldsValue, target::maxFields);
+    }
+
+    private void propagateEnum(Constraints source, Constraints target) {
+        List<Node> sourceEnum = source.getEnumValues();
+        if (sourceEnum == null) {
+            return;
+        }
+
+        List<Node> targetEnum = target.getEnumValues();
+        if (targetEnum == null) {
+            target.enumValues(cloneNodes(sourceEnum));
+            return;
+        }
+
+        Set<String> targetBlueIds = new HashSet<String>();
+        targetEnum.forEach(node -> targetBlueIds.add(BlueIdCalculator.calculateSemanticBlueId(node)));
+
+        List<Node> intersection = new ArrayList<Node>();
+        sourceEnum.forEach(node -> {
+            if (targetBlueIds.contains(BlueIdCalculator.calculateSemanticBlueId(node))) {
+                intersection.add(node.clone());
+            }
+        });
+
+        if (intersection.isEmpty()) {
+            throw new IllegalArgumentException("Constraints enum intersection is empty.");
+        }
+        target.enumValues(intersection);
+    }
+
     private void propagateOptions(Constraints source, Constraints target) {
+    }
+
+    private List<Node> cloneNodes(List<Node> nodes) {
+        List<Node> clones = new ArrayList<Node>(nodes.size());
+        nodes.forEach(node -> clones.add(node.clone()));
+        return clones;
     }
 
 }
