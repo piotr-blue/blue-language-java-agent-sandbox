@@ -25,7 +25,7 @@ public final class SnapshotFactoryV2 {
         Objects.requireNonNull(trust, "trust");
 
         Node resolvedNode = trust == SnapshotTrustV2.BLIND_TRUST_RESOLVED
-                ? resolved.clone()
+                ? resolved
                 : blue.resolve(resolved.clone());
         Node canonical = blue.reverse(resolvedNode.clone());
         return buildSnapshot(canonical, resolvedNode);
