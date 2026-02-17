@@ -87,4 +87,33 @@ final class ProcessorExecutionContextTest {
         assertThrows(IllegalArgumentException.class, () -> context.documentAt("/x~"));
         assertThrows(IllegalArgumentException.class, () -> context.documentContains("/x~2"));
     }
+
+    @Test
+    void documentHelpersSupportTrailingEmptyPropertySegments() {
+        Node document = new Node()
+                .properties("scope", new Node().properties("", new Node().value("empty-key")));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("empty-key", context.documentAt("/scope/").getValue());
+        assertTrue(context.documentContains("/scope/"));
+    }
+
+    @Test
+    void documentHelpersPreferNumericPropertyOverListIndex() {
+        Node document = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"))
+                        .properties("0", new Node().value("property-zero")));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("property-zero", context.documentAt("/list/0").getValue());
+    }
 }
