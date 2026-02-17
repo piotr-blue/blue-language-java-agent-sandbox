@@ -380,6 +380,24 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsNonPointer() {
+        String yaml = "name: Non Pointer Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: x\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("invalid path"));
+    }
+
+    @Test
     void initializationFailsWhenEmbeddedNodeChannelPathIsMalformed() {
         String yaml = "name: Bad Embedded Channel Path\n" +
                 "contracts:\n" +
@@ -387,6 +405,24 @@ class DocumentProcessorInitializationTest {
                 "    type:\n" +
                 "      blueId: EmbeddedNodeChannel\n" +
                 "    childPath: /child~\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("invalid childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsNonPointer() {
+        String yaml = "name: Non Pointer Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n" +
+                "    childPath: child\n";
 
         Blue blue = new Blue();
         Node document = blue.yamlToNode(yaml);
