@@ -82,7 +82,8 @@ final class ContractLoader {
                     "DocumentUpdateChannel",
                     key,
                     scopePath,
-                    "path"));
+                    "path",
+                    true));
             return;
         }
         if (contract instanceof EmbeddedNodeChannel) {
@@ -91,7 +92,8 @@ final class ContractLoader {
                     "EmbeddedNodeChannel",
                     key,
                     scopePath,
-                    "childPath"));
+                    "childPath",
+                    true));
         }
     }
 
@@ -99,8 +101,13 @@ final class ContractLoader {
                                             String contractType,
                                             String key,
                                             String scopePath,
-                                            String fieldName) {
+                                            String fieldName,
+                                            boolean required) {
         if (pointer == null) {
+            if (required) {
+                throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
+                        + " is missing required " + fieldName);
+            }
             return pointer;
         }
         String trimmed = pointer.trim();

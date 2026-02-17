@@ -416,6 +416,23 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsMissing() {
+        String yaml = "name: Missing Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("missing required path"));
+    }
+
+    @Test
     void initializationFailsWhenEmbeddedNodeChannelPathIsBlank() {
         String yaml = "name: Blank Embedded Channel Path\n" +
                 "contracts:\n" +
@@ -431,6 +448,23 @@ class DocumentProcessorInitializationTest {
                 () -> blue.initializeDocument(document));
         assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
         assertTrue(ex.getMessage().contains("blank childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsMissing() {
+        String yaml = "name: Missing Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("missing required childPath"));
     }
 
     @Test
