@@ -2,12 +2,10 @@ package blue.language.v2;
 
 import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Node;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-@Disabled("Enabled in Phase 2 when V2 list hashing semantics are implemented")
 class V2Spec_ListHashingDoesNotCollapseSingletonTest {
 
     @Test
