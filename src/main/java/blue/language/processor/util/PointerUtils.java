@@ -16,6 +16,7 @@ public final class PointerUtils {
         if (result.charAt(0) != '/') {
             result = "/" + result;
         }
+        validatePointerEscapes(result);
         return result;
     }
 
@@ -27,6 +28,7 @@ public final class PointerUtils {
         if (result.charAt(0) != '/') {
             result = "/" + result;
         }
+        validatePointerEscapes(result);
         return result;
     }
 
@@ -80,16 +82,33 @@ public final class PointerUtils {
         if ("/".equals(normalizedScope)) {
             return normalizedAbsolute;
         }
-        if (!normalizedAbsolute.startsWith(normalizedScope)) {
-            return normalizedAbsolute;
-        }
         if (normalizedAbsolute.length() == normalizedScope.length()) {
             return "/";
+        }
+        String prefix = normalizedScope + "/";
+        if (!normalizedAbsolute.startsWith(prefix)) {
+            return normalizedAbsolute;
         }
         String remainder = normalizedAbsolute.substring(normalizedScope.length());
         if (remainder.isEmpty()) {
             return "/";
         }
         return remainder.startsWith("/") ? remainder : "/" + remainder;
+    }
+
+    private static void validatePointerEscapes(String pointer) {
+        for (int i = 1; i < pointer.length(); i++) {
+            char c = pointer.charAt(i);
+            if (c != '~') {
+                continue;
+            }
+            if (i + 1 >= pointer.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
+            }
+            char next = pointer.charAt(++i);
+            if (next != '0' && next != '1') {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
+            }
+        }
     }
 }
