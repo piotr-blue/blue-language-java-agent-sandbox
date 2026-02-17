@@ -9,25 +9,11 @@ public final class PointerUtils {
     }
 
     public static String normalizeScope(String scopePath) {
-        if (scopePath == null || scopePath.isEmpty()) {
-            return "/";
-        }
-        if (scopePath.charAt(0) != '/') {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + scopePath);
-        }
-        validatePointerEscapes(scopePath);
-        return scopePath;
+        return normalizeOptionalPointer(scopePath);
     }
 
     public static String normalizePointer(String pointer) {
-        if (pointer == null || pointer.isEmpty()) {
-            return "/";
-        }
-        if (pointer.charAt(0) != '/') {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
-        }
-        validatePointerEscapes(pointer);
-        return pointer;
+        return normalizeOptionalPointer(pointer);
     }
 
     public static String normalizeRequiredPointer(String pointer, String argumentName) {
@@ -204,5 +190,16 @@ public final class PointerUtils {
                 throw new IllegalArgumentException("Invalid JSON pointer escape in: " + pointer);
             }
         }
+    }
+
+    private static String normalizeOptionalPointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
+        validatePointerEscapes(pointer);
+        return pointer;
     }
 }
