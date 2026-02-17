@@ -18,14 +18,31 @@ public class ProcessEmbedded extends MarkerContract {
     public void setPaths(List<String> newPaths) {
         paths.clear();
         if (newPaths != null) {
-            paths.addAll(newPaths);
+            for (String path : newPaths) {
+                String normalized = normalizePath(path);
+                if (normalized != null) {
+                    paths.add(normalized);
+                }
+            }
         }
     }
 
     public ProcessEmbedded addPath(String path) {
-        if (path != null) {
-            paths.add(path);
+        String normalized = normalizePath(path);
+        if (normalized != null) {
+            paths.add(normalized);
         }
         return this;
+    }
+
+    private String normalizePath(String path) {
+        if (path == null) {
+            return null;
+        }
+        String trimmed = path.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed;
     }
 }
