@@ -5,7 +5,6 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -70,7 +69,7 @@ public final class WorkingDocumentV2 {
             throw new IllegalArgumentException("Root patch is not supported in WorkingDocumentV2");
         }
 
-        List<String> segments = splitPointer(normalizedPath);
+        List<String> segments = PointerUtils.splitPointerSegmentsList(normalizedPath);
         Node parent = resolveParent(root, segments, patch.getOp() != JsonPatch.Op.REMOVE, normalizedPath);
         String leaf = segments.get(segments.size() - 1);
 
@@ -90,7 +89,7 @@ public final class WorkingDocumentV2 {
     }
 
     private void validateMutationPath(String normalizedPath, JsonPatch.Op op) {
-        List<String> segments = splitPointer(normalizedPath);
+        List<String> segments = PointerUtils.splitPointerSegmentsList(normalizedPath);
         for (int i = 0; i < segments.size(); i++) {
             String segment = segments.get(i);
             boolean last = i == segments.size() - 1;
@@ -264,15 +263,6 @@ public final class WorkingDocumentV2 {
             throw new IllegalStateException("Path does not exist: " + path);
         }
         return child;
-    }
-
-    private List<String> splitPointer(String path) {
-        String[] parts = PointerUtils.splitPointerSegments(path);
-        List<String> result = new ArrayList<String>(parts.length);
-        for (String part : parts) {
-            result.add(part);
-        }
-        return result;
     }
 
     private Map<String, Node> ensureMutableProperties(Node node) {
