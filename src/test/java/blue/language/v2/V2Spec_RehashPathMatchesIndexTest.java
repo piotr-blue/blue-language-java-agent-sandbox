@@ -26,6 +26,7 @@ class V2Spec_RehashPathMatchesIndexTest {
             )
             .properties("a/b", new Node().value("slash"))
             .properties("a~b", new Node().value("tilde"))
+            .properties("a~/b", new Node().value("tilde-and-slash"))
             .properties("type", new Node().value("property-overrides-type-segment"));
 
     @Test
@@ -111,6 +112,16 @@ class V2Spec_RehashPathMatchesIndexTest {
 
         String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a~b"));
         assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~0b"));
+    }
+
+    @Test
+    void rehashPathResolvesMixedEscapedSegments() {
+        Blue blue = new Blue();
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a~/b"));
+        assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~0~1b"));
     }
 
     @Test
