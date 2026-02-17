@@ -5,7 +5,6 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,7 @@ final class PatchEngine {
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
         String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
-        List<String> segments = new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(targetPath)));
+        List<String> segments = PointerUtils.splitPointerSegmentsList(targetPath);
 
         Node before = cloneNode(readNode(document, segments, LookupMode.BEFORE, targetPath));
         JsonPatch.Op op = patch.getOp();
@@ -58,7 +57,7 @@ final class PatchEngine {
         if ("/".equals(normalized)) {
             throw new IllegalArgumentException("Direct write cannot target root document");
         }
-        List<String> segments = new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(normalized)));
+        List<String> segments = PointerUtils.splitPointerSegmentsList(normalized);
         ParentContext ctx = resolveParent(document, segments, true, normalized);
         Node parent = ctx.parent;
         String leaf = ctx.leaf;

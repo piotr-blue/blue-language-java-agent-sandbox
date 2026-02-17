@@ -90,6 +90,14 @@ class PointerUtilsTest {
     }
 
     @Test
+    void splitPointerSegmentsListMirrorsArrayFormAndIsMutableCopy() {
+        List<String> segments = PointerUtils.splitPointerSegmentsList("/a~1b//");
+        assertEquals(Arrays.asList("a/b", "", ""), segments);
+        segments.add("x");
+        assertEquals(3, PointerUtils.splitPointerSegments("/a~1b//").length);
+    }
+
+    @Test
     void arrayIndexHelpersApplyStrictJsonPointerArrayRules() {
         assertEquals(0, PointerUtils.parseArrayIndex("0"));
         assertEquals(12, PointerUtils.parseArrayIndex("12"));

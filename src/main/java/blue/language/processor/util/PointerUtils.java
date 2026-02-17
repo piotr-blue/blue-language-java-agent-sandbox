@@ -39,6 +39,15 @@ public final class PointerUtils {
         return decoded;
     }
 
+    public static List<String> splitPointerSegmentsList(String pointer) {
+        String[] segments = splitPointerSegments(pointer);
+        List<String> list = new ArrayList<String>(segments.length);
+        for (String segment : segments) {
+            list.add(segment);
+        }
+        return list;
+    }
+
     public static String unescapePointerSegment(String segment) {
         if (segment == null || segment.isEmpty()) {
             return segment;
