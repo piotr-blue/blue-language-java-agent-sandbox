@@ -29,6 +29,12 @@ class PointerUtilsTest {
     }
 
     @Test
+    void relativizePointerKeepsNestedEmptySegmentsRelative() {
+        assertEquals("//", PointerUtils.relativizePointer("/scope", "/scope//"));
+        assertEquals("/a//", PointerUtils.relativizePointer("/scope", "/scope/a//"));
+    }
+
+    @Test
     void normalizePointerRejectsMalformedEscapes() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~2"));
