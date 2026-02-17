@@ -2,7 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.blueid.legacy.LegacyBlueIdCalculator;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
@@ -89,7 +89,7 @@ public class MergeReverserTest {
         assertFalse(reversed.getProperties().containsKey("y"));
         assertFalse(reversed.getProperties().containsKey("z"));
 
-        assertEquals(BlueIdCalculator.calculateBlueId(cNode), BlueIdCalculator.calculateBlueId(reversed));
+        assertEquals(LegacyBlueIdCalculator.calculateBlueId(cNode), LegacyBlueIdCalculator.calculateBlueId(reversed));
     }
 
     @Test
@@ -162,8 +162,8 @@ public class MergeReverserTest {
         nodeProvider.addSingleDocs(derived);
 
         Node derivedNode = nodeProvider.getNodeByName("Derived");
-        Blue blue = new Blue(nodeProvider);
-        Node resolved = blue.resolve(derivedNode);
+        Blue runtime = new Blue(nodeProvider);
+        Node resolved = runtime.resolve(derivedNode);
 
         MergeReverser reverser = new MergeReverser();
         Node reversed = reverser.reverse(resolved);
@@ -171,10 +171,10 @@ public class MergeReverserTest {
         assertEquals("Derived", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("Base"), reversed.getType().getBlueId());
         assertEquals(2, reversed.getAsNode("/list").getItems().size());
-        assertEquals(BlueIdCalculator.calculateBlueId(
+        assertEquals(blue.language.blueid.BlueIdCalculator.calculateSemanticBlueId(
                 Arrays.asList(
-                        blue.yamlToNode("value: A\ntype: Text"),
-                        blue.yamlToNode("value: B\ntype: Text")
+                        runtime.yamlToNode("value: A\ntype: Text"),
+                        runtime.yamlToNode("value: B\ntype: Text")
                 )
         ), reversed.getAsNode("/list").getItems().get(0).getBlueId());
         assertEquals("C", reversed.getAsNode("/list").getItems().get(1).getValue());

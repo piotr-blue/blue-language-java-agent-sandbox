@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +54,37 @@ public class PathLimitsTest {
         assertTrue(pathLimits.shouldExtendPathSegment("d", mockNode));
         pathLimits.enterPathSegment("d");
         assertTrue(pathLimits.shouldExtendPathSegment("c", mockNode));
+    }
+
+    @Test
+    public void testWithMaxDepthAllowsAnySegmentsUpToDepth() {
+        PathLimits limits = PathLimits.withMaxDepth(3);
+
+        assertTrue(limits.shouldExtendPathSegment("any", mockNode));
+        limits.enterPathSegment("any", mockNode);
+        assertTrue(limits.shouldExtendPathSegment("branch", mockNode));
+        limits.enterPathSegment("branch", mockNode);
+        assertTrue(limits.shouldExtendPathSegment("leaf", mockNode));
+        limits.enterPathSegment("leaf", mockNode);
+        assertFalse(limits.shouldExtendPathSegment("tooDeep", mockNode));
+    }
+
+    @Test
+    public void testWithMaxDepthZeroDisallowsTraversal() {
+        PathLimits limits = PathLimits.withMaxDepth(0);
+        assertFalse(limits.shouldExtendPathSegment("any", mockNode));
+    }
+
+    @Test
+    public void testBuilderRejectsNegativeMaxDepth() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().setMaxDepth(-1));
+    }
+
+    @Test
+    public void testWithMaxDepthRejectsNegativeDepth() {
+        assertThrows(IllegalArgumentException.class,
+                () -> PathLimits.withMaxDepth(-1));
     }
 
     @Test
@@ -158,6 +189,107 @@ public class PathLimitsTest {
         pathLimits.exitPathSegment();
         pathLimits.exitPathSegment();
         assertFalse(pathLimits.shouldExtendPathSegment("g", mockNode));
+    }
+
+    @Test
+    public void testJsonPointerEscapedAllowedPathMatchesRawSegment() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/a~1b/x~0y")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("a/b", mockNode));
+        pathLimits.enterPathSegment("a/b", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x~y", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("x/y", mockNode));
+    }
+
+    @Test
+    public void testBuilderNormalizesMissingLeadingSlashAndWhitespace() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("  x/*  ")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+        pathLimits.enterPathSegment("x", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("leaf", mockNode));
+    }
+
+    @Test
+    public void testBuilderRejectsMalformedPointerEscapes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().addPath("/x~").build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().addPath("/x~2").build());
+    }
+
+    @Test
+    public void testShouldExtendRejectsMalformedAbsolutePointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/x/*")
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.shouldExtendPathSegment("/x~2", mockNode));
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.shouldExtendPathSegment("/x~", mockNode));
+    }
+
+    @Test
+    public void testEnterPathSegmentRejectsMalformedAbsolutePointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/x/*")
+                .build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.enterPathSegment("/x~2", mockNode));
+        assertThrows(IllegalArgumentException.class,
+                () -> pathLimits.enterPathSegment("/x~", mockNode));
+    }
+
+    @Test
+    public void testEnterPathSegmentAcceptsValidEscapedAbsolutePointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/a~1b/x")
+                .build();
+
+        pathLimits.enterPathSegment("/a~1b", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+    }
+
+    @Test
+    public void testAbsoluteSegmentsPreserveLeadingEmptyPointerSegments() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("//a/x")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("//a", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("/a", mockNode));
+
+        pathLimits.enterPathSegment("//a", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+    }
+
+    @Test
+    public void testTrailingEmptyAllowedPathSegmentIsDistinctFromParentPath() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/scope/")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("scope", mockNode));
+        pathLimits.enterPathSegment("scope", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("child", mockNode));
+    }
+
+    @Test
+    public void testParentAllowedPathDoesNotImplicitlyAllowEmptyChildSegment() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/scope")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("scope", mockNode));
+        pathLimits.enterPathSegment("scope", mockNode);
+        assertFalse(pathLimits.shouldExtendPathSegment("", mockNode));
     }
 
     @Test

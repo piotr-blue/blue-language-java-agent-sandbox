@@ -2,6 +2,7 @@ package blue.language.utils;
 
 import blue.language.NodeProvider;
 import blue.language.TestUtils;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
 import blue.language.utils.limits.Limits;
@@ -149,7 +150,7 @@ public class NodeExtenderTest {
 
         nodeProvider.addSingleNodes(nodeA, nodeB, nodeC);
 
-        String listBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeA, nodeB));
+        String listBlueId = BlueIdCalculator.calculateSemanticBlueId(Arrays.asList(nodeA, nodeB));
         nodeProvider.addListAndItsItems(Arrays.asList(nodeA, nodeB));
 
         String listNode = "name: ListNode\n" +
@@ -194,14 +195,14 @@ public class NodeExtenderTest {
 
         nodeProvider.addSingleNodes(nodeA, nodeB, nodeC);
 
-        String listABBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeA, nodeB));
+        String listABBlueId = BlueIdCalculator.calculateSemanticBlueId(Arrays.asList(nodeA, nodeB));
         nodeProvider.addList(Arrays.asList(nodeA, nodeB));
 
         String ab = "blueId: " + listABBlueId;
         Node nodeAB = YAML_MAPPER.readValue(ab, Node.class);
         nodeProvider.addList(Arrays.asList(nodeAB, nodeC));
 
-        String listABCBlueId = BlueIdCalculator.calculateBlueId(Arrays.asList(nodeAB, nodeC));
+        String listABCBlueId = BlueIdCalculator.calculateSemanticBlueId(Arrays.asList(nodeAB, nodeC));
         String abc = "blueId: " + listABCBlueId;
         Node nodeABC = YAML_MAPPER.readValue(abc, Node.class);
 

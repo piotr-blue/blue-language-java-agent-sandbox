@@ -1,7 +1,9 @@
 package blue.language.provider;
 
+import blue.language.Blue;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.snapshot.ResolvedSnapshot;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -52,12 +54,12 @@ public class NodeContentHandler {
                     .map(item -> JSON_MAPPER.convertValue(item, Node.class))
                     .map(preprocessor)
                     .collect(Collectors.toList());
-            blueId = BlueIdCalculator.calculateBlueId(nodes);
+            blueId = BlueIdCalculator.calculateSemanticBlueId(nodes);
             jsonNode = JSON_MAPPER.valueToTree(nodes);
         } else {
             Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
             node = preprocessor.apply(node);
-            blueId = BlueIdCalculator.calculateBlueId(node);
+            blueId = BlueIdCalculator.calculateSemanticBlueId(node);
             jsonNode = JSON_MAPPER.valueToTree(node);
         }
 
@@ -67,7 +69,7 @@ public class NodeContentHandler {
     public static ParsedContent parseAndCalculateBlueId(Node node, Function<Node, Node> preprocessor) {
         String blueId;
         Node preprocessedNode = preprocessor.apply(node);
-        blueId = BlueIdCalculator.calculateBlueId(preprocessedNode);
+        blueId = BlueIdCalculator.calculateSemanticBlueId(preprocessedNode);
         JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNode);
 
         return new ParsedContent(blueId, jsonNode, false);
@@ -82,11 +84,58 @@ public class NodeContentHandler {
                 .map(preprocessor)
                 .collect(Collectors.toList());
 
-        String blueId = BlueIdCalculator.calculateBlueId(preprocessedNodes);
+        String blueId = BlueIdCalculator.calculateSemanticBlueId(preprocessedNodes);
         JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNodes);
         boolean isMultipleDocuments = nodes.size() > 1;
 
         return new ParsedContent(blueId, jsonNode, isMultipleDocuments);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(String content, Blue blue) {
+        JsonNode jsonNode;
+        try {
+            jsonNode = YAML_MAPPER.readTree(content);
+        } catch (Exception e) {
+            try {
+                jsonNode = JSON_MAPPER.readTree(content);
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to parse content as YAML or JSON", ex);
+            }
+        }
+
+        if (jsonNode.isArray() && jsonNode.size() > 1) {
+            List<Node> nodes = StreamSupport.stream(jsonNode.spliterator(), false)
+                    .map(item -> JSON_MAPPER.convertValue(item, Node.class))
+                    .collect(Collectors.toList());
+            return parseAndCalculateSemanticBlueId(nodes, blue);
+        }
+
+        Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
+        return parseAndCalculateSemanticBlueId(node, blue);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(Node node, Blue blue) {
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(node);
+        JsonNode canonical = JSON_MAPPER.valueToTree(snapshot.canonicalRoot().toNode());
+        return new ParsedContent(snapshot.rootBlueId(), canonical, false);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(List<Node> nodes, Blue blue) {
+        if (nodes == null || nodes.isEmpty()) {
+            throw new IllegalArgumentException("List of nodes cannot be null or empty");
+        }
+
+        List<ResolvedSnapshot> snapshots = nodes.stream()
+                .map(blue::resolveToSnapshot)
+                .collect(Collectors.toList());
+
+        List<Node> canonicalNodes = snapshots.stream()
+                .map(snapshot -> snapshot.canonicalRoot().toNode())
+                .collect(Collectors.toList());
+
+        String blueId = BlueIdCalculator.calculateSemanticBlueId(canonicalNodes);
+        JsonNode canonicalList = JSON_MAPPER.valueToTree(canonicalNodes);
+        return new ParsedContent(blueId, canonicalList, canonicalNodes.size() > 1);
     }
 
     public static JsonNode resolveThisReferences(JsonNode content, String currentBlueId, boolean isMultipleDocuments) {

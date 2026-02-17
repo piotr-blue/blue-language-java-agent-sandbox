@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.Arrays;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

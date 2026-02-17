@@ -1,6 +1,7 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,16 +17,35 @@ public class ProcessEmbedded extends MarkerContract {
     }
 
     public void setPaths(List<String> newPaths) {
-        paths.clear();
+        List<String> normalizedPaths = new ArrayList<>();
         if (newPaths != null) {
-            paths.addAll(newPaths);
+            for (String path : newPaths) {
+                String normalized = normalizePath(path);
+                if (normalized != null) {
+                    normalizedPaths.add(normalized);
+                }
+            }
         }
+        paths.clear();
+        paths.addAll(normalizedPaths);
     }
 
     public ProcessEmbedded addPath(String path) {
-        if (path != null) {
-            paths.add(path);
+        String normalized = normalizePath(path);
+        if (normalized != null) {
+            paths.add(normalized);
         }
         return this;
+    }
+
+    private String normalizePath(String path) {
+        if (path == null) {
+            return null;
+        }
+        String trimmed = path.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return PointerUtils.normalizeRequiredPointer(trimmed, "ProcessEmbedded path");
     }
 }

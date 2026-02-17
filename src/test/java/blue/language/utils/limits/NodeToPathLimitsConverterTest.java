@@ -3,7 +3,7 @@ package blue.language.utils.limits;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NodeToPathLimitsConverterTest {
@@ -71,6 +71,31 @@ class NodeToPathLimitsConverterTest {
         PathLimits limits = NodeToPathLimitsConverter.convert(null);
         assertFalse(limits.shouldExtendPathSegment("/", mockNode));
         assertFalse(limits.shouldExtendPathSegment("/anyPath", mockNode));
+    }
+
+    @Test
+    void testSpecialCharacterPropertySegmentsUseJsonPointerEscaping() {
+        Node node = new Node().properties("a/b", new Node().properties("x~y", new Node()));
+        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+
+        assertTrue(limits.shouldExtendPathSegment("a/b", mockNode));
+        limits.enterPathSegment("a/b", mockNode);
+
+        assertTrue(limits.shouldExtendPathSegment("x~y", mockNode));
+        assertFalse(limits.shouldExtendPathSegment("x/y", mockNode));
+    }
+
+    @Test
+    void testEmptyPropertyKeyIsKeptDistinctFromParentPath() {
+        Node node = new Node()
+                .properties("scope", new Node().properties("", new Node()));
+        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+
+        assertTrue(limits.shouldExtendPathSegment("scope", mockNode));
+        limits.enterPathSegment("scope", mockNode);
+
+        assertTrue(limits.shouldExtendPathSegment("", mockNode));
+        assertFalse(limits.shouldExtendPathSegment("child", mockNode));
     }
 
 }

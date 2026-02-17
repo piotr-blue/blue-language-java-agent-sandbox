@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.contracts.CutOffProbeContractProcessor;
@@ -10,6 +11,7 @@ import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import blue.language.processor.model.TestEvent;
+import blue.language.processor.util.PointerUtils;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
@@ -52,9 +54,9 @@ class ProcessEmbeddedTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String rootId = blue.calculateBlueId(original.clone());
+        String rootId = BlueIdCalculator.calculateSemanticBlueId(original.clone());
         Node originalChildNode = original.getProperties().get("x");
-        String childId = blue.calculateBlueId(originalChildNode.clone());
+        String childId = BlueIdCalculator.calculateSemanticBlueId(originalChildNode.clone());
 
         DocumentProcessingResult result = blue.initializeDocument(original);
         Node initialized = result.document();
@@ -596,7 +598,7 @@ class ProcessEmbeddedTest {
     }
 
     private Node terminatedMarker(Node document, String scopePath) {
-        String contractsPointer = ProcessorEngine.resolvePointer(scopePath, "/contracts");
+        String contractsPointer = PointerUtils.resolvePointer(scopePath, "/contracts");
         try {
             Node contracts = document.getAsNode(contractsPointer);
             if (contracts == null || contracts.getProperties() == null) {

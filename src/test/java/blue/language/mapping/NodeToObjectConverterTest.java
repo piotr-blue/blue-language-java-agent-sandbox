@@ -3,7 +3,7 @@ package blue.language.mapping;
 import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.mapping.model.*;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.blueid.legacy.LegacyBlueIdCalculator;
 import blue.language.utils.Properties;
 import blue.language.utils.TypeClassResolver;
 import blue.language.utils.UncheckedObjectMapper;
@@ -448,7 +448,7 @@ public class NodeToObjectConverterTest {
         assertNotNull(data);
 
         assertNotNull(data.alice1);
-        assertTrue(data.alice1.matches(BlueIdCalculator.calculateBlueId(data.alice2)));
+        assertTrue(data.alice1.matches(LegacyBlueIdCalculator.calculateBlueId(data.alice2)));
 
         assertNotNull(data.alice2);
         assertEquals("Alice", data.alice2.getName());

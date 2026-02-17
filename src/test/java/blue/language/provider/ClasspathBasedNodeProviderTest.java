@@ -20,10 +20,13 @@ class ClasspathBasedNodeProviderTest {
 
     @Test
     void testFetchByBlueId() {
-        String knownBlueId = "7hSVRWdTCXpr4TKvf5dibF24vAxyqGuVERVrvgHrxzYs";
+        Node knownNode = provider.findNodeByName("Toy")
+                .orElseThrow(() -> new AssertionError("Expected sample node 'Toy' to be present"));
+        String knownBlueId = knownNode.getBlueId();
         List<Node> nodes = provider.fetchByBlueId(knownBlueId);
         assertNotNull(nodes);
         assertFalse(nodes.isEmpty());
+        assertEquals("Toy", nodes.get(0).getName());
         assertEquals(knownBlueId, nodes.get(0).get("/blueId"));
     }
 

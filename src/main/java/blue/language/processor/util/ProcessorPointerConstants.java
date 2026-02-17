@@ -22,14 +22,16 @@ public final class ProcessorPointerConstants {
     }
 
     public static String relativeContractsEntry(String key) {
-        return RELATIVE_CONTRACTS + "/" + key;
+        return RELATIVE_CONTRACTS + "/" + PointerUtils.escapeRequiredPointerSegment(key, "Contract key");
     }
 
     public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX + "/" + channelKey;
+        return relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX + "/"
+                + PointerUtils.escapeRequiredPointerSegment(channelKey, "Channel key");
     }
 
     public static String relativeCheckpointLastSignature(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX + "/" + channelKey;
+        return relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX + "/"
+                + PointerUtils.escapeRequiredPointerSegment(channelKey, "Channel key");
     }
 }

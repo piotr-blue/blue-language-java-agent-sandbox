@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.NodeProvider;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.blueid.BlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

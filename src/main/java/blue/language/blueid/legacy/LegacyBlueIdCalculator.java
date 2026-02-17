@@ -1,36 +1,46 @@
-package blue.language.utils;
+package blue.language.blueid.legacy;
 
 import blue.language.model.Node;
+import blue.language.utils.Base58Sha256Provider;
+import blue.language.utils.NodeToMapListOrValue;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.Properties.*;
+import static blue.language.utils.Properties.OBJECT_BLUE_ID;
+import static blue.language.utils.Properties.OBJECT_DESCRIPTION;
+import static blue.language.utils.Properties.OBJECT_NAME;
+import static blue.language.utils.Properties.OBJECT_VALUE;
 
-public class BlueIdCalculator {
+public class LegacyBlueIdCalculator {
 
-    public static final BlueIdCalculator INSTANCE = new BlueIdCalculator(new Base58Sha256Provider());
+    public static final LegacyBlueIdCalculator INSTANCE = new LegacyBlueIdCalculator(new Base58Sha256Provider());
 
-    private Function<Object, String> hashProvider;
+    private final Function<Object, String> hashProvider;
 
-    public BlueIdCalculator(Function<Object, String> hashProvider) {
+    public LegacyBlueIdCalculator(Function<Object, String> hashProvider) {
         this.hashProvider = hashProvider;
     }
 
     public static String calculateBlueId(Node node) {
-        return BlueIdCalculator.INSTANCE.calculate(NodeToMapListOrValue.get(node));
+        return LegacyBlueIdCalculator.INSTANCE.calculate(NodeToMapListOrValue.get(node));
     }
 
     public static String calculateBlueId(List<Node> nodes) {
         List<Object> objects = nodes.stream()
                 .map(NodeToMapListOrValue::get)
                 .collect(Collectors.toList());
-        return BlueIdCalculator.INSTANCE.calculate(objects);
+        return LegacyBlueIdCalculator.INSTANCE.calculate(objects);
     }
 
     public String calculate(Object object) {
-        // we invoke calculateCleanedObject method only once (for root)
         return calculateCleanedObject(cleanStructure(object));
     }
 
@@ -51,7 +61,7 @@ public class BlueIdCalculator {
             return (String) map.get(OBJECT_BLUE_ID);
         }
 
-        Map<String, Object> hashes = new TreeMap<>(String::compareTo);
+        Map<String, Object> hashes = new TreeMap<String, Object>(String::compareTo);
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String key = entry.getKey();
             if (OBJECT_NAME.equals(key) || OBJECT_VALUE.equals(key) || OBJECT_DESCRIPTION.equals(key)) {
@@ -86,7 +96,7 @@ public class BlueIdCalculator {
             return null;
         } else if (obj instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) obj;
-            Map<String, Object> cleanedMap = new LinkedHashMap<>();
+            Map<String, Object> cleanedMap = new LinkedHashMap<String, Object>();
             for (Map.Entry<String, Object> entry : map.entrySet()) {
                 Object cleanedValue = cleanStructure(entry.getValue());
                 if (cleanedValue != null) {
@@ -96,7 +106,7 @@ public class BlueIdCalculator {
             return cleanedMap.isEmpty() ? null : cleanedMap;
         } else if (obj instanceof List) {
             List<Object> list = (List<Object>) obj;
-            List<Object> cleanedList = new ArrayList<>();
+            List<Object> cleanedList = new ArrayList<Object>();
             for (Object item : list) {
                 Object cleanedItem = cleanStructure(item);
                 if (cleanedItem != null) {
@@ -108,5 +118,4 @@ public class BlueIdCalculator {
             return obj;
         }
     }
-
 }

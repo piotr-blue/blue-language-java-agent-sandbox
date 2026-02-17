@@ -8,11 +8,11 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -60,7 +60,7 @@ final class ProcessorEngine {
 
     static boolean isInitialized(DocumentProcessor owner, Node document) {
         Objects.requireNonNull(document, "document");
-        String pointer = resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = PointerUtils.resolvePointer("/", ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker = null;
         try {
             marker = nodeAt(document, pointer);
@@ -71,30 +71,6 @@ final class ProcessorEngine {
         }
         validateInitializationMarker(marker, pointer);
         return true;
-    }
-
-    static String resolvePointer(String scopePath, String relativePointer) {
-        return PointerUtils.resolvePointer(scopePath, relativePointer);
-    }
-
-    static String normalizeScope(String scopePath) {
-        return PointerUtils.normalizeScope(scopePath);
-    }
-
-    static String normalizePointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
-    }
-
-    static String joinRelativePointers(String base, String tail) {
-        return PointerUtils.joinRelativePointers(base, tail);
-    }
-
-    static String relativizePointer(String scopePath, String absolutePath) {
-        return PointerUtils.relativizePointer(scopePath, absolutePath);
-    }
-
-    static String stripSlashes(String value) {
-        return PointerUtils.stripSlashes(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -145,7 +121,7 @@ final class ProcessorEngine {
     }
 
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
-        String relativePath = relativizePointer(scopePath, data.path());
+        String relativePath = PointerUtils.relativizePointer(scopePath, data.path());
         Node event = new Node().properties("type", new Node().value("Document Update"));
         event.properties("op", new Node().value(data.op().name().toLowerCase()));
         Node beforeNode = data.before() != null ? data.before().clone() : new Node().value(null);
@@ -160,7 +136,7 @@ final class ProcessorEngine {
         if (watchPath == null || watchPath.isEmpty()) {
             return false;
         }
-        String watch = PointerUtils.normalizePointer(PointerUtils.resolvePointer(scopePath, watchPath));
+        String watch = PointerUtils.resolvePointer(scopePath, watchPath);
         String changed = PointerUtils.normalizePointer(changedPath);
         if (watch.equals("/")) {
             return true;
@@ -172,29 +148,57 @@ final class ProcessorEngine {
     }
 
     static Node nodeAt(Node root, String pointer) {
-        if (pointer.equals("/")) {
-            return root;
-        }
-        String[] segments = pointer.substring(1).split("/");
+        Objects.requireNonNull(root, "root");
+        String[] segments = PointerUtils.splitPointerSegments(pointer);
         Node current = root;
         for (String segment : segments) {
-            if (segment.isEmpty()) {
-                continue;
-            }
-            Map<String, Node> props = current.getProperties();
-            if (props == null) {
-                return null;
-            }
-            current = props.get(segment);
             if (current == null) {
                 return null;
             }
+            Map<String, Node> props = current.getProperties();
+            if (props != null && props.containsKey(segment)) {
+                current = props.get(segment);
+                continue;
+            }
+
+            if (PointerUtils.isArrayIndexSegment(segment)) {
+                int index = PointerUtils.parseArrayIndex(segment);
+                List<Node> items = current.getItems();
+                if (items == null || index < 0 || index >= items.size()) {
+                    return null;
+                }
+                current = items.get(index);
+                continue;
+            }
+
+            if ("type".equals(segment)) {
+                current = current.getType();
+                continue;
+            }
+            if ("itemType".equals(segment)) {
+                current = current.getItemType();
+                continue;
+            }
+            if ("keyType".equals(segment)) {
+                current = current.getKeyType();
+                continue;
+            }
+            if ("valueType".equals(segment)) {
+                current = current.getValueType();
+                continue;
+            }
+            if ("blue".equals(segment)) {
+                current = current.getBlue();
+                continue;
+            }
+
+            return null;
         }
         return current;
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
-        String pointer = resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
+        String pointer = PointerUtils.resolvePointer(scopePath, ProcessorPointerConstants.RELATIVE_INITIALIZED);
         Node marker;
         try {
             marker = nodeAt(root, pointer);
@@ -289,7 +293,7 @@ final class ProcessorEngine {
         }
 
         boolean isScopeInactive(String scopePath) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             return cutOffScopes.contains(normalized)
                     || pendingTerminations.containsKey(normalized)
                     || runtime.isScopeTerminated(normalized);
@@ -307,7 +311,7 @@ final class ProcessorEngine {
                                ContractBundle bundle,
                                ScopeRuntimeContext.TerminationKind kind,
                                String reason) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             if (pendingTerminations.containsKey(normalized) || runtime.isScopeTerminated(normalized)) {
                 return;
             }
@@ -316,35 +320,27 @@ final class ProcessorEngine {
         }
 
         ContractBundle bundleForScope(String scopePath) {
-            return bundles.get(scopePath);
+            return bundles.get(PointerUtils.normalizeScope(scopePath));
         }
 
         void recordPendingTermination(String scopePath,
                                       ScopeRuntimeContext.TerminationKind kind,
                                       String reason) {
-            pendingTerminations.put(ProcessorEngine.normalizeScope(scopePath), new PendingTermination(kind, reason));
+            pendingTerminations.put(PointerUtils.normalizeScope(scopePath), new PendingTermination(kind, reason));
         }
 
         void clearPendingTermination(String scopePath) {
-            pendingTerminations.remove(ProcessorEngine.normalizeScope(scopePath));
+            pendingTerminations.remove(PointerUtils.normalizeScope(scopePath));
         }
 
         void markCutOff(String scopePath) {
-            String normalized = ProcessorEngine.normalizeScope(scopePath);
+            String normalized = PointerUtils.normalizeScope(scopePath);
             if (cutOffScopes.add(normalized)) {
                 ScopeRuntimeContext context = runtime.existingScope(normalized);
                 if (context != null) {
                     context.markCutOff();
                 }
             }
-        }
-
-        String normalizeScope(String scopePath) {
-            return ProcessorEngine.normalizeScope(scopePath);
-        }
-
-        String resolvePointer(String scopePath, String relativePointer) {
-            return ProcessorEngine.resolvePointer(scopePath, relativePointer);
         }
 
         String fatalReason(Throwable throwable, String defaultReason) {

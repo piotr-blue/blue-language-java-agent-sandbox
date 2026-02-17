@@ -1,12 +1,11 @@
 package blue.language.utils.limits;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Supported features:
@@ -31,7 +30,7 @@ public class PathLimits implements Limits {
             return false;
         }
 
-        String potentialPath = normalizePath(getCurrentFullPath() + "/" + pathSegment);
+        String potentialPath = buildPotentialPath(pathSegment);
         return isAllowedPath(potentialPath);
     }
 
@@ -50,14 +49,14 @@ public class PathLimits implements Limits {
     }
 
     private boolean matchesAllowedPath(String allowedPath, String path) {
-        String[] allowedParts = allowedPath.split("/");
-        String[] pathParts = path.split("/");
+        String[] allowedParts = PointerUtils.splitPointerSegments(allowedPath);
+        String[] pathParts = PointerUtils.splitPointerSegments(path);
 
         if (pathParts.length > allowedParts.length) {
             return false;
         }
 
-        for (int i = 1; i < pathParts.length; i++) {
+        for (int i = 0; i < pathParts.length; i++) {
             if (!allowedParts[i].equals("*") && !allowedParts[i].equals(pathParts[i])) {
                 return false;
             }
@@ -68,7 +67,16 @@ public class PathLimits implements Limits {
 
     @Override
     public void enterPathSegment(String pathSegment, Node noe) {
-        currentPath.push(pathSegment);
+        String segment = pathSegment == null ? "" : pathSegment;
+        if (segment.startsWith("/")) {
+            PointerUtils.validatePointerEscapes(segment);
+            currentPath.push(segment.substring(1));
+            return;
+        }
+        if (segment.isEmpty() && currentPath.isEmpty()) {
+            return;
+        }
+        currentPath.push(PointerUtils.escapePointerSegment(segment));
     }
 
     @Override
@@ -82,10 +90,12 @@ public class PathLimits implements Limits {
         return "/" + String.join("/", currentPath);
     }
 
-    private String normalizePath(String path) {
-        return "/" + Stream.of(path.split("/"))
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.joining("/"));
+    private String buildPotentialPath(String pathSegment) {
+        String segment = pathSegment == null ? "" : pathSegment;
+        if (segment.startsWith("/")) {
+            return segment;
+        }
+        return PointerUtils.appendPointerSegment(getCurrentFullPath(), segment);
     }
 
     public static class Builder {
@@ -93,11 +103,14 @@ public class PathLimits implements Limits {
         private int maxDepth = Integer.MAX_VALUE;
 
         public Builder addPath(String path) {
-            allowedPaths.add(path);
+            allowedPaths.add(normalizeAndValidateAllowedPath(path));
             return this;
         }
 
         public Builder setMaxDepth(int maxDepth) {
+            if (maxDepth < 0) {
+                throw new IllegalArgumentException("Max depth cannot be negative: " + maxDepth);
+            }
             this.maxDepth = maxDepth;
             return this;
         }
@@ -105,10 +118,35 @@ public class PathLimits implements Limits {
         public PathLimits build() {
             return new PathLimits(allowedPaths, maxDepth);
         }
+
+        private String normalizeAndValidateAllowedPath(String path) {
+            if (path == null) {
+                throw new IllegalArgumentException("Allowed path cannot be null");
+            }
+            String normalized = path.trim();
+            if (normalized.isEmpty()) {
+                throw new IllegalArgumentException("Allowed path cannot be empty");
+            }
+            try {
+                normalized = PointerUtils.normalizePointer(
+                        normalized.startsWith("/") ? normalized : "/" + normalized);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + normalized);
+            }
+            return normalized;
+        }
     }
 
     public static PathLimits withMaxDepth(int maxDepth) {
-        return new PathLimits.Builder().setMaxDepth(maxDepth).addPath("*").build();
+        Builder builder = new PathLimits.Builder().setMaxDepth(maxDepth);
+        if (maxDepth <= 0) {
+            return builder.addPath("/").build();
+        }
+        StringBuilder wildcardPath = new StringBuilder();
+        for (int i = 0; i < maxDepth; i++) {
+            wildcardPath.append("/*");
+        }
+        return builder.addPath(wildcardPath.toString()).build();
     }
 
     public static PathLimits withSinglePath(String path) {

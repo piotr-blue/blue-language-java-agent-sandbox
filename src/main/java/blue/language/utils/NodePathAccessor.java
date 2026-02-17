@@ -1,6 +1,8 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
+import blue.language.blueid.BlueIdCalculator;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -17,15 +19,14 @@ public class NodePathAccessor {
     }
 
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        if (path == null || !path.startsWith("/")) {
-            throw new IllegalArgumentException("Invalid path: " + path);
+        String[] segments = PointerUtils.splitPointerSegments(path);
+        if (segments.length == 0) {
+            if (!resolveFinalLink) {
+                return node;
+            }
+            Node resolved = linkingProvider != null ? link(node, linkingProvider) : node;
+            return resolved.getValue() != null ? resolved.getValue() : resolved;
         }
-
-        if (path.equals("/")) {
-            return node.getValue() != null ? node.getValue() : node;
-        }
-
-        String[] segments = path.substring(1).split("/");
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
@@ -45,43 +46,74 @@ public class NodePathAccessor {
     }
 
     private static Node getNodeForSegment(Node node, String segment, Function<Node, Node> linkingProvider, boolean resolveLink) {
+        if (node == null) {
+            throw new IllegalArgumentException("Property not found: " + segment);
+        }
         Node result;
 
-        switch (segment) {
-            case "name":
-                return new Node().value(node.getName());
-            case "description":
-                return new Node().value(node.getDescription());
-            case "type":
-                return node.getType();
-            case "itemType":
-                return node.getItemType();
-            case "keyType":
-                return node.getKeyType();
-            case "valueType":
-                return node.getValueType();
-            case "value":
-                return new Node().value(node.getValue());
-            case "blueId":
-                return new Node().value(BlueIdCalculator.calculateBlueId(node));
-        }
-
-        if (segment.matches("\\d+")) {
-            int itemIndex = Integer.parseInt(segment);
+        Map<String, Node> properties = node.getProperties();
+        if (properties != null && properties.containsKey(segment)) {
+            result = properties.get(segment);
+        } else if (PointerUtils.isArrayIndexSegment(segment)) {
+            int itemIndex = PointerUtils.parseArrayIndex(segment);
             List<Node> items = node.getItems();
-            if (items == null || itemIndex >= items.size()) {
-                throw new IllegalArgumentException("Invalid item index: " + itemIndex);
+            if (items == null || itemIndex < 0 || itemIndex >= items.size()) {
+                throw new IllegalArgumentException("Invalid item index: " + segment);
             }
             result = items.get(itemIndex);
         } else {
-            Map<String, Node> properties = node.getProperties();
-            if (properties == null || !properties.containsKey(segment)) {
-                throw new IllegalArgumentException("Property not found: " + segment);
+            if (node.getItems() != null && properties == null && !isBuiltInSegment(segment)) {
+                throw new IllegalArgumentException("Invalid item index: " + segment);
             }
-            result = properties.get(segment);
+            switch (segment) {
+                case "name":
+                    result = new Node().value(node.getName());
+                    break;
+                case "description":
+                    result = new Node().value(node.getDescription());
+                    break;
+                case "type":
+                    result = node.getType();
+                    break;
+                case "itemType":
+                    result = node.getItemType();
+                    break;
+                case "keyType":
+                    result = node.getKeyType();
+                    break;
+                case "valueType":
+                    result = node.getValueType();
+                    break;
+                case "value":
+                    result = new Node().value(node.getValue());
+                    break;
+                case "blueId":
+                    String blueId = node.getBlueId() != null
+                            ? node.getBlueId()
+                            : BlueIdCalculator.calculateSemanticBlueId(node);
+                    result = new Node().value(blueId);
+                    break;
+                case "blue":
+                    result = node.getBlue();
+                    break;
+                default:
+                    throw new IllegalArgumentException("Property not found: " + segment);
+            }
         }
 
         return resolveLink && linkingProvider != null ? link(result, linkingProvider) : result;
+    }
+
+    private static boolean isBuiltInSegment(String segment) {
+        return "name".equals(segment)
+                || "description".equals(segment)
+                || "type".equals(segment)
+                || "itemType".equals(segment)
+                || "keyType".equals(segment)
+                || "valueType".equals(segment)
+                || "value".equals(segment)
+                || "blueId".equals(segment)
+                || "blue".equals(segment);
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {

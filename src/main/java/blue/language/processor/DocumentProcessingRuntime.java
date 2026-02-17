@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,7 +30,7 @@ public final class DocumentProcessingRuntime {
     }
 
     public Map<String, ScopeRuntimeContext> scopes() {
-        return emissionRegistry.scopes();
+        return Collections.unmodifiableMap(emissionRegistry.scopes());
     }
 
     public ScopeRuntimeContext scope(String scopePath) {

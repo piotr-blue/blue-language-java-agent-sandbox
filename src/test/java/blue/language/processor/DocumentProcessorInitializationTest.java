@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.contracts.RemovePropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
@@ -43,7 +44,7 @@ class DocumentProcessorInitializationTest {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
         Node original = blue.yamlToNode(yaml);
-        String expectedDocumentId = blue.calculateBlueId(original.clone());
+        String expectedDocumentId = BlueIdCalculator.calculateSemanticBlueId(original.clone());
 
         assertFalse(blue.isInitialized(original));
 
@@ -358,6 +359,246 @@ class DocumentProcessorInitializationTest {
         assertNotNull(initialized.getProperties().get("lifecycle"));
         assertNull(initialized.getProperties().get("triggered"),
                 "Triggered handler should not run from lifecycle emission");
+    }
+
+    @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsMalformed() {
+        String yaml = "name: Bad Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: /x~2\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("invalid path"));
+    }
+
+    @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsNonPointer() {
+        String yaml = "name: Non Pointer Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: x\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("invalid path"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsMalformed() {
+        String yaml = "name: Bad Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n" +
+                "    childPath: /child~\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("invalid childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsNonPointer() {
+        String yaml = "name: Non Pointer Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n" +
+                "    childPath: child\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("invalid childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenProcessEmbeddedPathIsNonPointer() {
+        String yaml = "name: Non Pointer Embedded Marker Path\n" +
+                "contracts:\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: ProcessEmbedded\n" +
+                "    paths:\n" +
+                "      - child\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("JSON pointer"));
+    }
+
+    @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsBlank() {
+        String yaml = "name: Blank Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: \"   \"\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("blank path"));
+    }
+
+    @Test
+    void initializationFailsWhenDocumentUpdateChannelPathIsMissing() {
+        String yaml = "name: Missing Update Channel Path\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("missing required path"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsBlank() {
+        String yaml = "name: Blank Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n" +
+                "    childPath: \"   \"\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("blank childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenEmbeddedNodeChannelPathIsMissing() {
+        String yaml = "name: Missing Embedded Channel Path\n" +
+                "contracts:\n" +
+                "  channel:\n" +
+                "    type:\n" +
+                "      blueId: EmbeddedNodeChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("EmbeddedNodeChannel"));
+        assertTrue(ex.getMessage().contains("missing required childPath"));
+    }
+
+    @Test
+    void initializationFailsWhenContractKeyIsBlank() {
+        String yaml = "name: Blank Contract Key\n" +
+                "contracts:\n" +
+                "  \"   \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().toLowerCase().contains("contract key"));
+    }
+
+    @Test
+    void initializationFailsWhenNormalizedContractKeysCollide() {
+        String yaml = "name: Duplicate Normalized Keys\n" +
+                "contracts:\n" +
+                "  \" lifecycle \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  lifecycle:\n" +
+                "    type:\n" +
+                "      blueId: TriggeredEventChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("Duplicate normalized contract key"));
+    }
+
+    @Test
+    void initializationFailsWhenHandlerReferencesMissingChannel() {
+        String yaml = "name: Missing Channel Ref\n" +
+                "contracts:\n" +
+                "  setX:\n" +
+                "    channel: missing\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("missing channel"));
+    }
+
+    @Test
+    void initializationSupportsWhitespaceAroundContractAndChannelKeys() {
+        String yaml = "name: Trimmed Keys Doc\n" +
+                "contracts:\n" +
+                "  \"  lifecycle  \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  \"  setX  \":\n" +
+                "    channel: \" lifecycle \"\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    event:\n" +
+                "      type:\n" +
+                "        blueId: DocumentProcessingInitiated\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 9\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(yaml);
+
+        DocumentProcessingResult result = blue.initializeDocument(document);
+        assertEquals(new BigInteger("9"), result.document().getProperties().get("x").getValue());
     }
 
     @Test

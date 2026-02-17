@@ -22,12 +22,11 @@ final class PatchEngine {
     }
 
     PatchResult applyPatch(String originScopePath, JsonPatch patch) {
-        Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
-        String targetPath = PointerUtils.normalizePointer(patch.getPath());
-        List<String> segments = splitPointer(targetPath);
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
+        List<String> segments = PointerUtils.splitPointerSegmentsList(targetPath);
 
         Node before = cloneNode(readNode(document, segments, LookupMode.BEFORE, targetPath));
         JsonPatch.Op op = patch.getOp();
@@ -49,42 +48,57 @@ final class PatchEngine {
         Node after = patch.getOp() == JsonPatch.Op.REMOVE
                 ? null
                 : cloneNode(readNode(document, segments, LookupMode.AFTER, targetPath));
-        List<String> cascadeScopes = computeCascadeScopes(normalizedScope);
+        List<String> cascadeScopes = PointerUtils.ancestorPointers(normalizedScope, true);
         return new PatchResult(targetPath, before, after, op, normalizedScope, cascadeScopes);
     }
 
     void directWrite(String path, Node value) {
-        String normalized = PointerUtils.normalizePointer(path);
+        String normalized = PointerUtils.normalizeRequiredPointer(path, "Patch path");
         if ("/".equals(normalized)) {
             throw new IllegalArgumentException("Direct write cannot target root document");
         }
-        List<String> segments = splitPointer(normalized);
+        List<String> segments = PointerUtils.splitPointerSegmentsList(normalized);
         ParentContext ctx = resolveParent(document, segments, true, normalized);
         Node parent = ctx.parent;
         String leaf = ctx.leaf;
+
+        Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+        if (existingProperties != null && existingProperties.containsKey(leaf)) {
+            if (value == null) {
+                existingProperties.remove(leaf);
+            } else {
+                ensureMutableProperties(parent).put(leaf, value.clone());
+            }
+            return;
+        }
 
         List<Node> items = parent.getItems();
         if (items != null) {
             if ("-".equals(leaf)) {
                 throw new IllegalArgumentException("Direct write does not support append token '-' for path " + normalized);
             }
-            List<Node> mutable = ensureMutableItems(parent);
-            int index = parseArrayIndex(leaf, normalized);
-            if (value == null) {
-                if (index < 0 || index >= mutable.size()) {
-                    return;
-                }
-                mutable.remove(index);
-            } else {
-                if (index == mutable.size()) {
-                    mutable.add(value.clone());
-                } else if (index >= 0 && index < mutable.size()) {
-                    mutable.set(index, value.clone());
+            if (PointerUtils.isArrayIndexSegment(leaf)) {
+                List<Node> mutable = ensureMutableItems(parent);
+                int index = PointerUtils.parseArrayIndexOrThrow(leaf, normalized);
+                if (value == null) {
+                    if (index < 0 || index >= mutable.size()) {
+                        return;
+                    }
+                    mutable.remove(index);
                 } else {
-                    throw new IllegalStateException("Array index out of bounds for direct write: " + normalized);
+                    if (index == mutable.size()) {
+                        mutable.add(value.clone());
+                    } else if (index >= 0 && index < mutable.size()) {
+                        mutable.set(index, value.clone());
+                    } else {
+                        throw new IllegalStateException("Array index out of bounds for direct write: " + normalized);
+                    }
                 }
+                return;
             }
-            return;
+            if (existingProperties == null) {
+                throw new IllegalStateException("Expected numeric array index in path: " + normalized);
+            }
         }
 
         Map<String, Node> properties = ensureMutableProperties(parent);
@@ -101,19 +115,30 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                ensureMutableProperties(parent).put(leaf, value);
+                return;
+            }
+
             List<Node> items = parent.getItems();
             if (items != null) {
-                List<Node> mutable = ensureMutableItems(parent);
-                if ("-".equals(leaf)) {
-                    mutable.add(value);
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
+                    List<Node> mutable = ensureMutableItems(parent);
+                    if ("-".equals(leaf)) {
+                        mutable.add(value);
+                        return;
+                    }
+                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
+                    if (index < 0 || index > mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for add: " + path);
+                    }
+                    mutable.add(index, value);
                     return;
                 }
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index > mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for add: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.add(index, value);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -132,18 +157,29 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                ensureMutableProperties(parent).put(leaf, value);
+                return;
+            }
+
             List<Node> items = parent.getItems();
             if (items != null) {
-                if ("-".equals(leaf)) {
-                    throw new IllegalStateException("Replace does not support append token at path: " + path);
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
+                    if ("-".equals(leaf)) {
+                        throw new IllegalStateException("Replace does not support append token at path: " + path);
+                    }
+                    List<Node> mutable = ensureMutableItems(parent);
+                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
+                    if (index < 0 || index >= mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                    }
+                    mutable.set(index, value);
+                    return;
                 }
-                List<Node> mutable = ensureMutableItems(parent);
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index >= mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for replace: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.set(index, value);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -162,18 +198,29 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                existingProperties.remove(leaf);
+                return;
+            }
+
             List<Node> items = parent.getItems();
             if (items != null) {
-                if ("-".equals(leaf)) {
-                    throw new IllegalStateException("Remove does not support append token at path: " + path);
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
+                    if ("-".equals(leaf)) {
+                        throw new IllegalStateException("Remove does not support append token at path: " + path);
+                    }
+                    List<Node> mutable = ensureMutableItems(parent);
+                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
+                    if (index < 0 || index >= mutable.size()) {
+                        throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                    }
+                    mutable.remove(index);
+                    return;
                 }
-                List<Node> mutable = ensureMutableItems(parent);
-                int index = parseArrayIndex(leaf, path);
-                if (index < 0 || index >= mutable.size()) {
-                    throw new IllegalStateException("Array index out of bounds for remove: " + path);
+                if (existingProperties == null) {
+                    throw new IllegalStateException("Expected numeric array index in path: " + path);
                 }
-                mutable.remove(index);
-                return;
             }
 
             if ("-".equals(leaf)) {
@@ -218,8 +265,13 @@ final class PatchEngine {
             return null;
         }
 
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
+        }
+
         List<Node> items = current.getItems();
-        if (items != null) {
+        if (items != null && ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 if (!last) {
                     throw new IllegalStateException("Append token '-' must be final segment: " + path);
@@ -229,18 +281,13 @@ final class PatchEngine {
                 }
                 return items.isEmpty() ? null : items.get(items.size() - 1);
             }
-            int index = parseArrayIndex(segment, path);
+            int index = PointerUtils.parseArrayIndexOrThrow(segment, path);
             if (index < 0 || index >= items.size()) {
                 return null;
             }
             return items.get(index);
         }
-
-        Map<String, Node> properties = ensureMutableProperties(current, false);
-        if (properties == null || !properties.containsKey(segment)) {
-            return null;
-        }
-        return properties.get(segment);
+        return null;
     }
 
     private ParentContext resolveParent(Node root,
@@ -276,17 +323,24 @@ final class PatchEngine {
                                     List<String> segments,
                                     List<CreatedNode> createdNodes) {
         if (current == null) {
-            throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index));
+            throw new IllegalStateException("Path does not exist: "
+                    + PointerUtils.pointerFromSegments(segments, index));
+        }
+
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
         }
 
         List<Node> items = current.getItems();
-        if (items != null) {
+        if (items != null && ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 throw new IllegalStateException("Append token '-' must be final segment: " + fullPath);
             }
-            int arrayIndex = parseArrayIndex(segment, fullPath);
+            int arrayIndex = PointerUtils.parseArrayIndexOrThrow(segment, fullPath);
             if (arrayIndex < 0 || arrayIndex >= items.size()) {
-                throw new IllegalStateException("Array index out of bounds: " + pointerPrefix(segments, index + 1));
+                throw new IllegalStateException("Array index out of bounds: "
+                        + PointerUtils.pointerFromSegments(segments, index + 1));
             }
             Node child = items.get(arrayIndex);
             if (child == null) {
@@ -298,23 +352,25 @@ final class PatchEngine {
                         createdNodes.add(CreatedNode.forArray(current, arrayIndex));
                     }
                 } else {
-                    throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index + 1));
+                    throw new IllegalStateException("Path does not exist: "
+                            + PointerUtils.pointerFromSegments(segments, index + 1));
                 }
             }
             return child;
         }
+        if (items != null && properties == null) {
+            throw new IllegalStateException("Expected numeric array index in path: " + fullPath);
+        }
 
-        Map<String, Node> properties = ensureMutableProperties(current, false);
         if (properties == null && current.getValue() != null) {
-            throw new IllegalStateException("Cannot traverse into scalar at path: " + pointerPrefix(segments, index + 1));
+            throw new IllegalStateException("Cannot traverse into scalar at path: "
+                    + PointerUtils.pointerFromSegments(segments, index + 1));
         }
         Node child = properties != null ? properties.get(segment) : null;
         if (child == null) {
             if (!createMissingObjects) {
-                throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index + 1));
-            }
-            if (isArrayIndexSegment(segment)) {
-                throw new IllegalStateException("Expected array element to exist at path: " + pointerPrefix(segments, index + 1));
+                throw new IllegalStateException("Path does not exist: "
+                        + PointerUtils.pointerFromSegments(segments, index + 1));
             }
             child = new Node();
             boolean mapWasAbsent = properties == null;
@@ -359,73 +415,6 @@ final class PatchEngine {
             return node.getProperties();
         }
         return properties;
-    }
-
-    private int parseArrayIndex(String segment, String path) {
-        final int value;
-        try {
-            value = Integer.parseInt(segment);
-        } catch (NumberFormatException ex) {
-            throw new IllegalStateException("Expected numeric array index in path: " + path);
-        }
-        if (value < 0) {
-            throw new IllegalStateException("Negative array index in path: " + path);
-        }
-        return value;
-    }
-
-    private boolean isArrayIndexSegment(String segment) {
-        return "-".equals(segment) || (!segment.isEmpty() && segment.chars().allMatch(Character::isDigit));
-    }
-
-    private List<String> splitPointer(String path) {
-        if ("/".equals(path)) {
-            return new ArrayList<>();
-        }
-        String raw = path.substring(1);
-        if (raw.isEmpty()) {
-            return new ArrayList<>();
-        }
-        String[] parts = raw.split("/", -1);
-        List<String> segments = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            segments.add(part);
-        }
-        return segments;
-    }
-
-    private String pointerPrefix(List<String> segments, int length) {
-        if (length <= 0) {
-            return "/";
-        }
-        int limit = Math.min(length, segments.size());
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < limit; i++) {
-            builder.append('/');
-            String segment = segments.get(i);
-            if (segment != null) {
-                builder.append(segment);
-            }
-        }
-        return builder.length() == 0 ? "/" : builder.toString();
-    }
-
-    private List<String> computeCascadeScopes(String scopePath) {
-        List<String> scopes = new ArrayList<>();
-        String current = scopePath;
-        while (true) {
-            scopes.add(current);
-            if ("/".equals(current)) {
-                break;
-            }
-            int idx = current.lastIndexOf('/');
-            if (idx <= 0) {
-                current = "/";
-            } else {
-                current = current.substring(0, idx);
-            }
-        }
-        return scopes;
     }
 
     private Node cloneNode(Node node) {
@@ -527,7 +516,7 @@ final class PatchEngine {
             if (arrayIndex != null) {
                 List<Node> items = parent.getItems();
                 if (items != null && arrayIndex >= 0 && arrayIndex < items.size()) {
-                    items.remove(arrayIndex.intValue());
+                    items.set(arrayIndex, null);
                 }
                 return;
             }

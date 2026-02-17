@@ -1,6 +1,7 @@
 package blue.language.preprocess;
 
 import blue.language.NodeProvider;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
@@ -8,17 +9,20 @@ import blue.language.provider.BootstrapProvider;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.PathLimits;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 
 public class Preprocessor {
 
-    public static final String DEFAULT_BLUE_BLUE_ID = "6sqUywMoBRyj9hgQxSu2nDPnqcyiSM7xu9AB9sN98YJK";
+    public static final String DEFAULT_BLUE_BLUE_ID = calculateDefaultBlueBlueId();
 
     private TransformationProcessorProvider processorProvider;
     private NodeProvider nodeProvider;
@@ -102,6 +106,25 @@ public class Preprocessor {
             this.defaultSimpleBlue = YAML_MAPPER.readValue(inputStream, Node.class);
         } catch (IOException e) {
             throw new RuntimeException("Error loading DefaultBlue.blue from classpath", e);
+        }
+    }
+
+    private static String calculateDefaultBlueBlueId() {
+        try (InputStream inputStream = Preprocessor.class.getClassLoader().getResourceAsStream("transformation/DefaultBlue.blue")) {
+            if (inputStream == null) {
+                throw new RuntimeException("Unable to find DefaultBlue.blue in classpath");
+            }
+            JsonNode root = YAML_MAPPER.readTree(inputStream);
+            if (root != null && root.isArray() && root.size() > 1) {
+                List<Node> nodes = StreamSupport.stream(root.spliterator(), false)
+                        .map(element -> YAML_MAPPER.convertValue(element, Node.class))
+                        .collect(Collectors.toList());
+                return BlueIdCalculator.calculateSemanticBlueId(nodes);
+            }
+            Node node = YAML_MAPPER.convertValue(root, Node.class);
+            return BlueIdCalculator.calculateSemanticBlueId(node);
+        } catch (IOException e) {
+            throw new RuntimeException("Error calculating DefaultBlue.blue id", e);
         }
     }
 }

@@ -26,6 +26,7 @@ public class Node implements Cloneable {
     private List<Node> items;
     private Map<String, Node> properties;
     private String blueId;
+    private transient String computedBlueId;
     private Constraints constraints;
     private Node blue;
     private boolean inlineValue;
@@ -80,6 +81,22 @@ public class Node implements Cloneable {
 
     public String getBlueId() {
         return blueId;
+    }
+
+    public String getReferenceBlueId() {
+        return blueId;
+    }
+
+    public void setReferenceBlueId(String referenceBlueId) {
+        this.blueId = referenceBlueId;
+    }
+
+    public String getComputedBlueId() {
+        return computedBlueId;
+    }
+
+    public void setComputedBlueId(String computedBlueId) {
+        this.computedBlueId = computedBlueId;
     }
 
     public Constraints getConstraints() {
@@ -145,10 +162,16 @@ public class Node implements Cloneable {
     }
 
     public Node value(Object value) {
-        if (value instanceof Integer || value instanceof Long) {
-            this.value = BigInteger.valueOf((Integer) value);
+        if (value instanceof BigInteger || value instanceof BigDecimal) {
+            this.value = value;
         } else if (value instanceof Float || value instanceof Double) {
-            this.value = BigDecimal.valueOf((Double) value);
+            double decimalValue = ((Number) value).doubleValue();
+            if (!Double.isFinite(decimalValue)) {
+                throw new IllegalArgumentException("Non-finite numeric value is not supported: " + value);
+            }
+            this.value = BigDecimal.valueOf(decimalValue);
+        } else if (value instanceof Number) {
+            this.value = BigInteger.valueOf(((Number) value).longValue());
         } else {
             this.value = value;
         }
@@ -161,6 +184,9 @@ public class Node implements Cloneable {
     }
 
     public Node value(double value) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException("Non-finite numeric value is not supported: " + value);
+        }
         this.value = BigDecimal.valueOf(value);
         return this;
     }
@@ -215,6 +241,16 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node referenceBlueId(String referenceBlueId) {
+        this.blueId = referenceBlueId;
+        return this;
+    }
+
+    public Node computedBlueId(String computedBlueId) {
+        this.computedBlueId = computedBlueId;
+        return this;
+    }
+
     public Node constraints(Constraints constraints) {
         this.constraints = constraints;
         return this;
@@ -239,21 +275,41 @@ public class Node implements Cloneable {
     }
 
     public Node getAsNode(String path) {
-        return (Node) get(path);
+        Object value = get(path);
+        if (value instanceof Node) {
+            return (Node) value;
+        }
+        throw new IllegalArgumentException("Value at path " + path + " is not a node: " + value);
     }
 
     public String getAsText(String path) {
-        return (String) get(path);
+        Object value = get(path);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
+        throw new IllegalArgumentException("Value at path " + path + " is not text: " + value);
     }
 
     public Integer getAsInteger(String path) {
         Object value = get(path);
         if (value instanceof BigInteger) {
-            return ((BigInteger) value).intValue();
+            try {
+                return ((BigInteger) value).intValueExact();
+            } catch (ArithmeticException ex) {
+                throw new IllegalArgumentException("Value at path " + path + " is out of Integer range: " + value, ex);
+            }
         } else if (value instanceof BigDecimal) {
             BigDecimal bdValue = (BigDecimal) value;
-            if (bdValue.scale() == 0) {
-                return bdValue.intValueExact();
+            BigDecimal integralCandidate = bdValue.stripTrailingZeros();
+            if (integralCandidate.scale() <= 0) {
+                try {
+                    return integralCandidate.intValueExact();
+                } catch (ArithmeticException ex) {
+                    throw new IllegalArgumentException("Value at path " + path + " is out of Integer range: " + value, ex);
+                }
             } else {
                 throw new IllegalArgumentException("Value at path " + path + " is not an integer: " + bdValue);
             }
@@ -270,6 +326,7 @@ public class Node implements Cloneable {
             cloned.name = this.name;
             cloned.description = this.description;
             cloned.value = this.value;
+            cloned.computedBlueId = this.computedBlueId;
 
             if (this.type != null) {
                 cloned.type = this.type.clone();
@@ -330,6 +387,7 @@ public class Node implements Cloneable {
                ", items=" + items +
                ", properties=" + properties +
                ", blueId='" + blueId + '\'' +
+               ", computedBlueId='" + computedBlueId + '\'' +
                ", constraints=" + constraints +
                ", blue=" + blue +
                ", inlineValue=" + inlineValue +

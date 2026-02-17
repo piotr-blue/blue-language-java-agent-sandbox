@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 import blue.language.processor.model.JsonPatch;
 
 import java.util.Objects;
@@ -70,22 +71,18 @@ public final class ProcessorExecutionContext {
     }
 
     public String resolvePointer(String pointer) {
-        return execution.resolvePointer(scopePath, pointer);
+        return PointerUtils.resolvePointer(scopePath, pointer);
     }
 
     public Node documentAt(String absolutePointer) {
-        if (absolutePointer == null || absolutePointer.isEmpty()) {
-            return null;
-        }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
+        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
         return node != null ? node.clone() : null;
     }
 
     public boolean documentContains(String absolutePointer) {
-        if (absolutePointer == null || absolutePointer.isEmpty()) {
-            return false;
-        }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
+        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
         return node != null;
     }
 

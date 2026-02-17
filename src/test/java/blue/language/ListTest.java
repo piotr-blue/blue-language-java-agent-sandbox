@@ -5,19 +5,19 @@ import blue.language.merge.MergingProcessor;
 import blue.language.merge.processor.SequentialMergingProcessor;
 import blue.language.merge.processor.TypeAssigner;
 import blue.language.merge.processor.ValuePropagator;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.BlueIdCalculator.calculateSemanticBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,11 +36,11 @@ public class ListTest {
     @BeforeEach
     public void setUp() {
         a = new Node().name("A");
-        aId = calculateBlueId(a);
+        aId = calculateSemanticBlueId(a);
         b = new Node().name("B");
-        bId = calculateBlueId(b);
+        bId = calculateSemanticBlueId(b);
         c = new Node().name("C");
-        cId = calculateBlueId(c);
+        cId = calculateSemanticBlueId(c);
 
         List<Node> nodes = asList(a, b, c);
         nodeProvider = new BasicNodeProvider(nodes);
@@ -65,7 +65,7 @@ public class ListTest {
                         a,
                         b
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -74,7 +74,7 @@ public class ListTest {
                         b,
                         c
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
@@ -91,7 +91,7 @@ public class ListTest {
                         b,
                         c
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -99,7 +99,7 @@ public class ListTest {
                         a,
                         b
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS));
@@ -113,7 +113,7 @@ public class ListTest {
                         a,
                         b
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -121,7 +121,7 @@ public class ListTest {
                         a,
                         b
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
@@ -131,6 +131,10 @@ public class ListTest {
 
     @Test
     public void testDifferentFlavoursOfAList() throws Exception {
+        String abBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(a, b));
+        String abcBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(a, b, c));
+        Node abReference = new Node().blueId(abBlueId);
+        String abPlusCBlueId = BlueIdCalculator.calculateSemanticBlueId(asList(abReference, c));
 
         Node x1 = new Node()
                 .name("X")
@@ -143,31 +147,27 @@ public class ListTest {
         Node x2 = new Node()
                 .name("X")
                 .items(
-                        new Node().blueId(calculateBlueId(asList(a, b))),
+                        new Node().blueId(abBlueId),
                         c
                 );
 
         Node x3 = new Node()
                 .name("X")
                 .items(
-                        new Node().blueId(calculateBlueId(asList(a, b, c)))
+                        new Node().blueId(abcBlueId)
                 );
 
         Node x4 = new Node()
                 .name("X")
                 .items(
                         new Node()
-                                .blueId(calculateBlueId(
-                                        asList(
-                                                new Node().blueId(calculateBlueId(asList(a, b))),
-                                                c
-                                        )
-                                ))
+                                .blueId(abPlusCBlueId)
                 );
 
         nodeProvider.addSingleNodes(x1, x2, x3, x4);
         nodeProvider.addListAndItsItems(asList(a, b));
         nodeProvider.addListAndItsItems(asList(a, b, c));
+        nodeProvider.addList(asList(new Node().blueId(abBlueId), c));
 
         Node x1Extended = preprocessAndExtend(x1);
         Node x2Extended = preprocessAndExtend(x2);
@@ -194,11 +194,11 @@ public class ListTest {
         nodeProvider.addSingleNodes(aNode, bNode, cNode);
 
         List<Node> ab = Arrays.asList(aNode, bNode);
-        String abId = BlueIdCalculator.calculateBlueId(ab);
+        String abId = BlueIdCalculator.calculateSemanticBlueId(ab);
         nodeProvider.addListAndItsItems(ab);
 
         List<Node> abc = Arrays.asList(aNode, bNode, cNode);
-        String abcId = BlueIdCalculator.calculateBlueId(abc);
+        String abcId = BlueIdCalculator.calculateSemanticBlueId(abc);
         nodeProvider.addListAndItsItems(abc);
 
         String x1 = "name: X1\n" +

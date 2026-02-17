@@ -9,7 +9,8 @@ import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.processor.util.PointerUtils;
+import blue.language.blueid.BlueIdCalculator;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -45,7 +46,7 @@ final class ScopeExecutor {
     }
 
     void initializeScope(String scopePath, boolean chargeScopeEntry) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
         Set<String> processedEmbedded = new LinkedHashSet<>();
         ContractBundle bundle = null;
         Node preInitSnapshot = null;
@@ -80,7 +81,7 @@ final class ScopeExecutor {
             }
 
             processedEmbedded.add(nextEmbedded);
-            String childScope = ProcessorEngine.resolvePointer(normalizedScope, nextEmbedded);
+            String childScope = PointerUtils.resolvePointer(normalizedScope, nextEmbedded);
             Node childNode = ProcessorEngine.nodeAt(runtime.document(), childScope);
             if (childNode != null) {
                 initializeScope(childScope, true);
@@ -101,7 +102,7 @@ final class ScopeExecutor {
         }
 
         runtime.chargeInitialization();
-        String documentId = BlueIdCalculator.calculateBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
+        String documentId = BlueIdCalculator.calculateSemanticBlueId(preInitSnapshot != null ? preInitSnapshot : new Node());
         Node lifecycleEvent = ProcessorEngine.createLifecycleInitiatedEvent(documentId);
         ProcessorExecutionContext context = execution.createContext(normalizedScope, bundle, lifecycleEvent, false, true);
         deliverLifecycle(normalizedScope, bundle, lifecycleEvent, true);
@@ -109,7 +110,7 @@ final class ScopeExecutor {
     }
 
     void loadBundles(String scopePath) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
         if (bundles.containsKey(normalizedScope)) {
             return;
         }
@@ -119,13 +120,13 @@ final class ScopeExecutor {
                 : ContractBundle.empty();
         bundles.put(normalizedScope, bundle);
         for (String embeddedPointer : bundle.embeddedPaths()) {
-            String childScope = ProcessorEngine.resolvePointer(normalizedScope, embeddedPointer);
+            String childScope = PointerUtils.resolvePointer(normalizedScope, embeddedPointer);
             loadBundles(childScope);
         }
     }
 
     void processExternalEvent(String scopePath, Node event) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
         if (execution.isScopeInactive(normalizedScope)) {
             return;
         }
@@ -232,7 +233,7 @@ final class ScopeExecutor {
     }
 
     private ContractBundle processEmbeddedChildren(String scopePath, Node event) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
         Set<String> processed = new LinkedHashSet<>();
         ContractBundle bundle = refreshBundle(normalizedScope);
         while (bundle != null) {
@@ -241,7 +242,7 @@ final class ScopeExecutor {
                 return bundle;
             }
             processed.add(next);
-            String childScope = ProcessorEngine.resolvePointer(normalizedScope, next);
+            String childScope = PointerUtils.resolvePointer(normalizedScope, next);
             if (childScope.equals(normalizedScope)) {
                 bundle = refreshBundle(normalizedScope);
                 continue;
@@ -261,7 +262,7 @@ final class ScopeExecutor {
     }
 
     private ContractBundle refreshBundle(String scopePath) {
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
         Node scopeNode = ProcessorEngine.nodeAt(runtime.document(), normalizedScope);
         if (scopeNode == null) {
             bundles.remove(normalizedScope);
@@ -312,7 +313,7 @@ final class ScopeExecutor {
         }
         List<ContractBundle.ChannelBinding> embeddedChannels = bundle.channelsOfType(EmbeddedNodeChannel.class);
         for (String embeddedPointer : bundle.embeddedPaths()) {
-            String childScope = ProcessorEngine.resolvePointer(scopePath, embeddedPointer);
+            String childScope = PointerUtils.resolvePointer(scopePath, embeddedPointer);
             ScopeRuntimeContext childContext = runtime.scope(childScope);
             List<Node> emissions = childContext.drainBridgeableEvents();
             if (emissions.isEmpty()) {
@@ -326,7 +327,7 @@ final class ScopeExecutor {
                 for (ContractBundle.ChannelBinding channel : embeddedChannels) {
                     EmbeddedNodeChannel enc = (EmbeddedNodeChannel) channel.contract();
                     String configuredChild = enc.getChildPath() != null ? enc.getChildPath() : "/";
-                    String resolvedChild = ProcessorEngine.resolvePointer(scopePath, configuredChild);
+                    String resolvedChild = PointerUtils.resolvePointer(scopePath, configuredChild);
                     if (!resolvedChild.equals(childScope)) {
                         continue;
                     }
@@ -374,8 +375,8 @@ final class ScopeExecutor {
         if (bundle == null) {
             return;
         }
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = ProcessorEngine.normalizePointer(patch.getPath());
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
 
         if (targetPath.equals(normalizedScope)) {
             throw new ProcessorEngine.BoundaryViolationException("Self-root mutation is forbidden at scope " + normalizedScope);
@@ -389,7 +390,7 @@ final class ScopeExecutor {
         }
 
         for (String embeddedPointer : bundle.embeddedPaths()) {
-            String embeddedScope = ProcessorEngine.resolvePointer(normalizedScope, embeddedPointer);
+            String embeddedScope = PointerUtils.resolvePointer(normalizedScope, embeddedPointer);
             if (targetPath.startsWith(embeddedScope + "/")) {
                 throw new ProcessorEngine.BoundaryViolationException(
                         "Boundary violation: patch " + targetPath + " enters embedded scope " + embeddedScope);
@@ -403,10 +404,10 @@ final class ScopeExecutor {
         if (allowReservedMutation) {
             return;
         }
-        String normalizedScope = ProcessorEngine.normalizeScope(scopePath);
-        String targetPath = ProcessorEngine.normalizePointer(patch.getPath());
+        String normalizedScope = PointerUtils.normalizeScope(scopePath);
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
         for (String key : ProcessorContractConstants.RESERVED_CONTRACT_KEYS) {
-            String reservedPointer = ProcessorEngine.resolvePointer(normalizedScope, ProcessorPointerConstants.relativeContractsEntry(key));
+            String reservedPointer = PointerUtils.resolvePointer(normalizedScope, ProcessorPointerConstants.relativeContractsEntry(key));
             if (targetPath.equals(reservedPointer) || targetPath.startsWith(reservedPointer + "/")) {
                 throw new ProcessorEngine.BoundaryViolationException(
                         "Reserved key '" + key + "' is write-protected at " + reservedPointer);
@@ -420,9 +421,9 @@ final class ScopeExecutor {
         if (bundle == null || bundle.embeddedPaths().isEmpty()) {
             return;
         }
-        String changedPath = ProcessorEngine.normalizePointer(data.path());
+        String changedPath = PointerUtils.normalizePointer(data.path());
         for (String embeddedPointer : bundle.embeddedPaths()) {
-            String childScope = ProcessorEngine.resolvePointer(scopePath, embeddedPointer);
+            String childScope = PointerUtils.resolvePointer(scopePath, embeddedPointer);
             if (!changedPath.equals(childScope)) {
                 continue;
             }

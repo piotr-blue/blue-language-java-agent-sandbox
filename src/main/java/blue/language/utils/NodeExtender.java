@@ -98,16 +98,6 @@ public class NodeExtender {
         }
     }
 
-    private String appendPath(String currentPath, String segment) {
-        if (currentPath.isEmpty()) {
-            return segment;
-        } else if (currentPath.equals("/")) {
-            return "/" + segment;
-        } else {
-            return currentPath + "/" + segment;
-        }
-    }
-
     private void reconstructList(List<Node> items) {
         while (!items.isEmpty()) {
             Node firstItem = items.get(0);

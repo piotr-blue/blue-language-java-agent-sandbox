@@ -6,6 +6,7 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -157,6 +158,7 @@ public final class ContractBundle {
         private final Map<String, ChannelContract> channels = new LinkedHashMap<>();
         private final Map<String, List<HandlerBinding>> handlersByChannel = new LinkedHashMap<>();
         private final Map<String, MarkerContract> markers = new LinkedHashMap<>();
+        private final Set<String> usedContractKeys = new LinkedHashSet<>();
         private final List<String> embeddedPaths = new ArrayList<>();
         private boolean embeddedDeclared;
         private boolean checkpointDeclared;
@@ -165,14 +167,20 @@ public final class ContractBundle {
         }
 
         public Builder addChannel(String key, ChannelContract contract) {
-            channels.put(key, contract);
+            String normalizedKey = validateContractKey(key, "Channel");
+            ensureUniqueContractKey(normalizedKey);
+            channels.put(normalizedKey, contract);
             return this;
         }
 
         public Builder addHandler(String key, HandlerContract contract) {
+            String normalizedKey = validateContractKey(key, "Handler");
+            ensureUniqueContractKey(normalizedKey);
+            String channelKey = normalizeChannelKey(contract.getChannelKey(), normalizedKey);
+            contract.setChannelKey(channelKey);
             handlersByChannel
-                    .computeIfAbsent(contract.getChannelKey(), k -> new ArrayList<>())
-                    .add(new HandlerBinding(key, contract));
+                    .computeIfAbsent(channelKey, k -> new ArrayList<>())
+                    .add(new HandlerBinding(normalizedKey, contract));
             return this;
         }
 
@@ -183,32 +191,74 @@ public final class ContractBundle {
             embeddedDeclared = true;
             if (embedded.getPaths() != null) {
                 embeddedPaths.clear();
-                embeddedPaths.addAll(embedded.getPaths());
+                Set<String> normalizedPaths = new LinkedHashSet<>();
+                for (String path : embedded.getPaths()) {
+                    if (path == null) {
+                        continue;
+                    }
+                    String trimmed = path.trim();
+                    if (trimmed.isEmpty()) {
+                        continue;
+                    }
+                    normalizedPaths.add(PointerUtils.normalizeRequiredPointer(trimmed, "Embedded path"));
+                }
+                embeddedPaths.addAll(normalizedPaths);
             }
             return this;
         }
 
         public Builder addMarker(String key, MarkerContract contract) {
-            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(key) && !(contract instanceof ChannelEventCheckpoint)) {
+            String normalizedKey = validateContractKey(key, "Marker");
+            ensureUniqueContractKey(normalizedKey);
+            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey) && !(contract instanceof ChannelEventCheckpoint)) {
                 throw new IllegalStateException(
                         "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
             }
             if (contract instanceof ChannelEventCheckpoint) {
-                if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(key)) {
+                if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
                     throw new IllegalStateException(
-                            "Channel Event Checkpoint must use reserved key 'checkpoint' at key '" + key + "'");
+                            "Channel Event Checkpoint must use reserved key 'checkpoint' at key '" + normalizedKey + "'");
                 }
                 if (checkpointDeclared) {
                     throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
                 checkpointDeclared = true;
             }
-            markers.put(key, contract);
+            markers.put(normalizedKey, contract);
             return this;
         }
 
         public ContractBundle build() {
+            for (String channelKey : handlersByChannel.keySet()) {
+                if (!channels.containsKey(channelKey)) {
+                    throw new IllegalStateException("Handler references missing channel: " + channelKey);
+                }
+            }
             return new ContractBundle(channels, handlersByChannel, markers, embeddedPaths, checkpointDeclared);
+        }
+
+        private String validateContractKey(String key, String contractKind) {
+            if (key == null || key.trim().isEmpty()) {
+                throw new IllegalStateException(contractKind + " contract key must not be blank");
+            }
+            return key.trim();
+        }
+
+        private void ensureUniqueContractKey(String key) {
+            if (!usedContractKeys.add(key)) {
+                throw new IllegalStateException("Duplicate contract key: " + key);
+            }
+        }
+
+        private String normalizeChannelKey(String channelKey, String handlerKey) {
+            if (channelKey == null) {
+                throw new IllegalStateException("Handler " + handlerKey + " must declare channel");
+            }
+            String normalized = channelKey.trim();
+            if (normalized.isEmpty()) {
+                throw new IllegalStateException("Handler " + handlerKey + " must declare channel");
+            }
+            return normalized;
         }
     }
 }

@@ -1,10 +1,13 @@
 package blue.language.provider;
 
+import blue.language.Blue;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.utils.BlueIdCalculator;
+import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.utils.Nodes;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import java.util.*;
 import java.util.function.Function;
@@ -17,6 +20,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
 
     private Map<String, JsonNode> blueIdToContentMap;
     private Map<String, Boolean> blueIdToMultipleDocumentsMap;
+    private Map<String, ResolvedSnapshot> semanticBlueIdToSnapshotMap;
     private Function<Node, Node> preprocessor;
 
     public BasicNodeProvider(Node... nodes) {
@@ -26,6 +30,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
     public BasicNodeProvider(Collection<Node> nodes) {
         this.blueIdToContentMap = new HashMap<>();
         this.blueIdToMultipleDocumentsMap = new HashMap<>();
+        this.semanticBlueIdToSnapshotMap = new HashMap<>();
 
         Preprocessor defaultPreprocessor = new Preprocessor(this);
         this.preprocessor = defaultPreprocessor::preprocessWithDefaultBlue;
@@ -63,7 +68,7 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
     }
 
     public void processNodeList(List<Node> nodes) {
-        String listBlueId = BlueIdCalculator.calculateBlueId(nodes);
+        String listBlueId = BlueIdCalculator.calculateSemanticBlueId(nodes);
         JsonNode listContent = JSON_MAPPER.valueToTree(nodes);
         blueIdToContentMap.put(listBlueId, listContent);
         blueIdToMultipleDocumentsMap.put(listBlueId, true);
@@ -89,6 +94,46 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
                 .forEach(this::processNode);
     }
 
+    public String addSingleDocsSemantic(String yaml) {
+        Blue blue = new Blue(this);
+        Node authoring = YAML_MAPPER.readValue(yaml, Node.class);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(authoring);
+        storeSemanticSnapshot(snapshot, false);
+        addNodeToNameMap(JSON_MAPPER.valueToTree(snapshot.resolvedRoot().toNode()), snapshot.rootBlueId());
+        return snapshot.rootBlueId();
+    }
+
+    public String addMultipleDocsSemantic(String yaml) {
+        JsonNode jsonNode = YAML_MAPPER.readTree(yaml);
+        if (!jsonNode.isArray()) {
+            return addSingleDocsSemantic(yaml);
+        }
+
+        Blue blue = new Blue(this);
+        ArrayNode canonicalNodes = JSON_MAPPER.createArrayNode();
+        List<Node> canonicalNodeList = new ArrayList<Node>();
+        List<JsonNode> resolvedNodeJsons = new ArrayList<JsonNode>();
+
+        for (int i = 0; i < jsonNode.size(); i++) {
+            Node authoring = JSON_MAPPER.convertValue(jsonNode.get(i), Node.class);
+            ResolvedSnapshot snapshot = blue.resolveToSnapshot(authoring);
+            storeSemanticSnapshot(snapshot, false);
+            resolvedNodeJsons.add(JSON_MAPPER.valueToTree(snapshot.resolvedRoot().toNode()));
+
+            Node canonicalNode = snapshot.canonicalRoot().toNode();
+            canonicalNodeList.add(canonicalNode);
+            canonicalNodes.add(JSON_MAPPER.valueToTree(canonicalNode));
+        }
+
+        String listSemanticBlueId = BlueIdCalculator.calculateSemanticBlueId(canonicalNodeList);
+        blueIdToContentMap.put(listSemanticBlueId, canonicalNodes);
+        blueIdToMultipleDocumentsMap.put(listSemanticBlueId, true);
+        for (int i = 0; i < resolvedNodeJsons.size(); i++) {
+            addNodeToNameMap(resolvedNodeJsons.get(i), listSemanticBlueId + "#" + i);
+        }
+        return listSemanticBlueId;
+    }
+
     public String getBlueIdByName(String name) {
         return nameToBlueIdsMap.get(name).get(0);
     }
@@ -109,5 +154,29 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
 
     public void addList(List<Node> list) {
         processNodeList(list);
+    }
+
+    public Optional<ResolvedSnapshot> findSnapshotBySemanticBlueId(String semanticBlueId) {
+        return Optional.ofNullable(semanticBlueIdToSnapshotMap.get(semanticBlueId));
+    }
+
+    private void storeParsedContent(NodeContentHandler.ParsedContent parsedContent) {
+        blueIdToContentMap.put(parsedContent.blueId, parsedContent.content);
+        blueIdToMultipleDocumentsMap.put(parsedContent.blueId, parsedContent.isMultipleDocuments);
+    }
+
+    private void addNodeToNameMap(JsonNode node, String blueId) {
+        JsonNode nameNode = node.get("name");
+        if (nameNode != null && !nameNode.isNull()) {
+            addToNameMap(nameNode.asText(), blueId);
+        }
+    }
+
+    private void storeSemanticSnapshot(ResolvedSnapshot snapshot, boolean isMultipleDocuments) {
+        String semanticBlueId = snapshot.rootBlueId();
+        JsonNode canonicalJson = JSON_MAPPER.valueToTree(snapshot.canonicalRoot().toNode());
+        blueIdToContentMap.put(semanticBlueId, canonicalJson);
+        blueIdToMultipleDocumentsMap.put(semanticBlueId, isMultipleDocuments);
+        semanticBlueIdToSnapshotMap.put(semanticBlueId, snapshot);
     }
 }

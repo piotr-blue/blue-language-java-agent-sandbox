@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.legacy.LegacyBlueIdCalculator.calculateBlueId;
 import static blue.language.utils.Properties.*;
 import static org.junit.jupiter.api.Assertions.*;
 

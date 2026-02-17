@@ -1,13 +1,13 @@
 package blue.language.utils;
 
 import blue.language.NodeProvider;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
 import static blue.language.utils.Properties.*;
 
 public class Types {
@@ -20,15 +20,15 @@ public class Types {
     }
 
     public static boolean isSubtype(Node subtype, Node supertype, NodeProvider nodeProvider) {
-        String subtypeBlueId = calculateBlueId(subtype);
-        String supertypeBlueId = calculateBlueId(supertype);
+        String subtypeBlueId = identityForSubtypeCheck(subtype);
+        String supertypeBlueId = identityForSubtypeCheck(supertype);
         if (subtypeBlueId.equals(supertypeBlueId))
             return true;
 
         if (CORE_TYPE_BLUE_IDS.contains(subtypeBlueId)) {
             Node current = supertype;
             while (current != null) {
-                String currentBlueId = calculateBlueId(current);
+                String currentBlueId = identityForSubtypeCheck(current);
                 if (currentBlueId.equals(subtypeBlueId))
                     return true;
                 current = getType(current, nodeProvider);
@@ -38,7 +38,7 @@ public class Types {
 
         Node current = getType(subtype, nodeProvider);
         while (current != null) {
-            String blueId = calculateBlueId(current);
+            String blueId = identityForSubtypeCheck(current);
             if (blueId.equals(supertypeBlueId))
                 return true;
             current = getType(current, nodeProvider);
@@ -70,7 +70,7 @@ public class Types {
         if (type.getBlueId() != null) {
             // tmp code
             if (CORE_TYPE_BLUE_IDS.contains(type.getBlueId())) {
-                return new Node().blueId(type.getBlueId()).name(CORE_TYPE_BLUE_ID_TO_NAME_MAP.get(type.getBlueId()));
+                return new Node().blueId(type.getBlueId());
             }
             List<Node> typeNodes = nodeProvider.fetchByBlueId(type.getBlueId());
             if (typeNodes == null || typeNodes.isEmpty())
@@ -119,6 +119,13 @@ public class Types {
 
     public static boolean isDictionaryType(Node typeNode, NodeProvider nodeProvider) {
         return isSubtype(typeNode, new Node().blueId(DICTIONARY_TYPE_BLUE_ID), nodeProvider);
+    }
+
+    private static String identityForSubtypeCheck(Node node) {
+        if (node.getBlueId() != null) {
+            return node.getBlueId();
+        }
+        return BlueIdCalculator.calculateSemanticBlueId(node);
     }
 
 }
