@@ -59,4 +59,13 @@ class MapBlueIdIndexTest {
 
         assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
     }
+
+    @Test
+    void fromRejectsDuplicateNormalizedPointerKeys() {
+        Map<String, String> ids = new LinkedHashMap<String, String>();
+        ids.put("", "root-a");
+        ids.put("/", "root-b");
+
+        assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
+    }
 }

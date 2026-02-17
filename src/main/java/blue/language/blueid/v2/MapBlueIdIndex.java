@@ -24,7 +24,11 @@ public final class MapBlueIdIndex implements BlueIdIndex {
         }
         Map<String, String> normalized = new LinkedHashMap<String, String>();
         for (Map.Entry<String, String> entry : source.entrySet()) {
-            normalized.put(normalizePointer(entry.getKey()), entry.getValue());
+            String normalizedKey = normalizePointer(entry.getKey());
+            if (normalized.containsKey(normalizedKey)) {
+                throw new IllegalArgumentException("Duplicate normalized pointer key: " + normalizedKey);
+            }
+            normalized.put(normalizedKey, entry.getValue());
         }
         return new MapBlueIdIndex(normalized);
     }
