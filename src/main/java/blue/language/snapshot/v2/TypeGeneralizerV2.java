@@ -1,7 +1,10 @@
 package blue.language.snapshot.v2;
 
 import blue.language.Blue;
+import blue.language.model.Node;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class TypeGeneralizerV2 {
@@ -9,6 +12,153 @@ public final class TypeGeneralizerV2 {
     public GeneralizationReport generalizeToSoundness(Blue blue, FrozenNode resolvedRoot, String changedPointer) {
         Objects.requireNonNull(blue, "blue");
         Objects.requireNonNull(resolvedRoot, "resolvedRoot");
-        return GeneralizationReport.none();
+        Node mutableRoot = resolvedRoot.toNode();
+        return generalizeToSoundness(blue, mutableRoot, changedPointer);
+    }
+
+    public GeneralizationReport generalizeToSoundness(Blue blue, Node mutableResolvedRoot, String changedPointer) {
+        Objects.requireNonNull(blue, "blue");
+        Objects.requireNonNull(mutableResolvedRoot, "mutableResolvedRoot");
+
+        List<String> records = new ArrayList<String>();
+        List<String> pointers = parentPointers(changedPointer);
+        for (String pointer : pointers) {
+            Node node = nodeAt(mutableResolvedRoot, pointer);
+            if (node == null || node.getType() == null) {
+                continue;
+            }
+
+            while (!isConformant(blue, node)) {
+                Node currentType = node.getType();
+                Node parentType = currentType.getType();
+                if (parentType == null) {
+                    break;
+                }
+
+                String before = displayType(currentType);
+                Node generalizedType = toTypeReference(parentType);
+                node.type(generalizedType);
+                String after = displayType(generalizedType);
+                records.add(pointer + ": " + before + " -> " + after);
+            }
+        }
+
+        if (records.isEmpty()) {
+            return GeneralizationReport.none();
+        }
+        return new GeneralizationReport(records);
+    }
+
+    private boolean isConformant(Blue blue, Node node) {
+        try {
+            blue.resolve(node.clone());
+            return true;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
+    private List<String> parentPointers(String changedPointer) {
+        String normalized = normalizePointer(changedPointer);
+        if ("/".equals(normalized)) {
+            List<String> rootOnly = new ArrayList<String>();
+            rootOnly.add("/");
+            return rootOnly;
+        }
+
+        List<String> pointers = new ArrayList<String>();
+        String current = normalized;
+        while (true) {
+            int idx = current.lastIndexOf('/');
+            if (idx <= 0) {
+                pointers.add("/");
+                break;
+            }
+            current = current.substring(0, idx);
+            pointers.add(current);
+            if ("/".equals(current)) {
+                break;
+            }
+        }
+        return pointers;
+    }
+
+    private Node nodeAt(Node root, String pointer) {
+        if ("/".equals(pointer)) {
+            return root;
+        }
+
+        String[] segments = pointer.substring(1).split("/", -1);
+        Node current = root;
+        for (String rawSegment : segments) {
+            String segment = unescape(rawSegment);
+            if (segment.isEmpty()) {
+                continue;
+            }
+
+            if (isNumeric(segment)) {
+                if (current.getItems() == null) {
+                    return null;
+                }
+                int index = Integer.parseInt(segment);
+                if (index < 0 || index >= current.getItems().size()) {
+                    return null;
+                }
+                current = current.getItems().get(index);
+            } else {
+                if (current.getProperties() == null) {
+                    return null;
+                }
+                current = current.getProperties().get(segment);
+            }
+
+            if (current == null) {
+                return null;
+            }
+        }
+        return current;
+    }
+
+    private Node toTypeReference(Node typeNode) {
+        if (typeNode.getBlueId() != null) {
+            return new Node().blueId(typeNode.getBlueId());
+        }
+        return typeNode.clone();
+    }
+
+    private String displayType(Node typeNode) {
+        if (typeNode == null) {
+            return "<none>";
+        }
+        if (typeNode.getName() != null) {
+            return typeNode.getName();
+        }
+        if (typeNode.getBlueId() != null) {
+            return typeNode.getBlueId();
+        }
+        return "<anonymous>";
+    }
+
+    private String normalizePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
+    }
+
+    private String unescape(String segment) {
+        return segment.replace("~1", "/").replace("~0", "~");
+    }
+
+    private boolean isNumeric(String segment) {
+        if (segment.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            if (!Character.isDigit(segment.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

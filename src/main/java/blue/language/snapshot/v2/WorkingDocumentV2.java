@@ -50,8 +50,7 @@ public final class WorkingDocumentV2 {
         validateMutationPath(normalizedPath, patch.getOp());
         applyPatchInPlace(resolved, patch, normalizedPath);
 
-        GeneralizationReport generalizationReport =
-                typeGeneralizer.generalizeToSoundness(blue, FrozenNode.fromNode(resolved), normalizedPath);
+        GeneralizationReport generalizationReport = typeGeneralizer.generalizeToSoundness(blue, resolved, normalizedPath);
         current = snapshotFactory.fromResolved(blue, resolved, SnapshotTrustV2.BLIND_TRUST_RESOLVED);
         lastPatchReport = new PatchReport(Collections.singletonList(normalizedPath), generalizationReport);
         return lastPatchReport;

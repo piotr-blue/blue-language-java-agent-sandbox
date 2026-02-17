@@ -2,25 +2,45 @@ package blue.language.v2;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.provider.BasicNodeProvider;
 import blue.language.processor.model.JsonPatch;
 import blue.language.snapshot.v2.PatchReport;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
 import blue.language.snapshot.v2.WorkingDocumentV2;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Disabled("Enabled in Phase 5 when dynamic type generalization is implemented")
 class V2Spec_Generalization_CurrencyExampleTest {
 
     @Test
     void patchingCurrencyMustTriggerTypeGeneralization() {
-        Blue blue = new Blue();
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Price\n" +
+                        "amount:\n" +
+                        "  type: Integer\n" +
+                        "currency:\n" +
+                        "  type: Text\n"
+        );
+        String priceBlueId = provider.getBlueIdByName("Price");
+        provider.addSingleDocs(
+                "name: PriceInEUR\n" +
+                        "type:\n" +
+                        "  blueId: " + priceBlueId + "\n" +
+                        "currency: EUR\n"
+        );
+        String priceInEURBlueId = provider.getBlueIdByName("PriceInEUR");
+
+        Blue blue = new Blue(provider);
         Node doc = blue.yamlToNode(
                 "price:\n" +
                         "  type:\n" +
-                        "    name: PriceInEUR\n" +
+                        "    blueId: " + priceInEURBlueId + "\n" +
                         "  currency: EUR\n" +
                         "  amount: 10\n"
         );
@@ -30,5 +50,11 @@ class V2Spec_Generalization_CurrencyExampleTest {
         PatchReport report = workingDocument.applyPatch(JsonPatch.replace("/price/currency", new Node().value("USD")));
 
         assertTrue(report.generalizationReport().hasGeneralizations());
+        List<String> generalizations = report.generalizationReport().generalizations();
+        assertFalse(generalizations.isEmpty());
+        assertTrue(generalizations.get(0).startsWith("/price"));
+
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+        assertEquals(priceBlueId, committed.resolvedRoot().toNode().getAsText("/price/type/blueId"));
     }
 }
