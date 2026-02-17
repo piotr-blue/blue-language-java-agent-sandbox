@@ -376,10 +376,6 @@ final class ProcessorEngine {
             }
         }
 
-        String normalizeScope(String scopePath) {
-            return PointerUtils.normalizeScope(scopePath);
-        }
-
         String fatalReason(Throwable throwable, String defaultReason) {
             String message = throwable != null ? throwable.getMessage() : null;
             return message != null ? message : defaultReason;

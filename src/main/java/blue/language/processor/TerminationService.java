@@ -22,7 +22,7 @@ final class TerminationService {
                         String reason) {
         execution.recordPendingTermination(scopePath, kind, reason);
 
-        String normalized = execution.normalizeScope(scopePath);
+        String normalized = PointerUtils.normalizeScope(scopePath);
         String pointer = PointerUtils.resolvePointer(normalized, ProcessorPointerConstants.RELATIVE_TERMINATED);
         runtime.directWrite(pointer, createTerminationMarker(kind, reason));
         runtime.chargeTerminationMarker();
