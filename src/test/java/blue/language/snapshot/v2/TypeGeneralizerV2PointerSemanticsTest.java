@@ -199,6 +199,50 @@ class TypeGeneralizerV2PointerSemanticsTest {
     }
 
     @Test
+    void fallsBackToArrayIndexWhenMixedParentHasNoNumericPropertyMatch() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Price\n" +
+                        "amount:\n" +
+                        "  type: Integer\n" +
+                        "currency:\n" +
+                        "  type: Text\n"
+        );
+        String priceBlueId = provider.getBlueIdByName("Price");
+        provider.addSingleDocs(
+                "name: PriceInEUR\n" +
+                        "type:\n" +
+                        "  blueId: " + priceBlueId + "\n" +
+                        "currency: EUR\n"
+        );
+        String priceInEURBlueId = provider.getBlueIdByName("PriceInEUR");
+
+        Blue blue = new Blue(provider);
+        Node doc = new Node().properties("mixed", new Node()
+                .items(
+                        new Node()
+                                .type(new Node().blueId(priceInEURBlueId))
+                                .properties("currency", new Node().value("EUR"))
+                                .properties("amount", new Node().value(1)),
+                        new Node()
+                                .type(new Node().blueId(priceInEURBlueId))
+                                .properties("currency", new Node().value("EUR"))
+                                .properties("amount", new Node().value(2))
+                )
+                .properties("existing", new Node().value("keep")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
+        Node mutable = snapshot.resolvedRoot().toNode();
+        Node mutableMixed = mutable.getProperties().get("mixed");
+        mutableMixed.getItems().get(1).properties("currency", new Node().value("USD"));
+
+        TypeGeneralizerV2 generalizer = new TypeGeneralizerV2();
+        GeneralizationReport report = generalizer.generalizeToSoundness(blue, mutable, "/mixed/1/currency");
+        assertTrue(report.hasGeneralizations());
+        assertEquals(priceInEURBlueId, mutableMixed.getItems().get(0).getType().getBlueId());
+        assertEquals(priceBlueId, mutableMixed.getItems().get(1).getType().getBlueId());
+    }
+
+    @Test
     void supportsTrailingEmptyPropertySegmentsWhenParentIsObject() {
         BasicNodeProvider provider = new BasicNodeProvider();
         provider.addSingleDocs(
