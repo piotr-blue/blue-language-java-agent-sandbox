@@ -69,6 +69,8 @@ class TypeGeneralizerV2PointerSemanticsTest {
         TypeGeneralizerV2 generalizer = new TypeGeneralizerV2();
         assertThrows(IllegalArgumentException.class,
                 () -> generalizer.generalizeToSoundness(blue, resolved, "/list/~2bad/value"));
+        assertThrows(IllegalArgumentException.class,
+                () -> generalizer.generalizeToSoundness(blue, resolved, "list/0/value"));
     }
 
     @Test

@@ -139,7 +139,10 @@ public final class TypeGeneralizerV2 {
         if (pointer == null || pointer.isEmpty()) {
             return "/";
         }
-        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
+        return pointer;
     }
 
     private String unescape(String segment) {
