@@ -5,6 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -418,12 +419,7 @@ final class PatchEngine {
     }
 
     private List<String> splitPointer(String path) {
-        String[] parts = PointerUtils.splitPointerSegments(path);
-        List<String> segments = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            segments.add(part);
-        }
-        return segments;
+        return new ArrayList<String>(Arrays.asList(PointerUtils.splitPointerSegments(path)));
     }
 
     private Node cloneNode(Node node) {
