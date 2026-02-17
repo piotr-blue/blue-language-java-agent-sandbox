@@ -105,6 +105,25 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
     }
 
     @Test
+    void prefersNumericPropertyOverArrayIndexWhenParentContainsBoth() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("mixed", new Node()
+                        .items(new Node().value("item-zero"))
+                        .properties("0", new Node().value("property-zero")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/mixed/0", new Node().value("property-updated")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
+        assertEquals("property-updated", mixed.getProperties().get("0").getValue());
+        assertEquals("item-zero", mixed.getItems().get(0).getValue());
+    }
+
+    @Test
     void allowsEscapedPropertyPointerSegments() {
         Blue blue = new Blue();
         Node node = new Node()

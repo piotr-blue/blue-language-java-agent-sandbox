@@ -117,6 +117,13 @@ public final class WorkingDocumentV2 {
 
     private void applyAdd(Node parent, String leaf, Node value, String path) {
         Node incoming = value != null ? value.clone() : new Node();
+
+        Map<String, Node> properties = parent.getProperties();
+        if (properties != null && properties.containsKey(leaf)) {
+            ensureMutableProperties(parent).put(leaf, incoming);
+            return;
+        }
+
         List<Node> items = parent.getItems();
         if (items != null) {
             if ("-".equals(leaf)) {
@@ -140,6 +147,13 @@ public final class WorkingDocumentV2 {
 
     private void applyReplace(Node parent, String leaf, Node value, String path) {
         Node incoming = value != null ? value.clone() : new Node();
+
+        Map<String, Node> properties = parent.getProperties();
+        if (properties != null && properties.containsKey(leaf)) {
+            ensureMutableProperties(parent).put(leaf, incoming);
+            return;
+        }
+
         List<Node> items = parent.getItems();
         if (items != null) {
             if ("-".equals(leaf)) {
@@ -161,6 +175,12 @@ public final class WorkingDocumentV2 {
     }
 
     private void applyRemove(Node parent, String leaf, String path) {
+        Map<String, Node> properties = parent.getProperties();
+        if (properties != null && properties.containsKey(leaf)) {
+            ensureMutableProperties(parent).remove(leaf);
+            return;
+        }
+
         List<Node> items = parent.getItems();
         if (items != null) {
             if ("-".equals(leaf)) {
@@ -178,7 +198,7 @@ public final class WorkingDocumentV2 {
             throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
         }
 
-        Map<String, Node> properties = parent.getProperties();
+        properties = parent.getProperties();
         if (properties == null || !properties.containsKey(leaf)) {
             throw new IllegalStateException("Path does not exist for remove: " + path);
         }
@@ -199,6 +219,11 @@ public final class WorkingDocumentV2 {
             throw new IllegalStateException("Path does not exist: " + path);
         }
 
+        Map<String, Node> properties = currentNode.getProperties();
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
+        }
+
         List<Node> items = currentNode.getItems();
         if (items != null) {
             if ("-".equals(segment)) {
@@ -216,7 +241,7 @@ public final class WorkingDocumentV2 {
             return child;
         }
 
-        Map<String, Node> properties = ensureMutableProperties(currentNode);
+        properties = ensureMutableProperties(currentNode);
         Node child = properties.get(segment);
         if (child == null && createMissing) {
             child = new Node();
