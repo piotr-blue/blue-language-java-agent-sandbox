@@ -1,6 +1,9 @@
 package blue.language.provider;
 
+import blue.language.Blue;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Node;
+import blue.language.snapshot.v2.ResolvedSnapshotV2;
 import blue.language.utils.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -87,6 +90,53 @@ public class NodeContentHandler {
         boolean isMultipleDocuments = nodes.size() > 1;
 
         return new ParsedContent(blueId, jsonNode, isMultipleDocuments);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(String content, Blue blue) {
+        JsonNode jsonNode;
+        try {
+            jsonNode = YAML_MAPPER.readTree(content);
+        } catch (Exception e) {
+            try {
+                jsonNode = JSON_MAPPER.readTree(content);
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to parse content as YAML or JSON", ex);
+            }
+        }
+
+        if (jsonNode.isArray() && jsonNode.size() > 1) {
+            List<Node> nodes = StreamSupport.stream(jsonNode.spliterator(), false)
+                    .map(item -> JSON_MAPPER.convertValue(item, Node.class))
+                    .collect(Collectors.toList());
+            return parseAndCalculateSemanticBlueId(nodes, blue);
+        }
+
+        Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
+        return parseAndCalculateSemanticBlueId(node, blue);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(Node node, Blue blue) {
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+        JsonNode canonical = JSON_MAPPER.valueToTree(snapshot.canonicalRoot().toNode());
+        return new ParsedContent(snapshot.rootBlueId(), canonical, false);
+    }
+
+    public static ParsedContent parseAndCalculateSemanticBlueId(List<Node> nodes, Blue blue) {
+        if (nodes == null || nodes.isEmpty()) {
+            throw new IllegalArgumentException("List of nodes cannot be null or empty");
+        }
+
+        List<ResolvedSnapshotV2> snapshots = nodes.stream()
+                .map(blue::resolveToSnapshotV2)
+                .collect(Collectors.toList());
+
+        List<Node> canonicalNodes = snapshots.stream()
+                .map(snapshot -> snapshot.canonicalRoot().toNode())
+                .collect(Collectors.toList());
+
+        String blueId = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalNodes);
+        JsonNode canonicalList = JSON_MAPPER.valueToTree(canonicalNodes);
+        return new ParsedContent(blueId, canonicalList, canonicalNodes.size() > 1);
     }
 
     public static JsonNode resolveThisReferences(JsonNode content, String currentBlueId, boolean isMultipleDocuments) {
