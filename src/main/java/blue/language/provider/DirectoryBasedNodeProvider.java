@@ -2,7 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
@@ -53,7 +53,7 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
                     if (p.toString().endsWith(BLUE_FILE_EXTENSION)) {
                         processContent(content);
                     } else {
-                        String blueId = BlueIdCalculatorV2.calculateSemanticBlueId(new Node().value(content));
+                        String blueId = BlueIdCalculator.calculateSemanticBlueId(new Node().value(content));
                         blueIdToContentMap.put(blueId, content);
                         blueIdToMultipleDocumentsMap.put(blueId, false);
                     }
@@ -91,7 +91,7 @@ public class DirectoryBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void processNodeList(List<Node> nodes) {
-        String listBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(nodes);
+        String listBlueId = BlueIdCalculator.calculateSemanticBlueId(nodes);
         JsonNode listContent = JSON_MAPPER.valueToTree(nodes);
         blueIdToContentMap.put(listBlueId, listContent);
         blueIdToMultipleDocumentsMap.put(listBlueId, true);

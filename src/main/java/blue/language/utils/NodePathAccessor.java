@@ -1,7 +1,7 @@
 package blue.language.utils;
 
 import blue.language.model.Node;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.List;
@@ -90,7 +90,7 @@ public class NodePathAccessor {
                 case "blueId":
                     String blueId = node.getBlueId() != null
                             ? node.getBlueId()
-                            : BlueIdCalculatorV2.calculateSemanticBlueId(node);
+                            : BlueIdCalculator.calculateSemanticBlueId(node);
                     result = new Node().value(blueId);
                     break;
                 case "blue":

@@ -1,7 +1,7 @@
 package blue.language.preprocess;
 
 import blue.language.NodeProvider;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.preprocess.processor.InferBasicTypesForUntypedValues;
 import blue.language.preprocess.processor.ReplaceInlineValuesForTypeAttributesWithImports;
@@ -119,10 +119,10 @@ public class Preprocessor {
                 List<Node> nodes = StreamSupport.stream(root.spliterator(), false)
                         .map(element -> YAML_MAPPER.convertValue(element, Node.class))
                         .collect(Collectors.toList());
-                return BlueIdCalculatorV2.calculateSemanticBlueId(nodes);
+                return BlueIdCalculator.calculateSemanticBlueId(nodes);
             }
             Node node = YAML_MAPPER.convertValue(root, Node.class);
-            return BlueIdCalculatorV2.calculateSemanticBlueId(node);
+            return BlueIdCalculator.calculateSemanticBlueId(node);
         } catch (IOException e) {
             throw new RuntimeException("Error calculating DefaultBlue.blue id", e);
         }

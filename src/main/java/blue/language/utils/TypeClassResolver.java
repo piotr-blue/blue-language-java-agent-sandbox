@@ -2,7 +2,7 @@ package blue.language.utils;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import org.reflections.Reflections;
 import org.reflections.scanners.Scanners;
 import org.reflections.util.ClasspathHelper;
@@ -57,7 +57,7 @@ public class TypeClassResolver {
         if (node.getType() != null && node.getType().getBlueId() != null) {
             return node.getType().getBlueId();
         } else if (node.getType() != null) {
-            return BlueIdCalculatorV2.calculateSemanticBlueId(node.getType());
+            return BlueIdCalculator.calculateSemanticBlueId(node.getType());
         }
         return null;
     }

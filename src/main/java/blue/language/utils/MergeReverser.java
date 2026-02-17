@@ -1,6 +1,6 @@
 package blue.language.utils;
 
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 
 import java.util.*;
@@ -48,7 +48,7 @@ public class MergeReverser {
             int start = 0;
             List<Node> minimalItems = new ArrayList<>();
             if (fromType != null && fromType.getItems() != null) {
-                String itemsBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(fromType.getItems());
+                String itemsBlueId = BlueIdCalculator.calculateSemanticBlueId(fromType.getItems());
                 minimalItems.add(new Node().blueId(itemsBlueId));
                 start = fromType.getItems().size();
             }

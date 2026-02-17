@@ -2,7 +2,7 @@ package blue.language.merge;
 
 import blue.language.NodeProvider;
 import blue.language.model.Node;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.NodeProviderWrapper;
 import blue.language.utils.limits.Limits;
@@ -98,8 +98,8 @@ public class Merger implements NodeResolver {
                 limits.exitPathSegment();
                 continue;
             }
-            String sourceBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(sourceChildren.get(i));
-            String targetBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(targetChildren.get(i));
+            String sourceBlueId = BlueIdCalculator.calculateSemanticBlueId(sourceChildren.get(i));
+            String targetBlueId = BlueIdCalculator.calculateSemanticBlueId(targetChildren.get(i));
             if (!sourceBlueId.equals(targetBlueId))
                 throw new IllegalArgumentException(String.format(
                         "Mismatched items at index %d: source item has blueId '%s', but target item has blueId '%s'.",

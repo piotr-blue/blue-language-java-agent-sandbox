@@ -11,8 +11,10 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.model.Contract;
 import blue.language.preprocess.Preprocessor;
+import blue.language.snapshot.ResolvedSnapshot;
+import blue.language.snapshot.SnapshotFactory;
+import blue.language.snapshot.SnapshotTrust;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.snapshot.v2.SnapshotFactoryV2;
 import blue.language.snapshot.v2.SnapshotTrustV2;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
@@ -35,7 +37,7 @@ public class Blue implements NodeResolver {
     private Map<String, String> preprocessingAliases = new HashMap<>();
     private Limits globalLimits = NO_LIMITS;
     private DocumentProcessor documentProcessor;
-    private SnapshotFactoryV2 snapshotFactoryV2 = new SnapshotFactoryV2();
+    private SnapshotFactory snapshotFactory = new SnapshotFactory();
 
 
 
@@ -166,32 +168,55 @@ public class Blue implements NodeResolver {
     }
 
     public String calculateBlueId(Node node) {
-        return calculateSemanticBlueIdV2(node);
+        return calculateSemanticBlueId(node);
     }
 
     public String calculateBlueId(Object object) {
         return calculateBlueId(objectToNode(object));
     }
 
+    public ResolvedSnapshot resolveToSnapshot(Node authoring) {
+        return resolveToSnapshot(authoring, SnapshotTrust.RESOLVE);
+    }
+
+    public ResolvedSnapshot resolveToSnapshot(Node authoring, SnapshotTrust trust) {
+        if (trust == SnapshotTrust.BLIND_TRUST_RESOLVED) {
+            return snapshotFactory.fromResolved(this, authoring, trust);
+        }
+        return snapshotFactory.fromAuthoring(this, authoring);
+    }
+
+    public String calculateSemanticBlueId(Node authoring) {
+        return resolveToSnapshot(authoring).rootBlueId();
+    }
+
+    public String calculateSemanticBlueIdFromResolved(Node resolved) {
+        return snapshotFactory
+                .fromResolved(this, resolved, SnapshotTrust.BLIND_TRUST_RESOLVED)
+                .rootBlueId();
+    }
+
+    @Deprecated
     public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring) {
         return resolveToSnapshotV2(authoring, SnapshotTrustV2.RESOLVE);
     }
 
+    @Deprecated
     public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring, SnapshotTrustV2 trust) {
-        if (trust == SnapshotTrustV2.BLIND_TRUST_RESOLVED) {
-            return snapshotFactoryV2.fromResolved(this, authoring, trust);
-        }
-        return snapshotFactoryV2.fromAuthoring(this, authoring);
+        SnapshotTrust mappedTrust = trust == SnapshotTrustV2.BLIND_TRUST_RESOLVED
+                ? SnapshotTrust.BLIND_TRUST_RESOLVED
+                : SnapshotTrust.RESOLVE;
+        return toLegacySnapshot(resolveToSnapshot(authoring, mappedTrust));
     }
 
+    @Deprecated
     public String calculateSemanticBlueIdV2(Node authoring) {
-        return resolveToSnapshotV2(authoring).rootBlueId();
+        return calculateSemanticBlueId(authoring);
     }
 
+    @Deprecated
     public String calculateSemanticBlueIdV2FromResolved(Node resolved) {
-        return snapshotFactoryV2
-                .fromResolved(this, resolved, SnapshotTrustV2.BLIND_TRUST_RESOLVED)
-                .rootBlueId();
+        return calculateSemanticBlueIdFromResolved(resolved);
     }
 
     public void addPreprocessingAliases(Map<String, String> aliases) {
@@ -340,6 +365,15 @@ public class Blue implements NodeResolver {
                         new ConstraintsVerifier(),
                         new BasicTypesVerifier()
                 )
+        );
+    }
+
+    private ResolvedSnapshotV2 toLegacySnapshot(ResolvedSnapshot snapshot) {
+        return new ResolvedSnapshotV2(
+                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.canonicalRoot().toNode()),
+                blue.language.snapshot.v2.FrozenNode.fromNode(snapshot.resolvedRoot().toNode()),
+                snapshot.rootBlueId(),
+                blue.language.blueid.v2.MapBlueIdIndex.from(snapshot.blueIdsByPointer().asMap())
         );
     }
 

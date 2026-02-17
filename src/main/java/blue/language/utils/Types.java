@@ -1,7 +1,7 @@
 package blue.language.utils;
 
 import blue.language.NodeProvider;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 
 import java.util.List;
@@ -125,7 +125,7 @@ public class Types {
         if (node.getBlueId() != null) {
             return node.getBlueId();
         }
-        return BlueIdCalculatorV2.calculateSemanticBlueId(node);
+        return BlueIdCalculator.calculateSemanticBlueId(node);
     }
 
 }
