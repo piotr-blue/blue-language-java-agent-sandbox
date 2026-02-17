@@ -189,6 +189,15 @@ class NodePathAccessorTest {
     }
 
     @Test
+    void testRootPointerResolvesLinkWhenRequested() {
+        Node reference = new Node().blueId("ref-id");
+        Node linked = new Node().value("linked-root");
+
+        Object resolved = NodePathAccessor.get(reference, "/", node -> "ref-id".equals(node.getBlueId()) ? linked : node, true);
+        assertEquals("linked-root", resolved);
+    }
+
+    @Test
     void testResolveFinalLinkFalseSkipsFinalLinkResolution() {
         Node reference = new Node().blueId("ref-id");
         Node linked = new Node().value("linked");

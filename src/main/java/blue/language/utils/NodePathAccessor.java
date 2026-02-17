@@ -29,7 +29,8 @@ public class NodePathAccessor {
             if (!resolveFinalLink) {
                 return node;
             }
-            return node.getValue() != null ? node.getValue() : node;
+            Node resolved = linkingProvider != null ? link(node, linkingProvider) : node;
+            return resolved.getValue() != null ? resolved.getValue() : resolved;
         }
 
         String[] rawSegments = path.substring(1).split("/", -1);
