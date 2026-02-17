@@ -162,10 +162,10 @@ public class Node implements Cloneable {
     }
 
     public Node value(Object value) {
-        if (value instanceof Integer || value instanceof Long) {
-            this.value = BigInteger.valueOf((Integer) value);
+        if (value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) {
+            this.value = BigInteger.valueOf(((Number) value).longValue());
         } else if (value instanceof Float || value instanceof Double) {
-            this.value = BigDecimal.valueOf((Double) value);
+            this.value = BigDecimal.valueOf(((Number) value).doubleValue());
         } else {
             this.value = value;
         }

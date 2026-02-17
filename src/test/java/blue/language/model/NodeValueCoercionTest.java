@@ -1,0 +1,28 @@
+package blue.language.model;
+
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class NodeValueCoercionTest {
+
+    @Test
+    void valueObjectConvertsLongToBigInteger() {
+        Node node = new Node().value(Long.MAX_VALUE);
+
+        assertTrue(node.getValue() instanceof BigInteger);
+        assertEquals(BigInteger.valueOf(Long.MAX_VALUE), node.getValue());
+    }
+
+    @Test
+    void valueObjectConvertsFloatToBigDecimal() {
+        Node node = new Node().value(1.5f);
+
+        assertTrue(node.getValue() instanceof BigDecimal);
+        assertEquals(BigDecimal.valueOf(1.5d), node.getValue());
+    }
+}
