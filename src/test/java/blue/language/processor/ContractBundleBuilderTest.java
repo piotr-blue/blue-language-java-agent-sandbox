@@ -28,25 +28,29 @@ class ContractBundleBuilderTest {
 
     @Test
     void setEmbeddedRejectsMalformedPointerEscapes() {
-        ProcessEmbedded embedded = new ProcessEmbedded()
-                .addPath("/bad~")
-                .addPath("/ok");
+        assertThrows(IllegalArgumentException.class,
+                () -> {
+                    ProcessEmbedded embedded = new ProcessEmbedded()
+                            .addPath("/bad~")
+                            .addPath("/ok");
+                    ContractBundle.builder().setEmbedded(embedded).build();
+                });
 
         assertThrows(IllegalArgumentException.class,
-                () -> ContractBundle.builder().setEmbedded(embedded).build());
-
-        ProcessEmbedded invalidToken = new ProcessEmbedded().addPath("/bad~2");
-        assertThrows(IllegalArgumentException.class,
-                () -> ContractBundle.builder().setEmbedded(invalidToken).build());
+                () -> {
+                    ProcessEmbedded invalidToken = new ProcessEmbedded().addPath("/bad~2");
+                    ContractBundle.builder().setEmbedded(invalidToken).build();
+                });
     }
 
     @Test
     void setEmbeddedRejectsNonPointerPaths() {
-        ProcessEmbedded embedded = new ProcessEmbedded()
-                .addPath("child");
-
         assertThrows(IllegalArgumentException.class,
-                () -> ContractBundle.builder().setEmbedded(embedded).build());
+                () -> {
+                    ProcessEmbedded embedded = new ProcessEmbedded()
+                            .addPath("child");
+                    ContractBundle.builder().setEmbedded(embedded).build();
+                });
     }
 
     @Test

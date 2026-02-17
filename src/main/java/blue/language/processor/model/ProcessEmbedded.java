@@ -1,6 +1,7 @@
 package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +44,9 @@ public class ProcessEmbedded extends MarkerContract {
         if (trimmed.isEmpty()) {
             return null;
         }
-        return trimmed;
+        if (trimmed.charAt(0) != '/') {
+            throw new IllegalArgumentException("ProcessEmbedded path must start with '/': " + path);
+        }
+        return PointerUtils.normalizePointer(trimmed);
     }
 }
