@@ -48,7 +48,7 @@ final class PatchEngine {
         Node after = patch.getOp() == JsonPatch.Op.REMOVE
                 ? null
                 : cloneNode(readNode(document, segments, LookupMode.AFTER, targetPath));
-        List<String> cascadeScopes = computeCascadeScopes(normalizedScope);
+        List<String> cascadeScopes = PointerUtils.ancestorPointers(normalizedScope, true);
         return new PatchResult(targetPath, before, after, op, normalizedScope, cascadeScopes);
     }
 
@@ -423,10 +423,6 @@ final class PatchEngine {
 
     private String pointerPrefix(List<String> segments, int length) {
         return PointerUtils.pointerFromSegments(segments, length);
-    }
-
-    private List<String> computeCascadeScopes(String scopePath) {
-        return PointerUtils.ancestorPointers(scopePath, true);
     }
 
     private Node cloneNode(Node node) {
