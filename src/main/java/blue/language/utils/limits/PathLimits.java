@@ -122,7 +122,7 @@ public class PathLimits implements Limits {
         private int maxDepth = Integer.MAX_VALUE;
 
         public Builder addPath(String path) {
-            allowedPaths.add(path);
+            allowedPaths.add(normalizeAndValidateAllowedPath(path));
             return this;
         }
 
@@ -133,6 +133,40 @@ public class PathLimits implements Limits {
 
         public PathLimits build() {
             return new PathLimits(allowedPaths, maxDepth);
+        }
+
+        private String normalizeAndValidateAllowedPath(String path) {
+            if (path == null) {
+                throw new IllegalArgumentException("Allowed path cannot be null");
+            }
+            String normalized = path.trim();
+            if (normalized.isEmpty()) {
+                throw new IllegalArgumentException("Allowed path cannot be empty");
+            }
+            if (!normalized.startsWith("/")) {
+                normalized = "/" + normalized;
+            }
+            normalized = "/" + Stream.of(normalized.split("/"))
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.joining("/"));
+            validatePointerEscapes(normalized);
+            return normalized;
+        }
+
+        private void validatePointerEscapes(String pointer) {
+            for (int i = 1; i < pointer.length(); i++) {
+                char c = pointer.charAt(i);
+                if (c != '~') {
+                    continue;
+                }
+                if (i + 1 >= pointer.length()) {
+                    throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
+                }
+                char next = pointer.charAt(++i);
+                if (next != '0' && next != '1') {
+                    throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
+                }
+            }
         }
     }
 

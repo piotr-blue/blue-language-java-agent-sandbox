@@ -173,6 +173,25 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testBuilderNormalizesMissingLeadingSlashAndWhitespace() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("  x/*  ")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("x", mockNode));
+        pathLimits.enterPathSegment("x", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("leaf", mockNode));
+    }
+
+    @Test
+    public void testBuilderRejectsMalformedPointerEscapes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().addPath("/x~").build());
+        assertThrows(IllegalArgumentException.class,
+                () -> new PathLimits.Builder().addPath("/x~2").build());
+    }
+
+    @Test
     public void testConstraintsAndBlueId() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);
