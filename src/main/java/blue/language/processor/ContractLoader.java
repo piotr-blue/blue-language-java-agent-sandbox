@@ -129,12 +129,8 @@ final class ContractLoader {
             throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
                     + " has blank " + fieldName);
         }
-        if (trimmed.charAt(0) != '/') {
-            throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
-                    + " has invalid " + fieldName + ": " + pointer);
-        }
         try {
-            return PointerUtils.normalizePointer(trimmed);
+            return PointerUtils.normalizeRequiredPointer(trimmed, fieldName);
         } catch (IllegalArgumentException ex) {
             throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
                     + " has invalid " + fieldName + ": " + pointer, ex);

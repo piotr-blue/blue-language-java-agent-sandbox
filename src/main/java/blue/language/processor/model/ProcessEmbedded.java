@@ -46,9 +46,13 @@ public class ProcessEmbedded extends MarkerContract {
         if (trimmed.isEmpty()) {
             return null;
         }
-        if (trimmed.charAt(0) != '/') {
-            throw new IllegalArgumentException("ProcessEmbedded path must start with '/': " + path);
+        try {
+            return PointerUtils.normalizePointer(trimmed);
+        } catch (IllegalArgumentException ex) {
+            if (!trimmed.startsWith("/")) {
+                throw new IllegalArgumentException("ProcessEmbedded path must start with '/': " + path);
+            }
+            throw ex;
         }
-        return PointerUtils.normalizePointer(trimmed);
     }
 }

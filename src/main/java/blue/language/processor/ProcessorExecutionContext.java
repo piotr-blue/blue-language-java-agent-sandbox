@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.util.PointerUtils;
 import blue.language.processor.model.JsonPatch;
 
 import java.util.Objects;
@@ -101,9 +102,6 @@ public final class ProcessorExecutionContext {
         if (absolutePointer == null || absolutePointer.isEmpty()) {
             return "/";
         }
-        if (absolutePointer.charAt(0) != '/') {
-            throw new IllegalArgumentException("Document pointer must start with '/': " + absolutePointer);
-        }
-        return absolutePointer;
+        return PointerUtils.normalizePointer(absolutePointer);
     }
 }
