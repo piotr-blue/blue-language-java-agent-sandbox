@@ -72,6 +72,9 @@ public class PathLimits implements Limits {
             currentPath.push(segment.substring(1));
             return;
         }
+        if (segment.isEmpty() && currentPath.isEmpty()) {
+            return;
+        }
         currentPath.push(escapeJsonPointerSegment(segment));
     }
 
