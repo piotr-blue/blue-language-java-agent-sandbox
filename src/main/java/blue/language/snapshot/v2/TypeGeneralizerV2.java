@@ -61,7 +61,7 @@ public final class TypeGeneralizerV2 {
     }
 
     private List<String> parentPointers(String changedPointer) {
-        String normalized = normalizePointer(changedPointer);
+        String normalized = PointerUtils.normalizePointer(changedPointer);
         if ("/".equals(normalized)) {
             List<String> rootOnly = new ArrayList<String>();
             rootOnly.add("/");
@@ -136,7 +136,4 @@ public final class TypeGeneralizerV2 {
         return "<anonymous>";
     }
 
-    private String normalizePointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
-    }
 }

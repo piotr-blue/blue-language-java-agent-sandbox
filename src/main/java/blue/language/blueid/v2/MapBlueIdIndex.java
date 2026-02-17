@@ -26,7 +26,7 @@ public final class MapBlueIdIndex implements BlueIdIndex {
         }
         Map<String, String> normalized = new LinkedHashMap<String, String>();
         for (Map.Entry<String, String> entry : source.entrySet()) {
-            String normalizedKey = normalizePointer(entry.getKey());
+            String normalizedKey = PointerUtils.normalizePointer(entry.getKey());
             if (normalized.containsKey(normalizedKey)) {
                 throw new IllegalArgumentException("Duplicate normalized pointer key: " + normalizedKey);
             }
@@ -37,16 +37,12 @@ public final class MapBlueIdIndex implements BlueIdIndex {
 
     @Override
     public String blueIdAt(String jsonPointer) {
-        return index.get(normalizePointer(jsonPointer));
+        return index.get(PointerUtils.normalizePointer(jsonPointer));
     }
 
     @Override
     public Map<String, String> asMap() {
         return index;
-    }
-
-    private static String normalizePointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
     }
 
     private static String normalizeBlueId(String blueId, String pointer) {

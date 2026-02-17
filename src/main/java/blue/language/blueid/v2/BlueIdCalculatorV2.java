@@ -57,7 +57,7 @@ public final class BlueIdCalculatorV2 {
 
     public static String rehashPath(Node canonicalRoot, String jsonPointer) {
         Objects.requireNonNull(canonicalRoot, "canonicalRoot");
-        String normalizedPointer = normalizePointer(jsonPointer);
+        String normalizedPointer = PointerUtils.normalizePointer(jsonPointer);
         Node target = nodeAt(canonicalRoot, normalizedPointer);
         if (target == null) {
             throw new IllegalArgumentException("Path not found in canonical node: " + normalizedPointer);
@@ -153,10 +153,6 @@ public final class BlueIdCalculatorV2 {
 
     private static String hashNull() {
         return HASH_PROVIDER.apply(Arrays.asList("$null"));
-    }
-
-    private static String normalizePointer(String pointer) {
-        return PointerUtils.normalizePointer(pointer);
     }
 
     private static Node nodeAt(Node root, String pointer) {
