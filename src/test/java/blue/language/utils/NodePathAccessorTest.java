@@ -122,6 +122,16 @@ class NodePathAccessorTest {
     }
 
     @Test
+    void testNumericSegmentFallsBackToListIndexWhenNoPropertyMatch() {
+        Node node = new Node()
+                .items(new Node().value("list-zero"), new Node().value("list-one"))
+                .properties("existing", new Node().value("keep"));
+
+        assertEquals("list-one", NodePathAccessor.get(node, "/1"));
+        assertEquals("keep", NodePathAccessor.get(node, "/existing"));
+    }
+
+    @Test
     void testLeadingZeroPropertyKeyIsAccessible() {
         Node node = new Node()
                 .properties("01", new Node().value("leading-zero"));
