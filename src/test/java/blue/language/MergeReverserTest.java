@@ -2,6 +2,7 @@ package blue.language;
 
 import blue.language.model.Node;
 import blue.language.provider.BasicNodeProvider;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.utils.BlueIdCalculator;
 import blue.language.utils.MergeReverser;
 import blue.language.utils.Properties;
@@ -171,7 +172,7 @@ public class MergeReverserTest {
         assertEquals("Derived", reversed.getName());
         assertEquals(nodeProvider.getBlueIdByName("Base"), reversed.getType().getBlueId());
         assertEquals(2, reversed.getAsNode("/list").getItems().size());
-        assertEquals(BlueIdCalculator.calculateBlueId(
+        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(
                 Arrays.asList(
                         blue.yamlToNode("value: A\ntype: Text"),
                         blue.yamlToNode("value: B\ntype: Text")
