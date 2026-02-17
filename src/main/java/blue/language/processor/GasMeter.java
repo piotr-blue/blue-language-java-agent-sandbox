@@ -20,7 +20,7 @@ final class GasMeter {
     }
 
     void chargeScopeEntry(String scopePath) {
-        add(GasCharges.scopeEntry(scopeDepth(scopePath)));
+        add(GasCharges.scopeEntry(PointerUtils.splitPointerSegments(scopePath).length));
     }
 
     void chargeInitialization() {
@@ -84,10 +84,6 @@ final class GasMeter {
     private long payloadSizeCharge(Node node) {
         long bytes = NodeCanonicalizer.canonicalSize(node);
         return (bytes + 99L) / 100L;
-    }
-
-    private int scopeDepth(String scopePath) {
-        return PointerUtils.splitPointerSegments(scopePath).length;
     }
 
     private static final class GasCharges {
