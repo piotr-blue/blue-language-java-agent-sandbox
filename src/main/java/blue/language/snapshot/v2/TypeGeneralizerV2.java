@@ -23,7 +23,7 @@ public final class TypeGeneralizerV2 {
         Objects.requireNonNull(mutableResolvedRoot, "mutableResolvedRoot");
 
         List<String> records = new ArrayList<String>();
-        List<String> pointers = parentPointers(changedPointer);
+        List<String> pointers = PointerUtils.ancestorPointers(changedPointer, false);
         for (String pointer : pointers) {
             Node node = nodeAt(mutableResolvedRoot, pointer);
             if (node == null || node.getType() == null) {
@@ -58,10 +58,6 @@ public final class TypeGeneralizerV2 {
         } catch (IllegalArgumentException ex) {
             return false;
         }
-    }
-
-    private List<String> parentPointers(String changedPointer) {
-        return PointerUtils.ancestorPointers(changedPointer, false);
     }
 
     private Node nodeAt(Node root, String pointer) {
