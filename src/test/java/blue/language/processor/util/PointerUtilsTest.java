@@ -87,6 +87,8 @@ class PointerUtilsTest {
         assertEquals(-1, PointerUtils.parseArrayIndex("999999999999999999999"));
         assertEquals(4, PointerUtils.parseArrayIndexOrThrow("4", "/list/4"));
         assertThrows(IllegalStateException.class, () -> PointerUtils.parseArrayIndexOrThrow("01", "/list/01"));
+        assertThrows(IllegalStateException.class,
+                () -> PointerUtils.parseArrayIndexOrThrow("999999999999999999999", "/list/999999999999999999999"));
     }
 
     @Test
