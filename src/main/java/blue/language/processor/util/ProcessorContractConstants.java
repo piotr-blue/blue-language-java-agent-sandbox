@@ -1,9 +1,13 @@
 package blue.language.processor.util;
 
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
+import blue.language.processor.model.InitializationMarker;
 import blue.language.processor.model.LifecycleChannel;
+import blue.language.processor.model.MarkerContract;
+import blue.language.processor.model.ProcessingTerminatedMarker;
 import blue.language.processor.model.TriggeredEventChannel;
 
 import java.util.Arrays;
@@ -37,6 +41,13 @@ public final class ProcessorContractConstants {
                     EmbeddedNodeChannel.class
             )));
 
+    public static final Set<Class<? extends MarkerContract>> PROCESSOR_MANAGED_MARKER_TYPES =
+            Collections.unmodifiableSet(new LinkedHashSet<Class<? extends MarkerContract>>(Arrays.<Class<? extends MarkerContract>>asList(
+                    InitializationMarker.class,
+                    ProcessingTerminatedMarker.class,
+                    ChannelEventCheckpoint.class
+            )));
+
     private ProcessorContractConstants() {
     }
 
@@ -50,6 +61,18 @@ public final class ProcessorContractConstants {
         }
         for (Class<? extends ChannelContract> type : PROCESSOR_MANAGED_CHANNEL_TYPES) {
             if (type.isInstance(contract)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isProcessorManagedMarker(MarkerContract marker) {
+        if (marker == null) {
+            return false;
+        }
+        for (Class<? extends MarkerContract> type : PROCESSOR_MANAGED_MARKER_TYPES) {
+            if (type.isInstance(marker)) {
                 return true;
             }
         }

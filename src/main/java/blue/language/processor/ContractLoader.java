@@ -75,7 +75,14 @@ final class ContractLoader {
             } else if (contract instanceof ProcessEmbedded) {
                 builder.setEmbedded((ProcessEmbedded) contract);
             } else if (contract instanceof MarkerContract) {
-                builder.addMarker(key, (MarkerContract) contract);
+                MarkerContract marker = (MarkerContract) contract;
+                if (!ProcessorContractConstants.isReservedKey(key)
+                        && !ProcessorContractConstants.isProcessorManagedMarker(marker)
+                        && !registry.lookupMarker(marker.getClass()).isPresent()) {
+                    throw new MustUnderstandFailureException(
+                            "Unsupported contract type: " + marker.getClass().getName());
+                }
+                builder.addMarker(key, marker);
             }
         }
 

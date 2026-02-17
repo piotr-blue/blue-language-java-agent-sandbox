@@ -36,6 +36,28 @@ class DocumentProcessorCapabilityTest {
     }
 
     @Test
+    void initializeDocumentFailsWithCapabilityFailureWhenMarkerProcessorMissing() {
+        String yaml = "name: Doc\n" +
+                "contracts:\n" +
+                "  marker:\n" +
+                "    type:\n" +
+                "      blueId: ProcessingFailureMarker\n" +
+                "    code: X\n" +
+                "    reason: unsupported\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+        String originalJson = blue.nodeToJson(document.clone());
+
+        DocumentProcessingResult result = blue.initializeDocument(document);
+        assertTrue(result.capabilityFailure());
+        assertEquals(0L, result.totalGas());
+        assertTrue(result.triggeredEvents().isEmpty());
+        assertEquals(originalJson, blue.nodeToJson(result.document()));
+        assertNotNull(result.failureReason());
+    }
+
+    @Test
     void processDocumentFailsWithCapabilityFailureWhenNewUnsupportedContractAppears() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new blue.language.processor.contracts.SetPropertyContractProcessor());
