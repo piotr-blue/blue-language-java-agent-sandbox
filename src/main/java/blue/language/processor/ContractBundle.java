@@ -189,7 +189,11 @@ public final class ContractBundle {
                     if (path == null) {
                         continue;
                     }
-                    normalizedPaths.add(PointerUtils.normalizePointer(path));
+                    String trimmed = path.trim();
+                    if (trimmed.isEmpty()) {
+                        continue;
+                    }
+                    normalizedPaths.add(PointerUtils.normalizePointer(trimmed));
                 }
                 embeddedPaths.addAll(normalizedPaths);
             }

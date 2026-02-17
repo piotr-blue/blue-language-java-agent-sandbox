@@ -37,4 +37,18 @@ class ContractBundleBuilderTest {
         assertThrows(IllegalArgumentException.class,
                 () -> ContractBundle.builder().setEmbedded(invalidToken).build());
     }
+
+    @Test
+    void setEmbeddedTrimsWhitespaceAndSkipsBlankEntries() {
+        ProcessEmbedded embedded = new ProcessEmbedded()
+                .addPath("  child  ")
+                .addPath("   ")
+                .addPath("\t/next\t");
+
+        ContractBundle bundle = ContractBundle.builder()
+                .setEmbedded(embedded)
+                .build();
+
+        assertEquals(Arrays.asList("/child", "/next"), bundle.embeddedPaths());
+    }
 }
