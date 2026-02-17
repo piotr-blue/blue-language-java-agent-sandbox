@@ -125,4 +125,32 @@ public class TypesTest {
         assertFalse(isSubtype(new Node().blueId(INTEGER_TYPE_BLUE_ID), decoratedTextType, noLookupProvider));
     }
 
+    @Test
+    public void subtypeCheckUsesSemanticIdentityWhenProviderIsAvailable() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: AmountType\n" +
+                        "currency: USD\n"
+        );
+
+        Blue blue = new Blue(provider);
+        String amountTypeBlueId = provider.getBlueIdByName("AmountType");
+
+        Node withoutOverride = blue.yamlToNode(
+                "name: Amount\n" +
+                        "type:\n" +
+                        "  blueId: " + amountTypeBlueId + "\n"
+        );
+
+        Node withRedundantOverride = blue.yamlToNode(
+                "name: Amount\n" +
+                        "type:\n" +
+                        "  blueId: " + amountTypeBlueId + "\n" +
+                        "currency: USD\n"
+        );
+
+        assertTrue(isSubtype(withoutOverride, withRedundantOverride, provider));
+        assertTrue(isSubtype(withRedundantOverride, withoutOverride, provider));
+    }
+
 }
