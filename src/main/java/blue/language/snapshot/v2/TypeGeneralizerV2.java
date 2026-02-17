@@ -86,10 +86,6 @@ public final class TypeGeneralizerV2 {
     }
 
     private Node nodeAt(Node root, String pointer) {
-        if ("/".equals(pointer)) {
-            return root;
-        }
-
         String[] segments = PointerUtils.splitPointerSegments(pointer);
         Node current = root;
         for (String segment : segments) {
