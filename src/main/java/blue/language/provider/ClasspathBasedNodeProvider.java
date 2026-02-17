@@ -2,6 +2,7 @@ package blue.language.provider;
 
 import blue.language.model.Node;
 import blue.language.preprocess.Preprocessor;
+import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.utils.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -133,7 +134,7 @@ public class ClasspathBasedNodeProvider extends PreloadedNodeProvider {
     }
 
     private void processNodeList(List<Node> nodes) {
-        String listBlueId = BlueIdCalculator.calculateBlueId(nodes);
+        String listBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(nodes);
         JsonNode listContent = JSON_MAPPER.valueToTree(nodes);
         blueIdToContentMap.put(listBlueId, listContent);
         blueIdToMultipleDocumentsMap.put(listBlueId, true);

@@ -55,7 +55,7 @@ public class NodeContentHandler {
                     .map(item -> JSON_MAPPER.convertValue(item, Node.class))
                     .map(preprocessor)
                     .collect(Collectors.toList());
-            blueId = BlueIdCalculator.calculateBlueId(nodes);
+            blueId = BlueIdCalculatorV2.calculateSemanticBlueId(nodes);
             jsonNode = JSON_MAPPER.valueToTree(nodes);
         } else {
             Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
@@ -85,7 +85,7 @@ public class NodeContentHandler {
                 .map(preprocessor)
                 .collect(Collectors.toList());
 
-        String blueId = BlueIdCalculator.calculateBlueId(preprocessedNodes);
+        String blueId = BlueIdCalculatorV2.calculateSemanticBlueId(preprocessedNodes);
         JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNodes);
         boolean isMultipleDocuments = nodes.size() > 1;
 
