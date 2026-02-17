@@ -171,15 +171,16 @@ final class ProcessorEngine {
     }
 
     static Node nodeAt(Node root, String pointer) {
-        if (pointer.equals("/")) {
+        Objects.requireNonNull(root, "root");
+        String normalizedPointer = normalizeNodeAtPointer(pointer);
+        if ("/".equals(normalizedPointer)) {
             return root;
         }
-        String[] segments = pointer.substring(1).split("/");
+
+        String[] segments = normalizedPointer.substring(1).split("/", -1);
         Node current = root;
-        for (String segment : segments) {
-            if (segment.isEmpty()) {
-                continue;
-            }
+        for (String rawSegment : segments) {
+            String segment = unescapePointerSegment(rawSegment);
             Map<String, Node> props = current.getProperties();
             if (props == null) {
                 return null;
@@ -190,6 +191,42 @@ final class ProcessorEngine {
             }
         }
         return current;
+    }
+
+    private static String normalizeNodeAtPointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        if (!pointer.startsWith("/")) {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
+        return pointer;
+    }
+
+    private static String unescapePointerSegment(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return segment;
+        }
+        StringBuilder decoded = new StringBuilder(segment.length());
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c != '~') {
+                decoded.append(c);
+                continue;
+            }
+            if (i + 1 >= segment.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+            char next = segment.charAt(++i);
+            if (next == '0') {
+                decoded.append('~');
+            } else if (next == '1') {
+                decoded.append('/');
+            } else {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+        }
+        return decoded.toString();
     }
 
     static boolean hasInitializationMarker(Node root, String scopePath) {
