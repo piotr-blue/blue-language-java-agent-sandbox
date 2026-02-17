@@ -5,11 +5,14 @@ import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public final class WorkingDocument {
 
@@ -52,6 +55,38 @@ public final class WorkingDocument {
         GeneralizationReport generalizationReport = typeGeneralizer.generalizeToSoundness(blue, resolved, normalizedPath);
         current = snapshotFactory.fromResolved(blue, resolved, SnapshotTrust.BLIND_TRUST_RESOLVED);
         lastPatchReport = new PatchReport(Collections.singletonList(normalizedPath), generalizationReport);
+        return lastPatchReport;
+    }
+
+    public PatchReport applyPatches(List<JsonPatch> patches) {
+        Objects.requireNonNull(patches, "patches");
+        if (patches.isEmpty()) {
+            lastPatchReport = PatchReport.none();
+            return lastPatchReport;
+        }
+
+        Node resolved = current.resolvedRoot().toNode();
+        Set<String> changedPaths = new LinkedHashSet<String>();
+        List<String> allGeneralizations = new ArrayList<String>();
+
+        for (JsonPatch patch : patches) {
+            Objects.requireNonNull(patch, "patch");
+            String normalizedPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
+            validateMutationPath(normalizedPath, patch.getOp());
+            applyPatchInPlace(resolved, patch, normalizedPath);
+            changedPaths.add(normalizedPath);
+
+            GeneralizationReport report = typeGeneralizer.generalizeToSoundness(blue, resolved, normalizedPath);
+            if (report.hasGeneralizations()) {
+                allGeneralizations.addAll(report.generalizations());
+            }
+        }
+
+        current = snapshotFactory.fromResolved(blue, resolved, SnapshotTrust.BLIND_TRUST_RESOLVED);
+        GeneralizationReport aggregated = allGeneralizations.isEmpty()
+                ? GeneralizationReport.none()
+                : new GeneralizationReport(allGeneralizations);
+        lastPatchReport = new PatchReport(new ArrayList<String>(changedPaths), aggregated);
         return lastPatchReport;
     }
 
