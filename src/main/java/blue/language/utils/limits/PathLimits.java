@@ -49,8 +49,8 @@ public class PathLimits implements Limits {
     }
 
     private boolean matchesAllowedPath(String allowedPath, String path) {
-        String[] allowedParts = splitPointerSegments(allowedPath);
-        String[] pathParts = splitPointerSegments(path);
+        String[] allowedParts = PointerUtils.splitPointerSegments(allowedPath);
+        String[] pathParts = PointerUtils.splitPointerSegments(path);
 
         if (pathParts.length > allowedParts.length) {
             return false;
@@ -105,18 +105,6 @@ public class PathLimits implements Limits {
 
     private String escapeJsonPointerSegment(String segment) {
         return segment.replace("~", "~0").replace("/", "~1");
-    }
-
-    private String[] splitPointerSegments(String pointerPath) {
-        if (pointerPath == null || pointerPath.isEmpty() || "/".equals(pointerPath)) {
-            return new String[0];
-        }
-        PointerUtils.validatePointerEscapes(pointerPath);
-        String normalized = pointerPath.startsWith("/") ? pointerPath.substring(1) : pointerPath;
-        if (normalized.isEmpty()) {
-            return new String[0];
-        }
-        return normalized.split("/", -1);
     }
 
     public static class Builder {
