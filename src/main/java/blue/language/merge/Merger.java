@@ -209,11 +209,14 @@ public class Merger implements NodeResolver {
             return ControlForm.none();
         }
 
-        Node previousNode = child.getProperties().get(LIST_CONTROL_PREVIOUS);
-        Node posNode = child.getProperties().get(LIST_CONTROL_POS);
+        Map<String, Node> properties = child.getProperties();
+        boolean hasPreviousKey = properties.containsKey(LIST_CONTROL_PREVIOUS);
+        boolean hasPosKey = properties.containsKey(LIST_CONTROL_POS);
+        Node previousNode = properties.get(LIST_CONTROL_PREVIOUS);
+        Node posNode = properties.get(LIST_CONTROL_POS);
 
-        boolean previous = previousNode != null && controlAsBoolean(previousNode);
-        Integer pos = posNode == null ? null : controlAsInteger(posNode);
+        boolean previous = hasPreviousKey && controlAsBoolean(previousNode);
+        Integer pos = hasPosKey ? controlAsInteger(posNode) : null;
 
         if (!previous && pos == null) {
             return ControlForm.none();
@@ -265,17 +268,23 @@ public class Merger implements NodeResolver {
     }
 
     private boolean controlAsBoolean(Node controlNode) {
+        if (controlNode == null || controlNode.getValue() == null) {
+            throw new IllegalArgumentException("$previous control form requires boolean true.");
+        }
         Object value = controlNode.getValue();
         if (value instanceof Boolean) {
-            return (Boolean) value;
+            if (!((Boolean) value)) {
+                throw new IllegalArgumentException("$previous control form only supports boolean true.");
+            }
+            return true;
         }
-        if (value instanceof String) {
-            return Boolean.parseBoolean((String) value);
-        }
-        throw new IllegalArgumentException("List control form value must be boolean: " + value);
+        throw new IllegalArgumentException("$previous control form value must be boolean true.");
     }
 
     private int controlAsInteger(Node controlNode) {
+        if (controlNode == null || controlNode.getValue() == null) {
+            throw new IllegalArgumentException("$pos control form requires a non-negative integer.");
+        }
         Object value = controlNode.getValue();
         if (value instanceof BigInteger) {
             return ((BigInteger) value).intValueExact();
@@ -283,10 +292,7 @@ public class Merger implements NodeResolver {
         if (value instanceof Number) {
             return ((Number) value).intValue();
         }
-        if (value instanceof String) {
-            return Integer.parseInt((String) value);
-        }
-        throw new IllegalArgumentException("List control form value must be integer: " + value);
+        throw new IllegalArgumentException("$pos control form value must be integer: " + value);
     }
 
     private static final class ControlForm {

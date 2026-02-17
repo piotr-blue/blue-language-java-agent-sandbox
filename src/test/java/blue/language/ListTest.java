@@ -306,6 +306,38 @@ public class ListTest {
     }
 
     @Test
+    public void listControlsRejectPreviousSetToFalse() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(false)),
+                        c
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
+    public void listControlsRejectNonNumericPos() {
+        x = new Node()
+                .name("Base")
+                .items(a, b);
+        y = new Node()
+                .name("Derived")
+                .type(x.clone())
+                .items(
+                        new Node().properties("$previous", new Node().value(true)),
+                        new Node().properties("$pos", new Node().value("x")).name("B")
+                );
+
+        assertThrows(IllegalArgumentException.class, () -> merger.resolve(y, Limits.NO_LIMITS));
+    }
+
+    @Test
     public void listControlsAllowPositionalOverlayAndAppend() {
         x = new Node()
                 .name("Base")
