@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.function.Function;
 
+import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NodeContentHandlerV2Test {
@@ -59,6 +60,17 @@ class NodeContentHandlerV2Test {
         Node node = new Node().name("SemanticSingle").properties("x", new Node().value(1));
 
         NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(node, Function.identity());
+
+        assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(node), parsed.blueId);
+        assertFalse(parsed.isMultipleDocuments);
+    }
+
+    @Test
+    void parseAndCalculateBlueIdSingleDocStringUsesSemanticV2() {
+        String yaml = "name: SemanticSingle\nx: 1\n";
+        Node node = YAML_MAPPER.readValue(yaml, Node.class);
+
+        NodeContentHandler.ParsedContent parsed = NodeContentHandler.parseAndCalculateBlueId(yaml, Function.identity());
 
         assertEquals(BlueIdCalculatorV2.calculateSemanticBlueId(node), parsed.blueId);
         assertFalse(parsed.isMultipleDocuments);
