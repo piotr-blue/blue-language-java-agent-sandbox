@@ -56,7 +56,12 @@ public final class BlueIdCalculatorV2 {
 
     public static String rehashPath(Node canonicalRoot, String jsonPointer) {
         Objects.requireNonNull(canonicalRoot, "canonicalRoot");
-        return calculateSemanticBlueId(canonicalRoot);
+        String normalizedPointer = normalizePointer(jsonPointer);
+        Node target = nodeAt(canonicalRoot, normalizedPointer);
+        if (target == null) {
+            throw new IllegalArgumentException("Path not found in canonical node: " + normalizedPointer);
+        }
+        return calculateSemanticBlueId(target);
     }
 
     private static String calculateCanonical(Object value) {
@@ -147,5 +152,90 @@ public final class BlueIdCalculatorV2 {
 
     private static String hashNull() {
         return HASH_PROVIDER.apply(Arrays.asList("$null"));
+    }
+
+    private static String normalizePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        if ("/".equals(pointer)) {
+            return pointer;
+        }
+        if (!pointer.startsWith("/")) {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
+        return pointer;
+    }
+
+    private static Node nodeAt(Node root, String pointer) {
+        if ("/".equals(pointer)) {
+            return root;
+        }
+        String[] segments = pointer.substring(1).split("/");
+        Node current = root;
+        for (String rawSegment : segments) {
+            String segment = unescapePointerSegment(rawSegment);
+            current = descend(current, segment);
+            if (current == null) {
+                return null;
+            }
+        }
+        return current;
+    }
+
+    private static Node descend(Node current, String segment) {
+        if (current == null) {
+            return null;
+        }
+
+        Map<String, Node> properties = current.getProperties();
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
+        }
+
+        if (isNonNegativeInteger(segment)) {
+            List<Node> items = current.getItems();
+            if (items != null) {
+                int index = Integer.parseInt(segment);
+                if (index >= 0 && index < items.size()) {
+                    return items.get(index);
+                }
+            }
+        }
+
+        if ("type".equals(segment)) {
+            return current.getType();
+        }
+        if ("itemType".equals(segment)) {
+            return current.getItemType();
+        }
+        if ("keyType".equals(segment)) {
+            return current.getKeyType();
+        }
+        if ("valueType".equals(segment)) {
+            return current.getValueType();
+        }
+        if ("blue".equals(segment)) {
+            return current.getBlue();
+        }
+
+        return null;
+    }
+
+    private static String unescapePointerSegment(String segment) {
+        return segment.replace("~1", "/").replace("~0", "~");
+    }
+
+    private static boolean isNonNegativeInteger(String value) {
+        if (value == null || value.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
     }
 }
