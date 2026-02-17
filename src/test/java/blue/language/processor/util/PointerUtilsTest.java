@@ -3,6 +3,7 @@ package blue.language.processor.util;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -134,5 +135,17 @@ class PointerUtilsTest {
 
         assertEquals("/a~1b//c~0d", PointerUtils.pointerFromSegments(Arrays.asList("a/b", "", "c~d"), 3));
         assertEquals("/", PointerUtils.pointerFromSegments(Arrays.asList("a/b"), -1));
+    }
+
+    @Test
+    void ancestorPointersPreserveEscapedAndTrailingEmptySegments() {
+        List<String> includeSelf = PointerUtils.ancestorPointers("/a~1b//c", true);
+        assertEquals(Arrays.asList("/a~1b//c", "/a~1b/", "/a~1b", "/"), includeSelf);
+
+        List<String> parentsOnly = PointerUtils.ancestorPointers("/a~1b//c", false);
+        assertEquals(Arrays.asList("/a~1b/", "/a~1b", "/"), parentsOnly);
+
+        assertEquals(Arrays.asList("/"), PointerUtils.ancestorPointers("/", true));
+        assertEquals(Arrays.asList("/"), PointerUtils.ancestorPointers("/", false));
     }
 }

@@ -61,18 +61,7 @@ public final class TypeGeneralizerV2 {
     }
 
     private List<String> parentPointers(String changedPointer) {
-        String[] segments = PointerUtils.splitPointerSegments(changedPointer);
-        if (segments.length == 0) {
-            List<String> rootOnly = new ArrayList<String>();
-            rootOnly.add("/");
-            return rootOnly;
-        }
-
-        List<String> pointers = new ArrayList<String>();
-        for (int length = segments.length - 1; length >= 0; length--) {
-            pointers.add(PointerUtils.pointerFromSegments(segments, length));
-        }
-        return pointers;
+        return PointerUtils.ancestorPointers(changedPointer, false);
     }
 
     private Node nodeAt(Node root, String pointer) {

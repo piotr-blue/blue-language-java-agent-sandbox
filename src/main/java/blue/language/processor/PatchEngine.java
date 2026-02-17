@@ -426,21 +426,7 @@ final class PatchEngine {
     }
 
     private List<String> computeCascadeScopes(String scopePath) {
-        List<String> scopes = new ArrayList<>();
-        String current = scopePath;
-        while (true) {
-            scopes.add(current);
-            if ("/".equals(current)) {
-                break;
-            }
-            int idx = current.lastIndexOf('/');
-            if (idx <= 0) {
-                current = "/";
-            } else {
-                current = current.substring(0, idx);
-            }
-        }
-        return scopes;
+        return PointerUtils.ancestorPointers(scopePath, true);
     }
 
     private Node cloneNode(Node node) {

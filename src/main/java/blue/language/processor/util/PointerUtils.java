@@ -1,6 +1,7 @@
 package blue.language.processor.util;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Utility helpers for normalising and composing JSON Pointer / scope strings.
@@ -146,6 +147,21 @@ public final class PointerUtils {
             }
         }
         return pointer.toString();
+    }
+
+    public static List<String> ancestorPointers(String pointer, boolean includeSelf) {
+        String[] segments = splitPointerSegments(pointer);
+        List<String> pointers = new ArrayList<String>();
+        if (segments.length == 0) {
+            pointers.add("/");
+            return pointers;
+        }
+
+        int startLength = includeSelf ? segments.length : segments.length - 1;
+        for (int length = startLength; length >= 0; length--) {
+            pointers.add(pointerFromSegments(segments, length));
+        }
+        return pointers;
     }
 
     public static String resolvePointer(String scopePath, String relativePointer) {
