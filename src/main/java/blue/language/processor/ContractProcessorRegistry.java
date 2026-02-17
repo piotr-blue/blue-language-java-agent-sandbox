@@ -60,15 +60,15 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
-        return Optional.ofNullable(handlerProcessors.get(type));
+        return Optional.ofNullable(resolveProcessor(type, handlerProcessors));
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
-        return Optional.ofNullable(channelProcessors.get(type));
+        return Optional.ofNullable(resolveProcessor(type, channelProcessors));
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
-        return Optional.ofNullable(markerProcessors.get(type));
+        return Optional.ofNullable(resolveProcessor(type, markerProcessors));
     }
 
     public Map<String, ContractProcessor<? extends Contract>> processors() {
@@ -94,5 +94,36 @@ public class ContractProcessorRegistry {
         for (String blueId : declared) {
             processorsByBlueId.put(blueId, processor);
         }
+    }
+
+    private <T extends Contract, P extends ContractProcessor<? extends T>> P resolveProcessor(
+            Class<? extends T> requestedType,
+            Map<Class<? extends T>, P> processorsByType) {
+        Objects.requireNonNull(requestedType, "requestedType");
+
+        P exact = processorsByType.get(requestedType);
+        if (exact != null) {
+            return exact;
+        }
+
+        Class<? extends T> bestType = null;
+        P bestProcessor = null;
+        for (Map.Entry<Class<? extends T>, P> entry : processorsByType.entrySet()) {
+            Class<? extends T> candidateType = entry.getKey();
+            if (!candidateType.isAssignableFrom(requestedType)) {
+                continue;
+            }
+            if (bestType == null || bestType.isAssignableFrom(candidateType)) {
+                bestType = candidateType;
+                bestProcessor = entry.getValue();
+                continue;
+            }
+            if (!candidateType.isAssignableFrom(bestType) &&
+                    candidateType.getName().compareTo(bestType.getName()) < 0) {
+                bestType = candidateType;
+                bestProcessor = entry.getValue();
+            }
+        }
+        return bestProcessor;
     }
 }
