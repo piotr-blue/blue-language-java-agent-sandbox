@@ -99,9 +99,6 @@ public final class ProcessorExecutionContext {
     }
 
     private String normalizeAbsolutePointer(String absolutePointer) {
-        if (absolutePointer == null || absolutePointer.isEmpty()) {
-            return "/";
-        }
         return PointerUtils.normalizePointer(absolutePointer);
     }
 }
