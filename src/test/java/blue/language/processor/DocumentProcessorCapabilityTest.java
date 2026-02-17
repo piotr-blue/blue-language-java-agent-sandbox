@@ -2,8 +2,11 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.model.TerminateScope;
 import org.junit.jupiter.api.Test;
+
+import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -60,7 +63,7 @@ class DocumentProcessorCapabilityTest {
     @Test
     void processDocumentFailsWithCapabilityFailureWhenNewUnsupportedContractAppears() {
         Blue blue = new Blue();
-        blue.registerContractProcessor(new blue.language.processor.contracts.SetPropertyContractProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
 
         String baseYaml = "name: Base\n" +
                 "contracts:\n" +
@@ -97,5 +100,30 @@ class DocumentProcessorCapabilityTest {
         assertNotNull(resultContracts);
         assertNotNull(resultContracts.getProperties().get("unsupportedHandler"));
         assertNotNull(result.failureReason());
+    }
+
+    @Test
+    void initializeDocumentSupportsSubtypeHandlerViaMostSpecificRegistryLookup() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+
+        String yaml = "name: Doc\n" +
+                "contracts:\n" +
+                "  lifecycleChannel:\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  handler:\n" +
+                "    channel: lifecycleChannel\n" +
+                "    event:\n" +
+                "      type:\n" +
+                "        blueId: DocumentProcessingInitiated\n" +
+                "    type:\n" +
+                "      blueId: AdvancedSetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 7\n";
+
+        DocumentProcessingResult result = blue.initializeDocument(blue.yamlToNode(yaml));
+        assertFalse(result.capabilityFailure());
+        assertEquals(new BigInteger("7"), result.document().getProperties().get("x").getValue());
     }
 }
