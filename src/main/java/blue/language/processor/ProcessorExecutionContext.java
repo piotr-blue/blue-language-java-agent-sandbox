@@ -71,7 +71,7 @@ public final class ProcessorExecutionContext {
     }
 
     public String resolvePointer(String pointer) {
-        return execution.resolvePointer(scopePath, pointer);
+        return PointerUtils.resolvePointer(scopePath, pointer);
     }
 
     public Node documentAt(String absolutePointer) {

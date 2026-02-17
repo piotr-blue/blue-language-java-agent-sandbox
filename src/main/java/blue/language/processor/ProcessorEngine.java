@@ -380,10 +380,6 @@ final class ProcessorEngine {
             return PointerUtils.normalizeScope(scopePath);
         }
 
-        String resolvePointer(String scopePath, String relativePointer) {
-            return PointerUtils.resolvePointer(scopePath, relativePointer);
-        }
-
         String fatalReason(Throwable throwable, String defaultReason) {
             String message = throwable != null ? throwable.getMessage() : null;
             return message != null ? message : defaultReason;
