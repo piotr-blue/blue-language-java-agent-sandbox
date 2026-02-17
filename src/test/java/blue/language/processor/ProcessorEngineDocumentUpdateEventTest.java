@@ -76,6 +76,14 @@ final class ProcessorEngineDocumentUpdateEventTest {
     }
 
     @Test
+    void matchesDocumentUpdateRejectsMalformedPointerEscapes() {
+        assertThrows(IllegalArgumentException.class,
+                () -> ProcessorEngine.matchesDocumentUpdate("/scope", "/x~2", "/scope/x"));
+        assertThrows(IllegalArgumentException.class,
+                () -> ProcessorEngine.matchesDocumentUpdate("/scope", "/x", "/scope/x~"));
+    }
+
+    @Test
     void matchesDocumentUpdateRespectsEscapedAndTrailingEmptySegments() {
         assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b/", "/scope/a~1b/"));
         assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/a~1b/", "/scope/a~1b//child"));
