@@ -226,4 +226,21 @@ class V2Spec_RehashPathMatchesIndexTest {
             assertEquals(indexedBlueId, BlueIdCalculatorV2.rehashPath(canonicalRoot, pointer));
         }
     }
+
+    @Test
+    void rehashPathSupportsTrailingEmptySegmentWhenPropertyExists() {
+        Blue blue = new Blue();
+        Node withEmptyPropertySegment = new Node()
+                .name("Root")
+                .properties("scope", new Node()
+                        .properties("", new Node().value("empty-key")));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(withEmptyPropertySegment);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String nestedHash = BlueIdCalculatorV2.calculateSemanticBlueId(
+                canonicalRoot.getProperties().get("scope").getProperties().get(""));
+        assertEquals(nestedHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/scope/"));
+        assertEquals(nestedHash, snapshot.blueIdsByPointer().blueIdAt("/scope/"));
+    }
 }
