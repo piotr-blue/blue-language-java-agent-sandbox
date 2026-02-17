@@ -56,6 +56,34 @@ class TestEventChannelTest {
     }
 
     @Test
+    void subtypeTestEventChannelUsesRegisteredBaseProcessor() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        String documentYaml = "name: Sample Doc\n" +
+                "contracts:\n" +
+                "  testEventsChannel:\n" +
+                "    type:\n" +
+                "      blueId: AdvancedTestEventChannel\n" +
+                "  setX:\n" +
+                "    channel: testEventsChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n";
+
+        Node document = blue.yamlToNode(documentYaml);
+        Node initialized = blue.initializeDocument(document).document();
+
+        Node testEvent = blue.objectToNode(new TestEvent().x(5).y(10));
+        Node processed = blue.processDocument(initialized, testEvent).document();
+
+        Node xNode = processed.getProperties().get("x");
+        assertEquals(new BigInteger("1"), xNode.getValue());
+    }
+
+    @Test
     void triggeredAndEmbeddedChannelsPropagateChildEvents() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new SetPropertyContractProcessor());
