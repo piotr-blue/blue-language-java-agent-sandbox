@@ -335,6 +335,23 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void addNumericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"), new Node().value("item-one"))
+                .properties("existing", new Node().value("keep"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.add("/mixed/1", new Node().value("item-inserted")));
+
+        Node mixedAfter = property(document, "mixed");
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+        assertEquals("item-inserted", mixedAfter.getItems().get(1).getValue());
+        assertEquals("item-one", mixedAfter.getItems().get(2).getValue());
+        assertEquals("keep", property(mixedAfter, "existing").getValue());
+    }
+
+    @Test
     void addUsesPropertyBranchForNonNumericLeafOnMixedParent() {
         Node mixed = new Node()
                 .items(new Node().value("item-zero"))
