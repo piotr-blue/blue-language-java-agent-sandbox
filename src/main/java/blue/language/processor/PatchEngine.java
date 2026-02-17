@@ -402,14 +402,10 @@ final class PatchEngine {
     }
 
     private String normalizeAndValidatePatchPointer(String path) {
-        Objects.requireNonNull(path, "path");
-        if (path.isEmpty()) {
-            throw new IllegalArgumentException("Patch path must be a JSON pointer starting with '/'.");
+        if (path == null || path.isEmpty()) {
+            throw new IllegalArgumentException("Patch path must be a JSON pointer starting with '/': " + path);
         }
-        if (path.charAt(0) != '/') {
-            throw new IllegalArgumentException("Patch path must start with '/': " + path);
-        }
-        return path;
+        return PointerUtils.normalizePointer(path);
     }
 
     private String unescapePointerSegment(String segment) {
