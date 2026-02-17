@@ -74,18 +74,14 @@ public final class ProcessorExecutionContext {
     }
 
     public Node documentAt(String absolutePointer) {
-        if (absolutePointer == null || absolutePointer.isEmpty()) {
-            return null;
-        }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
+        String normalizedPointer = normalizeAbsolutePointer(absolutePointer);
+        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
         return node != null ? node.clone() : null;
     }
 
     public boolean documentContains(String absolutePointer) {
-        if (absolutePointer == null || absolutePointer.isEmpty()) {
-            return false;
-        }
-        Node node = ProcessorEngine.nodeAt(runtime().document(), ProcessorEngine.normalizePointer(absolutePointer));
+        String normalizedPointer = normalizeAbsolutePointer(absolutePointer);
+        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
         return node != null;
     }
 
@@ -99,5 +95,15 @@ public final class ProcessorExecutionContext {
 
     private DocumentProcessingRuntime runtime() {
         return execution.runtime();
+    }
+
+    private String normalizeAbsolutePointer(String absolutePointer) {
+        if (absolutePointer == null || absolutePointer.isEmpty()) {
+            return "/";
+        }
+        if (absolutePointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Document pointer must start with '/': " + absolutePointer);
+        }
+        return absolutePointer;
     }
 }

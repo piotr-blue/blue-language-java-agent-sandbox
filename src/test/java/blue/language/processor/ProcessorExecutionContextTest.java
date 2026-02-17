@@ -116,4 +116,29 @@ final class ProcessorExecutionContextTest {
 
         assertEquals("property-zero", context.documentAt("/list/0").getValue());
     }
+
+    @Test
+    void documentHelpersTreatEmptyPointerAsRoot() {
+        Node document = new Node()
+                .properties("value", new Node().value(1));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertNotNull(context.documentAt(""));
+        assertTrue(context.documentContains(""));
+    }
+
+    @Test
+    void documentHelpersRejectNonPointerPaths() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertThrows(IllegalArgumentException.class, () -> context.documentAt("x"));
+        assertThrows(IllegalArgumentException.class, () -> context.documentContains("x"));
+    }
 }
