@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class V2Spec_RehashPathMatchesIndexTest {
@@ -58,5 +59,29 @@ class V2Spec_RehashPathMatchesIndexTest {
 
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "type"));
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/does-not-exist"));
+    }
+
+    @Test
+    void rehashPathUsesPropertyWhenSegmentCollidesWithBuiltInTypePointer() {
+        Blue blue = new Blue();
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String propertyTypeHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("type"));
+        String builtinTypeHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getType());
+
+        assertEquals(propertyTypeHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/type"));
+        assertEquals(propertyTypeHash, snapshot.blueIdsByPointer().blueIdAt("/type"));
+        assertNotEquals(builtinTypeHash, propertyTypeHash);
+    }
+
+    @Test
+    void rehashPathResolvesEscapedPropertySegments() {
+        Blue blue = new Blue();
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(AUTHORING);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        String escapedPropertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getProperties().get("a/b"));
+        assertEquals(escapedPropertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/a~1b"));
     }
 }
