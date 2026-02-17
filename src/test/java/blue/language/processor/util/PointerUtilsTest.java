@@ -24,6 +24,11 @@ class PointerUtilsTest {
     }
 
     @Test
+    void relativizePointerPreservesTrailingEmptyDescendantAbsolutePath() {
+        assertEquals("/foo/", PointerUtils.relativizePointer("/foo", "/foo/"));
+    }
+
+    @Test
     void normalizePointerRejectsMalformedEscapes() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~2"));

@@ -112,4 +112,19 @@ final class ProcessorEngineDocumentUpdateEventTest {
         Node event = ProcessorEngine.createDocumentUpdateEvent(data, "/foo");
         assertEquals("/bar", event.getProperties().get("path").getValue());
     }
+
+    @Test
+    void createDocumentUpdateEventPreservesTrailingEmptyScopedPathAsAbsolute() {
+        DocumentProcessingRuntime.DocumentUpdateData data = new DocumentProcessingRuntime.DocumentUpdateData(
+                "/scope/",
+                new Node().value("before"),
+                new Node().value("after"),
+                JsonPatch.Op.REPLACE,
+                "/scope",
+                Collections.singletonList("/scope")
+        );
+
+        Node event = ProcessorEngine.createDocumentUpdateEvent(data, "/scope");
+        assertEquals("/scope/", event.getProperties().get("path").getValue());
+    }
 }

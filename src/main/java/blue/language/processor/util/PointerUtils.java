@@ -91,6 +91,12 @@ public final class PointerUtils {
         if (remainder.isEmpty()) {
             return "/";
         }
+        if ("/".equals(remainder)) {
+            // Relative "/" already denotes scope root in processor APIs.
+            // Preserve absolute path so trailing-empty descendants are not
+            // collapsed into ambiguous root markers.
+            return normalizedAbsolute;
+        }
         return remainder.startsWith("/") ? remainder : "/" + remainder;
     }
 
