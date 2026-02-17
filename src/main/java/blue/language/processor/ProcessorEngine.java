@@ -82,6 +82,12 @@ final class ProcessorEngine {
     }
 
     static String normalizePointer(String pointer) {
+        if (pointer == null || pointer.isEmpty()) {
+            return "/";
+        }
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
+        }
         return PointerUtils.normalizePointer(pointer);
     }
 

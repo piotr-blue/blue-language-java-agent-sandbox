@@ -101,4 +101,15 @@ final class ProcessorEngineNodeAtTest {
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "/x~2"));
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "x"));
     }
+
+    @Test
+    void normalizePointerRejectsNonPointerPaths() {
+        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizePointer("x"));
+    }
+
+    @Test
+    void normalizePointerTreatsNullAndEmptyAsRoot() {
+        assertEquals("/", ProcessorEngine.normalizePointer(null));
+        assertEquals("/", ProcessorEngine.normalizePointer(""));
+    }
 }
