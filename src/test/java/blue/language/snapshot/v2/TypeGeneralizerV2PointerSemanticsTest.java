@@ -70,4 +70,43 @@ class TypeGeneralizerV2PointerSemanticsTest {
         assertThrows(IllegalArgumentException.class,
                 () -> generalizer.generalizeToSoundness(blue, resolved, "/list/~2bad/value"));
     }
+
+    @Test
+    void supportsLeadingZeroPropertySegmentsWhenParentIsObject() {
+        BasicNodeProvider provider = new BasicNodeProvider();
+        provider.addSingleDocs(
+                "name: Price\n" +
+                        "amount:\n" +
+                        "  type: Integer\n" +
+                        "currency:\n" +
+                        "  type: Text\n"
+        );
+        String priceBlueId = provider.getBlueIdByName("Price");
+        provider.addSingleDocs(
+                "name: PriceInEUR\n" +
+                        "type:\n" +
+                        "  blueId: " + priceBlueId + "\n" +
+                        "currency: EUR\n"
+        );
+        String priceInEURBlueId = provider.getBlueIdByName("PriceInEUR");
+
+        Blue blue = new Blue(provider);
+        Node doc = blue.yamlToNode(
+                "prices:\n" +
+                        "  \"01\":\n" +
+                        "    type:\n" +
+                        "      blueId: " + priceInEURBlueId + "\n" +
+                        "    currency: EUR\n" +
+                        "    amount: 1\n"
+        );
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(doc);
+        Node mutable = snapshot.resolvedRoot().toNode();
+        Node priceNode = mutable.getProperties().get("prices").getProperties().get("01");
+        priceNode.properties("currency", new Node().value("USD"));
+
+        TypeGeneralizerV2 generalizer = new TypeGeneralizerV2();
+        GeneralizationReport report = generalizer.generalizeToSoundness(blue, mutable, "/prices/01/currency");
+        assertTrue(report.hasGeneralizations());
+        assertEquals(priceBlueId, priceNode.getType().getBlueId());
+    }
 }

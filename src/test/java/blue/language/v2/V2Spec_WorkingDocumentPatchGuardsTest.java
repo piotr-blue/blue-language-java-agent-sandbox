@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class V2Spec_WorkingDocumentPatchGuardsTest {
 
@@ -83,5 +84,23 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
         WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
         assertThrows(IllegalStateException.class,
                 () -> workingDocument.applyPatch(JsonPatch.replace("/list/01", new Node().value(99))));
+    }
+
+    @Test
+    void allowsLeadingZeroPropertyKeyWhenParentIsObject() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("box", new Node()
+                        .properties("01", new Node().value("before")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.replace("/box/01", new Node().value("after")));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node box = committed.resolvedRoot().toNode().getProperties().get("box");
+        assertTrue(box.getProperties().containsKey("01"));
+        assertEquals("after", box.getProperties().get("01").getValue());
     }
 }
