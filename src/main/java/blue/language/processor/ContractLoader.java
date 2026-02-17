@@ -40,7 +40,7 @@ final class ContractLoader {
         }
 
         for (Map.Entry<String, Node> entry : contractsNode.getProperties().entrySet()) {
-            String key = entry.getKey();
+            String key = normalizeContractKey(entry.getKey(), scopePath);
             Contract contract = converter.convertWithType(entry.getValue(), Contract.class, false);
             if (contract == null) {
                 continue;
@@ -73,6 +73,13 @@ final class ContractLoader {
         }
 
         return builder.build();
+    }
+
+    private String normalizeContractKey(String key, String scopePath) {
+        if (key == null || key.trim().isEmpty()) {
+            throw new IllegalStateException("Contract key must not be blank at scope " + scopePath);
+        }
+        return key.trim();
     }
 
     private void normalizePointerBackedContracts(Contract contract, String key, String scopePath) {

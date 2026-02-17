@@ -110,4 +110,18 @@ class ContractBundleBuilderTest {
                         .addHandler(" setX ", handlerB)
                         .build());
     }
+
+    @Test
+    void builderNormalizesWhitespaceInContractAndChannelKeys() {
+        SetProperty handler = new SetProperty();
+        handler.setChannelKey(" life ");
+
+        ContractBundle bundle = ContractBundle.builder()
+                .addChannel(" life ", new LifecycleChannel())
+                .addHandler(" setX ", handler)
+                .build();
+
+        assertEquals("life", bundle.channelsOfType(LifecycleChannel.class).get(0).key());
+        assertEquals("setX", bundle.handlersFor("life").get(0).key());
+    }
 }

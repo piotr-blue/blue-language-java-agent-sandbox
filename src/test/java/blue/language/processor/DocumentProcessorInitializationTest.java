@@ -480,7 +480,7 @@ class DocumentProcessorInitializationTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("contract key"));
+        assertTrue(ex.getMessage().toLowerCase().contains("contract key"));
     }
 
     @Test
@@ -501,6 +501,31 @@ class DocumentProcessorInitializationTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> blue.initializeDocument(document));
         assertTrue(ex.getMessage().contains("missing channel"));
+    }
+
+    @Test
+    void initializationSupportsWhitespaceAroundContractAndChannelKeys() {
+        String yaml = "name: Trimmed Keys Doc\n" +
+                "contracts:\n" +
+                "  \"  lifecycle  \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  \"  setX  \":\n" +
+                "    channel: \" lifecycle \"\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    event:\n" +
+                "      type:\n" +
+                "        blueId: DocumentProcessingInitiated\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 9\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node document = blue.yamlToNode(yaml);
+
+        DocumentProcessingResult result = blue.initializeDocument(document);
+        assertEquals(new BigInteger("9"), result.document().getProperties().get("x").getValue());
     }
 
     @Test
