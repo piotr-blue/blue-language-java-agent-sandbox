@@ -22,7 +22,6 @@ final class PatchEngine {
     }
 
     PatchResult applyPatch(String originScopePath, JsonPatch patch) {
-        Objects.requireNonNull(originScopePath, "originScopePath");
         Objects.requireNonNull(patch, "patch");
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);

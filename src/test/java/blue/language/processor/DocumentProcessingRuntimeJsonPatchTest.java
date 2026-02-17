@@ -31,6 +31,24 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void applyPatchTreatsNullAndEmptyOriginScopeAsRoot() {
+        Node document = new Node();
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        DocumentProcessingRuntime.DocumentUpdateData addData =
+                runtime.applyPatch(null, JsonPatch.add("/a", new Node().value(1)));
+        assertEquals("/", addData.originScope());
+        assertEquals(1, intValue(property(document, "a")));
+
+        DocumentProcessingRuntime.DocumentUpdateData replaceData =
+                runtime.applyPatch("", JsonPatch.replace("/a", new Node().value(2)));
+        assertEquals("/", replaceData.originScope());
+        assertEquals(1, intValue(replaceData.before()));
+        assertEquals(2, intValue(replaceData.after()));
+        assertEquals(2, intValue(property(document, "a")));
+    }
+
+    @Test
     void replaceUpsertsObjectProperty() {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
