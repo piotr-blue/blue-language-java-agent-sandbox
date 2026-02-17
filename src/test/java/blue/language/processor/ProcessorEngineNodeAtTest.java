@@ -20,6 +20,13 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtTreatsNullAndEmptyPointersAsRoot() {
+        Node root = new Node().properties("x", new Node().value("y"));
+        assertEquals(root, ProcessorEngine.nodeAt(root, null));
+        assertEquals(root, ProcessorEngine.nodeAt(root, ""));
+    }
+
+    @Test
     void nodeAtSupportsArrayTraversalWithStrictIndexSemantics() {
         Node root = new Node()
                 .properties("list", new Node()

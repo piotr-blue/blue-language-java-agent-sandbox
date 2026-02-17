@@ -132,6 +132,20 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void documentHelpersTreatNullPointerAsRoot() {
+        Node document = new Node()
+                .properties("value", new Node().value(1));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertNotNull(context.documentAt(null));
+        assertTrue(context.documentContains(null));
+    }
+
+    @Test
     void documentHelpersRejectNonPointerPaths() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
