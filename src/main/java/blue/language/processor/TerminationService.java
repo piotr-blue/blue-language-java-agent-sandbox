@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.util.ProcessorPointerConstants;
+import blue.language.processor.util.PointerUtils;
 
 /**
  * Handles termination markers, lifecycle emission, and run termination bookkeeping.
@@ -22,7 +23,7 @@ final class TerminationService {
         execution.recordPendingTermination(scopePath, kind, reason);
 
         String normalized = execution.normalizeScope(scopePath);
-        String pointer = ProcessorEngine.resolvePointer(normalized, ProcessorPointerConstants.RELATIVE_TERMINATED);
+        String pointer = PointerUtils.resolvePointer(normalized, ProcessorPointerConstants.RELATIVE_TERMINATED);
         runtime.directWrite(pointer, createTerminationMarker(kind, reason));
         runtime.chargeTerminationMarker();
 
