@@ -105,6 +105,7 @@ final class ProcessorEngineNodeAtTest {
     @Test
     void normalizePointerRejectsNonPointerPaths() {
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizePointer("x"));
+        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.normalizePointer("/x~2"));
     }
 
     @Test
