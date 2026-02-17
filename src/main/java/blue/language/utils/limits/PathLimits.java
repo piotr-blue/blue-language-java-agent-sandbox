@@ -5,8 +5,6 @@ import blue.language.model.Node;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Supported features:
@@ -97,9 +95,17 @@ public class PathLimits implements Limits {
     }
 
     private String normalizePath(String path) {
-        return "/" + Stream.of(path.split("/"))
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.joining("/"));
+        if (path == null || path.isEmpty()) {
+            return "/";
+        }
+        String normalized = path;
+        while (normalized.startsWith("//")) {
+            normalized = normalized.substring(1);
+        }
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
+        return normalized;
     }
 
     private String escapeJsonPointerSegment(String segment) {
@@ -146,9 +152,12 @@ public class PathLimits implements Limits {
             if (!normalized.startsWith("/")) {
                 normalized = "/" + normalized;
             }
-            normalized = "/" + Stream.of(normalized.split("/"))
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.joining("/"));
+            while (normalized.startsWith("//")) {
+                normalized = normalized.substring(1);
+            }
+            if (!normalized.startsWith("/")) {
+                normalized = "/" + normalized;
+            }
             validatePointerEscapes(normalized);
             return normalized;
         }

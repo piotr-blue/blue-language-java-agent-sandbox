@@ -192,6 +192,29 @@ public class PathLimitsTest {
     }
 
     @Test
+    public void testTrailingEmptyAllowedPathSegmentIsDistinctFromParentPath() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/scope/")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("scope", mockNode));
+        pathLimits.enterPathSegment("scope", mockNode);
+        assertTrue(pathLimits.shouldExtendPathSegment("", mockNode));
+        assertFalse(pathLimits.shouldExtendPathSegment("child", mockNode));
+    }
+
+    @Test
+    public void testParentAllowedPathDoesNotImplicitlyAllowEmptyChildSegment() {
+        pathLimits = new PathLimits.Builder()
+                .addPath("/scope")
+                .build();
+
+        assertTrue(pathLimits.shouldExtendPathSegment("scope", mockNode));
+        pathLimits.enterPathSegment("scope", mockNode);
+        assertFalse(pathLimits.shouldExtendPathSegment("", mockNode));
+    }
+
+    @Test
     public void testConstraintsAndBlueId() throws Exception {
         BasicNodeProvider nodeProvider = new BasicNodeProvider();
         Blue blue = new Blue(nodeProvider);

@@ -85,4 +85,17 @@ class NodeToPathLimitsConverterTest {
         assertFalse(limits.shouldExtendPathSegment("x/y", mockNode));
     }
 
+    @Test
+    void testEmptyPropertyKeyIsKeptDistinctFromParentPath() {
+        Node node = new Node()
+                .properties("scope", new Node().properties("", new Node()));
+        PathLimits limits = NodeToPathLimitsConverter.convert(node);
+
+        assertTrue(limits.shouldExtendPathSegment("scope", mockNode));
+        limits.enterPathSegment("scope", mockNode);
+
+        assertTrue(limits.shouldExtendPathSegment("", mockNode));
+        assertFalse(limits.shouldExtendPathSegment("child", mockNode));
+    }
+
 }
