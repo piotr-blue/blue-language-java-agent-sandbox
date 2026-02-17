@@ -5,6 +5,7 @@ import blue.language.model.Node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public final class TypeGeneralizerV2 {
@@ -92,7 +93,10 @@ public final class TypeGeneralizerV2 {
         Node current = root;
         for (String rawSegment : segments) {
             String segment = unescape(rawSegment);
-            if (isArrayIndexSegment(segment)) {
+            Map<String, Node> properties = current.getProperties();
+            if (properties != null && properties.containsKey(segment)) {
+                current = properties.get(segment);
+            } else if (isArrayIndexSegment(segment)) {
                 if (current.getItems() == null) {
                     return null;
                 }
@@ -102,10 +106,7 @@ public final class TypeGeneralizerV2 {
                 }
                 current = current.getItems().get(index);
             } else {
-                if (current.getProperties() == null) {
-                    return null;
-                }
-                current = current.getProperties().get(segment);
+                return null;
             }
 
             if (current == null) {
