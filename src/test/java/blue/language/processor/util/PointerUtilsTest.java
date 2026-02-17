@@ -42,6 +42,14 @@ class PointerUtilsTest {
     }
 
     @Test
+    void normalizeRequiredPointerRejectsMissingPathAndNormalizesValidPointer() {
+        assertEquals("/scope", PointerUtils.normalizeRequiredPointer("/scope", "Patch path"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeRequiredPointer(null, "Patch path"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeRequiredPointer("", "Patch path"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeRequiredPointer("scope", "Patch path"));
+    }
+
+    @Test
     void normalizePointerRejectsNonPointerPaths() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("x"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("scope"));

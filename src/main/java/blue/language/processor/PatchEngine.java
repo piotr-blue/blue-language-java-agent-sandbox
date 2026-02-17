@@ -25,7 +25,7 @@ final class PatchEngine {
         Objects.requireNonNull(patch, "patch");
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
-        String targetPath = normalizeAndValidatePatchPointer(patch.getPath());
+        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
         List<String> segments = splitPointer(targetPath);
 
         Node before = cloneNode(readNode(document, segments, LookupMode.BEFORE, targetPath));
@@ -53,7 +53,7 @@ final class PatchEngine {
     }
 
     void directWrite(String path, Node value) {
-        String normalized = normalizeAndValidatePatchPointer(path);
+        String normalized = PointerUtils.normalizeRequiredPointer(path, "Patch path");
         if ("/".equals(normalized)) {
             throw new IllegalArgumentException("Direct write cannot target root document");
         }
@@ -419,13 +419,6 @@ final class PatchEngine {
             segments.add(part);
         }
         return segments;
-    }
-
-    private String normalizeAndValidatePatchPointer(String path) {
-        if (path == null || path.isEmpty()) {
-            throw new IllegalArgumentException("Patch path must be a JSON pointer starting with '/': " + path);
-        }
-        return PointerUtils.normalizePointer(path);
     }
 
     private String pointerPrefix(List<String> segments, int length) {

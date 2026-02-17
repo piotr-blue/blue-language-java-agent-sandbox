@@ -30,6 +30,13 @@ public final class PointerUtils {
         return pointer;
     }
 
+    public static String normalizeRequiredPointer(String pointer, String argumentName) {
+        if (pointer == null || pointer.isEmpty()) {
+            throw new IllegalArgumentException(argumentName + " must be a JSON pointer starting with '/': " + pointer);
+        }
+        return normalizePointer(pointer);
+    }
+
     public static String[] splitPointerSegments(String pointer) {
         String normalized = normalizePointer(pointer);
         if ("/".equals(normalized)) {
