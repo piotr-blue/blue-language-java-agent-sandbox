@@ -66,15 +66,15 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
-        return Optional.ofNullable(handlerProcessors.get(type));
+        return lookupMostSpecificProcessor(handlerProcessors, type);
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
-        return Optional.ofNullable(channelProcessors.get(type));
+        return lookupMostSpecificProcessor(channelProcessors, type);
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
-        return Optional.ofNullable(markerProcessors.get(type));
+        return lookupMostSpecificProcessor(markerProcessors, type);
     }
 
     public Map<String, ContractProcessor<? extends Contract>> processors() {
@@ -135,5 +135,66 @@ public class ContractProcessorRegistry {
                 sink.add(trimmed);
             }
         }
+    }
+
+    private <T extends Contract, P extends ContractProcessor<? extends T>> Optional<P> lookupMostSpecificProcessor(
+            Map<Class<? extends T>, P> processorsByType,
+            Class<? extends T> requestedType
+    ) {
+        if (requestedType == null) {
+            return Optional.empty();
+        }
+
+        P exact = processorsByType.get(requestedType);
+        if (exact != null) {
+            return Optional.of(exact);
+        }
+
+        List<Class<? extends T>> candidates = new ArrayList<Class<? extends T>>();
+        for (Class<? extends T> supportedType : processorsByType.keySet()) {
+            if (supportedType.isAssignableFrom(requestedType)) {
+                candidates.add(supportedType);
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Class<? extends T> selected = selectMostSpecificCandidate(requestedType, candidates);
+        return Optional.ofNullable(processorsByType.get(selected));
+    }
+
+    private <T extends Contract> Class<? extends T> selectMostSpecificCandidate(
+            Class<? extends T> requestedType,
+            List<Class<? extends T>> candidates
+    ) {
+        Class<? extends T> selected = null;
+        for (Class<? extends T> candidate : candidates) {
+            boolean subtypeOfAll = true;
+            for (Class<? extends T> other : candidates) {
+                if (candidate == other) {
+                    continue;
+                }
+                if (!other.isAssignableFrom(candidate)) {
+                    subtypeOfAll = false;
+                    break;
+                }
+            }
+            if (!subtypeOfAll) {
+                continue;
+            }
+            if (selected != null && !selected.equals(candidate)) {
+                throw new IllegalStateException("Ambiguous processor match for "
+                        + requestedType.getName() + ": " + selected.getName() + " and " + candidate.getName());
+            }
+            selected = candidate;
+        }
+
+        if (selected != null) {
+            return selected;
+        }
+        throw new IllegalStateException("No unique most-specific processor for "
+                + requestedType.getName() + " among " + candidates);
     }
 }
