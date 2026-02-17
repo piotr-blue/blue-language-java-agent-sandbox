@@ -201,4 +201,19 @@ class NodePathAccessorTest {
         assertSame(reference, unresolved);
         assertEquals("linked", resolved);
     }
+
+    @Test
+    void testNodeTypedGettersProvideDeterministicTypeErrors() {
+        Node node = new Node()
+                .properties("text", new Node().value("ok"))
+                .properties("child", new Node().name("child"))
+                .properties("empty", new Node().value(null));
+
+        assertEquals("ok", node.getAsText("/text"));
+        assertEquals("child", node.getAsNode("/child").getName());
+
+        assertThrows(IllegalArgumentException.class, () -> node.getAsNode("/text"));
+        assertThrows(IllegalArgumentException.class, () -> node.getAsText("/child"));
+        assertThrows(IllegalArgumentException.class, () -> node.getAsText("/empty"));
+    }
 }

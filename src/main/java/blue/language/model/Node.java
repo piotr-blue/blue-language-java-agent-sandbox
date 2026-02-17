@@ -266,11 +266,22 @@ public class Node implements Cloneable {
     }
 
     public Node getAsNode(String path) {
-        return (Node) get(path);
+        Object value = get(path);
+        if (value instanceof Node) {
+            return (Node) value;
+        }
+        throw new IllegalArgumentException("Value at path " + path + " is not a node: " + value);
     }
 
     public String getAsText(String path) {
-        return (String) get(path);
+        Object value = get(path);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
+        throw new IllegalArgumentException("Value at path " + path + " is not text: " + value);
     }
 
     public Integer getAsInteger(String path) {
