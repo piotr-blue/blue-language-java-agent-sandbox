@@ -11,14 +11,13 @@ import blue.language.preprocess.Preprocessor;
 import blue.language.utils.NodeExtender;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.utils.BlueIdCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.v2.BlueIdCalculatorV2.calculateSemanticBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,11 +36,11 @@ public class ListTest {
     @BeforeEach
     public void setUp() {
         a = new Node().name("A");
-        aId = calculateBlueId(a);
+        aId = calculateSemanticBlueId(a);
         b = new Node().name("B");
-        bId = calculateBlueId(b);
+        bId = calculateSemanticBlueId(b);
         c = new Node().name("C");
-        cId = calculateBlueId(c);
+        cId = calculateSemanticBlueId(c);
 
         List<Node> nodes = asList(a, b, c);
         nodeProvider = new BasicNodeProvider(nodes);
@@ -66,7 +65,7 @@ public class ListTest {
                         a,
                         b
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -75,7 +74,7 @@ public class ListTest {
                         b,
                         c
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);
@@ -92,7 +91,7 @@ public class ListTest {
                         b,
                         c
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -100,7 +99,7 @@ public class ListTest {
                         a,
                         b
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         assertThrows(IllegalArgumentException.class, () -> merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS));
@@ -114,7 +113,7 @@ public class ListTest {
                         a,
                         b
                 );
-        xId = calculateBlueId(x);
+        xId = calculateSemanticBlueId(x);
         y = new Node()
                 .name("Y")
                 .type(new Node().blueId(xId))
@@ -122,7 +121,7 @@ public class ListTest {
                         a,
                         b
                 );
-        yId = calculateBlueId(y);
+        yId = calculateSemanticBlueId(y);
 
         nodeProvider.addSingleNodes(x, y);
         Node node = merger.resolve(nodeProvider.fetchByBlueId(yId).get(0), Limits.NO_LIMITS);

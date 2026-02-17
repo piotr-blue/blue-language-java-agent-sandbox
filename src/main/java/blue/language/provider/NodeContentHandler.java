@@ -4,7 +4,6 @@ import blue.language.Blue;
 import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Node;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
-import blue.language.utils.BlueIdCalculator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -60,7 +59,7 @@ public class NodeContentHandler {
         } else {
             Node node = JSON_MAPPER.convertValue(jsonNode, Node.class);
             node = preprocessor.apply(node);
-            blueId = BlueIdCalculator.calculateBlueId(node);
+            blueId = BlueIdCalculatorV2.calculateSemanticBlueId(node);
             jsonNode = JSON_MAPPER.valueToTree(node);
         }
 
@@ -70,7 +69,7 @@ public class NodeContentHandler {
     public static ParsedContent parseAndCalculateBlueId(Node node, Function<Node, Node> preprocessor) {
         String blueId;
         Node preprocessedNode = preprocessor.apply(node);
-        blueId = BlueIdCalculator.calculateBlueId(preprocessedNode);
+        blueId = BlueIdCalculatorV2.calculateSemanticBlueId(preprocessedNode);
         JsonNode jsonNode = JSON_MAPPER.valueToTree(preprocessedNode);
 
         return new ParsedContent(blueId, jsonNode, false);

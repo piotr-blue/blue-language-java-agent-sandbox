@@ -8,7 +8,6 @@ import blue.language.merge.processor.ValuePropagator;
 import blue.language.model.Node;
 import blue.language.utils.limits.Limits;
 import blue.language.provider.BasicNodeProvider;
-import blue.language.provider.DirectoryBasedNodeProvider;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -17,8 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static blue.language.TestUtils.samplesDirectoryNodeProvider;
-import static blue.language.utils.BlueIdCalculator.calculateBlueId;
+import static blue.language.blueid.v2.BlueIdCalculatorV2.calculateSemanticBlueId;
 import static blue.language.utils.UncheckedObjectMapper.YAML_MAPPER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -27,19 +25,19 @@ public class TypeAssignerTest {
     @Test
     public void testPropertySubtype() throws Exception {
         Node a = new Node().name("A");
-        Node b = new Node().name("B").type(new Node().blueId(calculateBlueId(a)));
-        Node c = new Node().name("C").type(new Node().blueId(calculateBlueId(b)));
+        Node b = new Node().name("B").type(new Node().blueId(calculateSemanticBlueId(a)));
+        Node c = new Node().name("C").type(new Node().blueId(calculateSemanticBlueId(b)));
 
         Node x = new Node()
                 .name("X")
                 .properties(
-                        "a", new Node().type(new Node().blueId(calculateBlueId(b)))
+                        "a", new Node().type(new Node().blueId(calculateSemanticBlueId(b)))
                 );
         Node y = new Node()
                 .name("Y")
-                .type(new Node().blueId(calculateBlueId(x)))
+                .type(new Node().blueId(calculateSemanticBlueId(x)))
                 .properties(
-                        "a", new Node().type(new Node().blueId(calculateBlueId(c)))
+                        "a", new Node().type(new Node().blueId(calculateSemanticBlueId(c)))
                 );
 
         List<Node> nodes = Arrays.asList(a, b, c, x, y);
@@ -51,7 +49,7 @@ public class TypeAssignerTest {
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateSemanticBlueId(y)).get(0), Limits.NO_LIMITS);
 
         assertEquals("C", node.getProperties().get("a").getType().getName());
     }
@@ -59,17 +57,17 @@ public class TypeAssignerTest {
     @Test
     public void testEmptyTypeIsInherited() throws Exception {
         Node a = new Node().name("A");
-        Node b = new Node().name("B").type(new Node().blueId(calculateBlueId(a)));
-        Node c = new Node().name("C").type(new Node().blueId(calculateBlueId(b)));
+        Node b = new Node().name("B").type(new Node().blueId(calculateSemanticBlueId(a)));
+        Node c = new Node().name("C").type(new Node().blueId(calculateSemanticBlueId(b)));
 
         Node x = new Node()
                 .name("X")
                 .properties(
-                        "a", new Node().type(new Node().blueId(calculateBlueId(b)))
+                        "a", new Node().type(new Node().blueId(calculateSemanticBlueId(b)))
                 );
         Node y = new Node()
                 .name("Y")
-                .type(new Node().blueId(calculateBlueId(x)))
+                .type(new Node().blueId(calculateSemanticBlueId(x)))
                 .properties(
                         "a", new Node()
                 );
@@ -83,7 +81,7 @@ public class TypeAssignerTest {
 
         BasicNodeProvider nodeProvider = new BasicNodeProvider(nodes);
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(y)).get(0), Limits.NO_LIMITS);
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateSemanticBlueId(y)).get(0), Limits.NO_LIMITS);
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
@@ -132,15 +130,36 @@ public class TypeAssignerTest {
         );
 
         Merger merger = new Merger(mergingProcessor, nodeProvider);
-        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateBlueId(nodes.get("Y"))).get(0));
+        Node node = merger.resolve(nodeProvider.fetchByBlueId(calculateSemanticBlueId(nodes.get("Y"))).get(0));
 
         assertEquals("B", node.getProperties().get("a").getType().getName());
     }
 
     @Test
     public void testDifferentSubtypeVariations2() throws Exception {
+        BasicNodeProvider nodeProvider = new BasicNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: General Hattori Hanzo Voucher\n" +
+                        "details:\n" +
+                        "  customerSupport:\n" +
+                        "    phone: \"+1234567890\"\n"
+        );
+        String generalVoucherBlueId = nodeProvider.getBlueIdByName("General Hattori Hanzo Voucher");
 
-        DirectoryBasedNodeProvider dirNodeProvider = samplesDirectoryNodeProvider();
+        nodeProvider.addSingleDocs(
+                "name: Celebrating Kill Bill Anniversary 2024\n" +
+                        "type:\n" +
+                        "  blueId: " + generalVoucherBlueId + "\n"
+        );
+        String anniversaryBlueId = nodeProvider.getBlueIdByName("Celebrating Kill Bill Anniversary 2024");
+
+        nodeProvider.addSingleDocs(
+                "name: My Voucher\n" +
+                        "type:\n" +
+                        "  blueId: " + anniversaryBlueId + "\n" +
+                        "serialNumber: 30902345235\n" +
+                        "purchaseDate: 2024-04-01\n"
+        );
 
         MergingProcessor mergingProcessor = new SequentialMergingProcessor(
                 Arrays.asList(
@@ -149,9 +168,9 @@ public class TypeAssignerTest {
                 )
         );
 
-        Merger merger = new Merger(mergingProcessor, dirNodeProvider);
+        Merger merger = new Merger(mergingProcessor, nodeProvider);
 
-        Node source = dirNodeProvider.findNodeByName("My Voucher").orElse(null);
+        Node source = nodeProvider.findNodeByName("My Voucher").orElse(null);
 
         Node node = merger.resolve(source);
 
