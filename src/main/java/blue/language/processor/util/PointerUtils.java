@@ -160,9 +160,6 @@ public final class PointerUtils {
         if ("/".equals(normalizedPointer)) {
             return normalizedScope;
         }
-        if (normalizedPointer.length() == 1) { // "/"
-            return normalizedScope;
-        }
         return normalizedScope + normalizedPointer;
     }
 
