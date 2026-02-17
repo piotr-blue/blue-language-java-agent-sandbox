@@ -301,7 +301,11 @@ public class Node implements Cloneable {
         } else if (value instanceof BigDecimal) {
             BigDecimal bdValue = (BigDecimal) value;
             if (bdValue.scale() == 0) {
-                return bdValue.intValueExact();
+                try {
+                    return bdValue.intValueExact();
+                } catch (ArithmeticException ex) {
+                    throw new IllegalArgumentException("Value at path " + path + " is out of Integer range: " + value, ex);
+                }
             } else {
                 throw new IllegalArgumentException("Value at path " + path + " is not an integer: " + bdValue);
             }

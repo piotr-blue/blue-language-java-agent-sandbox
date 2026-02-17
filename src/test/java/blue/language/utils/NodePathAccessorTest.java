@@ -239,9 +239,11 @@ class NodePathAccessorTest {
     void testGetAsIntegerRejectsBigIntegerOverflow() {
         Node node = new Node()
                 .properties("tooLarge", new Node().value(new BigInteger("2147483648")))
+                .properties("tooLargeDecimal", new Node().value(new java.math.BigDecimal("2147483648")))
                 .properties("inRange", new Node().value(new BigInteger("2147483647")));
 
         assertEquals(Integer.valueOf(Integer.MAX_VALUE), node.getAsInteger("/inRange"));
         assertThrows(IllegalArgumentException.class, () -> node.getAsInteger("/tooLarge"));
+        assertThrows(IllegalArgumentException.class, () -> node.getAsInteger("/tooLargeDecimal"));
     }
 }
