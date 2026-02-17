@@ -1,5 +1,6 @@
 package blue.language.transport.v2;
 
+import blue.language.Blue;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
 import blue.language.utils.NodeToMapListOrValue;
 
@@ -46,6 +47,17 @@ public final class WebhookEnvelopeV2 {
         return builder()
                 .rootBlueId(snapshot.rootBlueId())
                 .canonical(NodeToMapListOrValue.get(snapshot.canonicalRoot().toNode()))
+                .blueIdsByPointer(snapshot.blueIdsByPointer().asMap())
+                .build();
+    }
+
+    public static WebhookEnvelopeV2 fromSnapshot(ResolvedSnapshotV2 snapshot, Blue blue) {
+        Map<String, Object> bundle = new BundleBuilderV2()
+                .forCanonical(blue, snapshot.canonicalRoot().toNode());
+        return builder()
+                .rootBlueId(snapshot.rootBlueId())
+                .canonical(NodeToMapListOrValue.get(snapshot.canonicalRoot().toNode()))
+                .bundle(bundle)
                 .blueIdsByPointer(snapshot.blueIdsByPointer().asMap())
                 .build();
     }
