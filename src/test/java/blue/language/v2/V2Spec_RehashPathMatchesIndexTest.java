@@ -4,12 +4,15 @@ import blue.language.Blue;
 import blue.language.blueid.v2.BlueIdCalculatorV2;
 import blue.language.model.Node;
 import blue.language.snapshot.v2.ResolvedSnapshotV2;
+import blue.language.snapshot.v2.SnapshotTrustV2;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class V2Spec_RehashPathMatchesIndexTest {
@@ -145,5 +148,36 @@ class V2Spec_RehashPathMatchesIndexTest {
         Node canonicalRoot = snapshot.canonicalRoot().toNode();
 
         assertThrows(IllegalArgumentException.class, () -> BlueIdCalculatorV2.rehashPath(canonicalRoot, "/1"));
+    }
+
+    @Test
+    void rehashPathSupportsBuiltInChildSegmentsWithoutPropertyOverrides() {
+        Blue blue = new Blue();
+        Node resolved = new Node()
+                .name("Root")
+                .type(new Node().name("TypeNode"))
+                .properties("listCarrier", new Node()
+                        .type("List")
+                        .itemType(new Node().name("ItemTypeNode")))
+                .properties("dictCarrier", new Node()
+                        .type("Dictionary")
+                        .keyType(new Node().name("KeyTypeNode"))
+                        .valueType(new Node().name("ValueTypeNode")));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(resolved, SnapshotTrustV2.BLIND_TRUST_RESOLVED);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        for (String pointer : Arrays.asList(
+                "/type",
+                "/listCarrier/type",
+                "/listCarrier/itemType",
+                "/dictCarrier/type",
+                "/dictCarrier/keyType",
+                "/dictCarrier/valueType"
+        )) {
+            String indexedBlueId = snapshot.blueIdsByPointer().blueIdAt(pointer);
+            assertNotNull(indexedBlueId, "Expected pointer in index: " + pointer);
+            assertEquals(indexedBlueId, BlueIdCalculatorV2.rehashPath(canonicalRoot, pointer));
+        }
     }
 }
