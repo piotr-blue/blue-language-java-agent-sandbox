@@ -100,10 +100,14 @@ final class ContractLoader {
                                             String key,
                                             String scopePath,
                                             String fieldName) {
-        if (pointer == null || pointer.trim().isEmpty()) {
+        if (pointer == null) {
             return pointer;
         }
         String trimmed = pointer.trim();
+        if (trimmed.isEmpty()) {
+            throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
+                    + " has blank " + fieldName);
+        }
         try {
             return PointerUtils.normalizePointer(trimmed);
         } catch (IllegalArgumentException ex) {
