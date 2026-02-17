@@ -76,7 +76,7 @@ public class PathLimits implements Limits {
         if (segment.isEmpty() && currentPath.isEmpty()) {
             return;
         }
-        currentPath.push(escapeJsonPointerSegment(segment));
+        currentPath.push(PointerUtils.escapePointerSegment(segment));
     }
 
     @Override
@@ -95,16 +95,12 @@ public class PathLimits implements Limits {
         if (segment.startsWith("/")) {
             return segment;
         }
-        String escapedSegment = escapeJsonPointerSegment(segment);
+        String escapedSegment = PointerUtils.escapePointerSegment(segment);
         String current = getCurrentFullPath();
         if ("/".equals(current)) {
             return "/" + escapedSegment;
         }
         return current + "/" + escapedSegment;
-    }
-
-    private String escapeJsonPointerSegment(String segment) {
-        return PointerUtils.escapePointerSegment(segment);
     }
 
     public static class Builder {
