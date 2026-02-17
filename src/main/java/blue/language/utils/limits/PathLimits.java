@@ -139,16 +139,12 @@ public class PathLimits implements Limits {
             if (!normalized.startsWith("/")) {
                 normalized = "/" + normalized;
             }
-            validatePointerEscapes(normalized);
-            return normalized;
-        }
-
-        private void validatePointerEscapes(String pointer) {
             try {
-                PointerUtils.validatePointerEscapes(pointer);
+                PointerUtils.validatePointerEscapes(normalized);
             } catch (IllegalArgumentException ex) {
-                throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
+                throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + normalized);
             }
+            return normalized;
         }
     }
 
