@@ -434,6 +434,22 @@ class DocumentProcessorInitializationTest {
     }
 
     @Test
+    void initializationFailsWhenContractKeyIsBlank() {
+        String yaml = "name: Blank Contract Key\n" +
+                "contracts:\n" +
+                "  \"   \":\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("contract key"));
+    }
+
+    @Test
     void childLifecycleIsBridgedToParent() {
         String yaml = "name: Embedded Lifecycle\n" +
                 "child:\n" +

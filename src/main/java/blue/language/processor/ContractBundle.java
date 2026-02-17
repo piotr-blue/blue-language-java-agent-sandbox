@@ -166,14 +166,15 @@ public final class ContractBundle {
         }
 
         public Builder addChannel(String key, ChannelContract contract) {
-            channels.put(key, contract);
+            channels.put(validateContractKey(key, "Channel"), contract);
             return this;
         }
 
         public Builder addHandler(String key, HandlerContract contract) {
+            String normalizedKey = validateContractKey(key, "Handler");
             handlersByChannel
                     .computeIfAbsent(contract.getChannelKey(), k -> new ArrayList<>())
-                    .add(new HandlerBinding(key, contract));
+                    .add(new HandlerBinding(normalizedKey, contract));
             return this;
         }
 
@@ -201,26 +202,34 @@ public final class ContractBundle {
         }
 
         public Builder addMarker(String key, MarkerContract contract) {
+            String normalizedKey = validateContractKey(key, "Marker");
             if (ProcessorContractConstants.KEY_CHECKPOINT.equals(key) && !(contract instanceof ChannelEventCheckpoint)) {
                 throw new IllegalStateException(
                         "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
             }
             if (contract instanceof ChannelEventCheckpoint) {
-                if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(key)) {
+                if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
                     throw new IllegalStateException(
-                            "Channel Event Checkpoint must use reserved key 'checkpoint' at key '" + key + "'");
+                            "Channel Event Checkpoint must use reserved key 'checkpoint' at key '" + normalizedKey + "'");
                 }
                 if (checkpointDeclared) {
                     throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
                 checkpointDeclared = true;
             }
-            markers.put(key, contract);
+            markers.put(normalizedKey, contract);
             return this;
         }
 
         public ContractBundle build() {
             return new ContractBundle(channels, handlersByChannel, markers, embeddedPaths, checkpointDeclared);
+        }
+
+        private String validateContractKey(String key, String contractKind) {
+            if (key == null || key.trim().isEmpty()) {
+                throw new IllegalStateException(contractKind + " contract key must not be blank");
+            }
+            return key;
         }
     }
 }

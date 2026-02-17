@@ -1,6 +1,8 @@
 package blue.language.processor;
 
+import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.ProcessEmbedded;
+import blue.language.processor.model.SetProperty;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -50,5 +52,15 @@ class ContractBundleBuilderTest {
                 .build();
 
         assertEquals(Arrays.asList("/child", "/next"), bundle.embeddedPaths());
+    }
+
+    @Test
+    void builderRejectsBlankContractKeys() {
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder().addChannel("   ", new DocumentUpdateChannel()));
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder().addHandler("   ", new SetProperty()));
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder().addMarker("   ", new ProcessEmbedded()));
     }
 }
