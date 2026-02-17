@@ -2,6 +2,8 @@ package blue.language.processor.util;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -121,5 +123,16 @@ class PointerUtilsTest {
                 () -> PointerUtils.escapeRequiredPointerSegment(null, "segment"));
         assertThrows(IllegalArgumentException.class,
                 () -> PointerUtils.escapeRequiredPointerSegment("", "segment"));
+    }
+
+    @Test
+    void pointerFromSegmentsBuildsEscapedPointersForArraysAndLists() {
+        String[] segments = new String[]{"a/b", "", "c~d"};
+        assertEquals("/a~1b//c~0d", PointerUtils.pointerFromSegments(segments, 3));
+        assertEquals("/a~1b/", PointerUtils.pointerFromSegments(segments, 2));
+        assertEquals("/", PointerUtils.pointerFromSegments(segments, 0));
+
+        assertEquals("/a~1b//c~0d", PointerUtils.pointerFromSegments(Arrays.asList("a/b", "", "c~d"), 3));
+        assertEquals("/", PointerUtils.pointerFromSegments(Arrays.asList("a/b"), -1));
     }
 }

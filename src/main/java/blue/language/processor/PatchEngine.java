@@ -422,19 +422,7 @@ final class PatchEngine {
     }
 
     private String pointerPrefix(List<String> segments, int length) {
-        if (length <= 0) {
-            return "/";
-        }
-        int limit = Math.min(length, segments.size());
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < limit; i++) {
-            builder.append('/');
-            String segment = segments.get(i);
-            if (segment != null) {
-                builder.append(PointerUtils.escapePointerSegment(segment));
-            }
-        }
-        return builder.length() == 0 ? "/" : builder.toString();
+        return PointerUtils.pointerFromSegments(segments, length);
     }
 
     private List<String> computeCascadeScopes(String scopePath) {

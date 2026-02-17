@@ -1,5 +1,7 @@
 package blue.language.processor.util;
 
+import java.util.List;
+
 /**
  * Utility helpers for normalising and composing JSON Pointer / scope strings.
  */
@@ -106,6 +108,44 @@ public final class PointerUtils {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
         return index;
+    }
+
+    public static String pointerFromSegments(String[] segments, int length) {
+        if (segments == null || length <= 0) {
+            return "/";
+        }
+        int limit = Math.min(length, segments.length);
+        if (limit <= 0) {
+            return "/";
+        }
+        StringBuilder pointer = new StringBuilder();
+        for (int i = 0; i < limit; i++) {
+            pointer.append('/');
+            String segment = segments[i];
+            if (segment != null) {
+                pointer.append(escapePointerSegment(segment));
+            }
+        }
+        return pointer.toString();
+    }
+
+    public static String pointerFromSegments(List<String> segments, int length) {
+        if (segments == null || length <= 0) {
+            return "/";
+        }
+        int limit = Math.min(length, segments.size());
+        if (limit <= 0) {
+            return "/";
+        }
+        StringBuilder pointer = new StringBuilder();
+        for (int i = 0; i < limit; i++) {
+            pointer.append('/');
+            String segment = segments.get(i);
+            if (segment != null) {
+                pointer.append(escapePointerSegment(segment));
+            }
+        }
+        return pointer.toString();
     }
 
     public static String resolvePointer(String scopePath, String relativePointer) {

@@ -70,20 +70,9 @@ public final class TypeGeneralizerV2 {
 
         List<String> pointers = new ArrayList<String>();
         for (int length = segments.length - 1; length >= 0; length--) {
-            pointers.add(pointerFromSegments(segments, length));
+            pointers.add(PointerUtils.pointerFromSegments(segments, length));
         }
         return pointers;
-    }
-
-    private String pointerFromSegments(String[] segments, int length) {
-        if (length <= 0) {
-            return "/";
-        }
-        StringBuilder pointer = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            pointer.append('/').append(PointerUtils.escapePointerSegment(segments[i]));
-        }
-        return pointer.toString();
     }
 
     private Node nodeAt(Node root, String pointer) {
