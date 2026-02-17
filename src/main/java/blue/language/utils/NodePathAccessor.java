@@ -26,7 +26,11 @@ public class NodePathAccessor {
             return node.getValue() != null ? node.getValue() : node;
         }
 
-        String[] segments = path.substring(1).split("/");
+        String[] rawSegments = path.substring(1).split("/", -1);
+        String[] segments = new String[rawSegments.length];
+        for (int i = 0; i < rawSegments.length; i++) {
+            segments[i] = unescapePointerSegment(rawSegments[i]);
+        }
         return getRecursive(node, segments, 0, linkingProvider, resolveFinalLink);
     }
 
@@ -106,6 +110,32 @@ public class NodePathAccessor {
         } catch (NumberFormatException ex) {
             return -1;
         }
+    }
+
+    private static String unescapePointerSegment(String segment) {
+        if (segment == null || segment.isEmpty()) {
+            return segment;
+        }
+        StringBuilder decoded = new StringBuilder(segment.length());
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c != '~') {
+                decoded.append(c);
+                continue;
+            }
+            if (i + 1 >= segment.length()) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+            char next = segment.charAt(++i);
+            if (next == '0') {
+                decoded.append('~');
+            } else if (next == '1') {
+                decoded.append('/');
+            } else {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in segment: " + segment);
+            }
+        }
+        return decoded.toString();
     }
 
     private static Node link(Node node, Function<Node, Node> linkingProvider) {

@@ -115,4 +115,30 @@ class NodePathAccessorTest {
         assertThrows(IllegalArgumentException.class,
                 () -> NodePathAccessor.get(node, "/999999999999999999999999"));
     }
+
+    @Test
+    void testEscapedPointerSegmentsResolveSpecialPropertyNames() {
+        Node node = new Node()
+                .properties("a/b", new Node().value("slash"))
+                .properties("a~b", new Node().value("tilde"));
+
+        assertEquals("slash", NodePathAccessor.get(node, "/a~1b"));
+        assertEquals("tilde", NodePathAccessor.get(node, "/a~0b"));
+    }
+
+    @Test
+    void testTrailingSegmentsArePreserved() {
+        Node node = new Node()
+                .properties("scope", new Node()
+                        .properties("", new Node().value("empty-key")));
+
+        assertEquals("empty-key", NodePathAccessor.get(node, "/scope/"));
+    }
+
+    @Test
+    void testMalformedEscapedPointerSegmentIsRejected() {
+        Node node = new Node().properties("x", new Node().value("y"));
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/x~"));
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/x~2"));
+    }
 }
