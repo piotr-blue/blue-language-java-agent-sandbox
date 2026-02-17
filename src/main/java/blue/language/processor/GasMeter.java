@@ -88,20 +88,7 @@ final class GasMeter {
 
     private int scopeDepth(String scopePath) {
         String normalized = PointerUtils.normalizeScope(scopePath);
-        if ("/".equals(normalized)) {
-            return 0;
-        }
-        String trimmed = normalized.substring(1);
-        if (trimmed.isEmpty()) {
-            return 0;
-        }
-        int depth = 1;
-        for (int i = 0; i < trimmed.length(); i++) {
-            if (trimmed.charAt(i) == '/') {
-                depth++;
-            }
-        }
-        return depth;
+        return PointerUtils.splitPointerSegments(normalized).length;
     }
 
     private static final class GasCharges {
