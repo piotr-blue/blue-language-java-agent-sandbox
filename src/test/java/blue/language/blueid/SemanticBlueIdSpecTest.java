@@ -5,6 +5,8 @@ import blue.language.model.Constraints;
 import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -61,6 +63,48 @@ class SemanticBlueIdSpecTest {
         assertNotEquals(
                 BlueIdCalculator.calculateSemanticBlueId(scalar),
                 BlueIdCalculator.calculateSemanticBlueId(singletonList)
+        );
+    }
+
+    @Test
+    void nullsAndEmptyMapsAreRemovedRecursivelyBeforeHashing() {
+        Node compact = new Node().properties("a", new Node().value(1));
+
+        Node noisy = new Node()
+                .properties("a", new Node().value(1))
+                .properties("ignoredNull", new Node().value(null))
+                .properties("ignoredEmptyMap", new Node())
+                .properties("nested", new Node()
+                        .properties("alsoIgnoredNull", new Node().value(null))
+                        .properties("alsoIgnoredEmptyMap", new Node()));
+
+        assertEquals(
+                BlueIdCalculator.calculateSemanticBlueId(compact),
+                BlueIdCalculator.calculateSemanticBlueId(noisy)
+        );
+    }
+
+    @Test
+    void emptyListsArePreservedDuringCleaning() {
+        Node withoutList = new Node().properties("a", new Node().value(1));
+        Node withEmptyList = new Node()
+                .properties("a", new Node().value(1))
+                .properties("items", new Node().items(new ArrayList<Node>()));
+
+        assertNotEquals(
+                BlueIdCalculator.calculateSemanticBlueId(withoutList),
+                BlueIdCalculator.calculateSemanticBlueId(withEmptyList)
+        );
+    }
+
+    @Test
+    void emptyMapsInsideListsAreRemovedDuringCleaning() {
+        Node compact = new Node().items(new Node().value("x"));
+        Node noisy = new Node().items(new Node().value("x"), new Node());
+
+        assertEquals(
+                BlueIdCalculator.calculateSemanticBlueId(compact),
+                BlueIdCalculator.calculateSemanticBlueId(noisy)
         );
     }
 }

@@ -37,14 +37,15 @@ public final class Canonicalizer {
 
     public static Object toCanonicalObject(Node canonicalNode) {
         Objects.requireNonNull(canonicalNode, "canonicalNode");
-        return canonicalizeNode(canonicalNode);
+        return cleanCanonicalObject(canonicalizeNode(canonicalNode));
     }
 
     public static Object toCanonicalObject(List<Node> canonicalDocs) {
         Objects.requireNonNull(canonicalDocs, "canonicalDocs");
-        return canonicalDocs.stream()
+        Object canonicalDocsObject = canonicalDocs.stream()
                 .map(Canonicalizer::toCanonicalObject)
                 .collect(Collectors.toList());
+        return cleanCanonicalObject(canonicalDocsObject);
     }
 
     private static Object canonicalizeNode(Node node) {
@@ -143,7 +144,7 @@ public final class Canonicalizer {
     private static Map<String, Object> constraintsToMap(Constraints constraints) {
         Map<String, Object> map = YAML_MAPPER.convertValue(constraints, new TypeReference<Map<String, Object>>() {
         });
-        pruneEmptyEntries(map);
+        cleanMapEntries(map);
         return map;
     }
 
@@ -155,29 +156,70 @@ public final class Canonicalizer {
         return constraintsMap.isEmpty() ? null : constraintsMap;
     }
 
-    private static void pruneEmptyEntries(Map<String, Object> map) {
+    private static void cleanMapEntries(Map<String, Object> map) {
         Iterator<Map.Entry<String, Object>> iterator = map.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<String, Object> entry = iterator.next();
-            Object value = entry.getValue();
+            Object value = cleanCanonicalValue(entry.getValue());
             if (value == null) {
                 iterator.remove();
                 continue;
             }
             if (value instanceof Map) {
                 Map<String, Object> nested = (Map<String, Object>) value;
-                pruneEmptyEntries(nested);
                 if (nested.isEmpty()) {
                     iterator.remove();
+                } else {
+                    entry.setValue(nested);
                 }
                 continue;
             }
             if (value instanceof List) {
-                List<Object> list = (List<Object>) value;
-                if (list.isEmpty()) {
-                    iterator.remove();
-                }
+                entry.setValue(value);
+                continue;
             }
+            entry.setValue(value);
         }
+    }
+
+    private static Object cleanCanonicalObject(Object value) {
+        return cleanCanonicalValue(value);
+    }
+
+    private static Object cleanCanonicalValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Map) {
+            Map<String, Object> original = (Map<String, Object>) value;
+            Map<String, Object> cleaned = new LinkedHashMap<String, Object>();
+            for (Map.Entry<String, Object> entry : original.entrySet()) {
+                Object cleanedChild = cleanCanonicalValue(entry.getValue());
+                if (cleanedChild == null) {
+                    continue;
+                }
+                if (cleanedChild instanceof Map && ((Map<?, ?>) cleanedChild).isEmpty()) {
+                    continue;
+                }
+                cleaned.put(entry.getKey(), cleanedChild);
+            }
+            return cleaned;
+        }
+        if (value instanceof List) {
+            List<?> original = (List<?>) value;
+            List<Object> cleaned = new ArrayList<Object>();
+            for (Object entry : original) {
+                Object cleanedChild = cleanCanonicalValue(entry);
+                if (cleanedChild == null) {
+                    continue;
+                }
+                if (cleanedChild instanceof Map && ((Map<?, ?>) cleanedChild).isEmpty()) {
+                    continue;
+                }
+                cleaned.add(cleanedChild);
+            }
+            return cleaned;
+        }
+        return value;
     }
 }

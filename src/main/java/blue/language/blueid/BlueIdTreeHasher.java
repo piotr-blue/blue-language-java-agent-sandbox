@@ -191,7 +191,14 @@ public final class BlueIdTreeHasher {
             Map<String, Object> result = new LinkedHashMap<String, Object>();
             Map<?, ?> map = (Map<?, ?>) value;
             for (Map.Entry<?, ?> entry : map.entrySet()) {
-                result.put(String.valueOf(entry.getKey()), normalize(entry.getValue()));
+                Object child = normalize(entry.getValue());
+                if (child == null) {
+                    continue;
+                }
+                if (child instanceof Map && ((Map<?, ?>) child).isEmpty()) {
+                    continue;
+                }
+                result.put(String.valueOf(entry.getKey()), child);
             }
             return result;
         }
@@ -199,7 +206,14 @@ public final class BlueIdTreeHasher {
             List<?> original = (List<?>) value;
             List<Object> normalized = new ArrayList<Object>(original.size());
             for (Object element : original) {
-                normalized.add(normalize(element));
+                Object child = normalize(element);
+                if (child == null) {
+                    continue;
+                }
+                if (child instanceof Map && ((Map<?, ?>) child).isEmpty()) {
+                    continue;
+                }
+                normalized.add(child);
             }
             return normalized;
         }

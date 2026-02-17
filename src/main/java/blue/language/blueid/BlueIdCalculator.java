@@ -158,17 +158,31 @@ public final class BlueIdCalculator {
             Map<String, Object> result = new LinkedHashMap<String, Object>();
             Map<?, ?> original = (Map<?, ?>) value;
             for (Map.Entry<?, ?> entry : original.entrySet()) {
-                result.put(String.valueOf(entry.getKey()), normalize(entry.getValue()));
+                Object child = normalize(entry.getValue());
+                if (child == null) {
+                    continue;
+                }
+                if (child instanceof Map && ((Map<?, ?>) child).isEmpty()) {
+                    continue;
+                }
+                result.put(String.valueOf(entry.getKey()), child);
             }
             return result;
         }
         if (value instanceof List) {
             List<?> original = (List<?>) value;
-            Object[] normalized = new Object[original.size()];
+            List<Object> cleaned = new java.util.ArrayList<Object>();
             for (int i = 0; i < original.size(); i++) {
-                normalized[i] = normalize(original.get(i));
+                Object child = normalize(original.get(i));
+                if (child == null) {
+                    continue;
+                }
+                if (child instanceof Map && ((Map<?, ?>) child).isEmpty()) {
+                    continue;
+                }
+                cleaned.add(child);
             }
-            return Arrays.asList(normalized);
+            return cleaned;
         }
         return value;
     }
