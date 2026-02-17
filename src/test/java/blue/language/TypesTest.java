@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static blue.language.TestUtils.useNodeNameAsBlueIdProvider;
+import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
+import static blue.language.utils.Properties.TEXT_TYPE_BLUE_ID;
 import static blue.language.utils.Types.isSubtype;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -107,6 +109,20 @@ public class TypesTest {
                 .properties("x", new Node().value(1));
 
         assertTrue(isSubtype(candidate, supertype, provider));
+    }
+
+    @Test
+    public void coreSubtypeCheckHandlesDecoratedAncestors() {
+        Node decoratedTextType = new Node()
+                .name("DecoratedText")
+                .blueId("decorated-text-id")
+                .type(new Node().blueId(TEXT_TYPE_BLUE_ID))
+                .properties("format", new Node().value("markdown"));
+
+        NodeProvider noLookupProvider = blueId -> null;
+
+        assertTrue(isSubtype(new Node().blueId(TEXT_TYPE_BLUE_ID), decoratedTextType, noLookupProvider));
+        assertFalse(isSubtype(new Node().blueId(INTEGER_TYPE_BLUE_ID), decoratedTextType, noLookupProvider));
     }
 
 }
