@@ -18,10 +18,7 @@ public class NodePathAccessor {
     }
 
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        if (path == null) {
-            throw new IllegalArgumentException("Invalid path: " + path);
-        }
-        if (path.isEmpty()) {
+        if (path == null || path.isEmpty()) {
             path = "/";
         }
         if (!path.startsWith("/")) {

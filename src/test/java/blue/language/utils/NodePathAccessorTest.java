@@ -103,10 +103,12 @@ class NodePathAccessorTest {
 
         assertEquals("TestValue", NodePathAccessor.get(nodeWithValue, "/"));
         assertEquals("TestValue", NodePathAccessor.get(nodeWithValue, ""));
+        assertEquals("TestValue", NodePathAccessor.get(nodeWithValue, null));
         assertEquals("Test", NodePathAccessor.get(nodeWithValue, "/name"));
 
         assertTrue(NodePathAccessor.get(nodeWithoutValue, "/") instanceof Node);
         assertTrue(NodePathAccessor.get(nodeWithoutValue, "") instanceof Node);
+        assertTrue(NodePathAccessor.get(nodeWithoutValue, null) instanceof Node);
         assertEquals("Test", NodePathAccessor.get(nodeWithoutValue, "/name"));
     }
 
