@@ -69,7 +69,7 @@ public class PathLimits implements Limits {
     public void enterPathSegment(String pathSegment, Node noe) {
         String segment = pathSegment == null ? "" : pathSegment;
         if (segment.startsWith("/")) {
-            validatePointerEscapes(segment);
+            PointerUtils.validatePointerEscapes(segment);
             currentPath.push(segment.substring(1));
             return;
         }
@@ -111,16 +111,12 @@ public class PathLimits implements Limits {
         if (pointerPath == null || pointerPath.isEmpty() || "/".equals(pointerPath)) {
             return new String[0];
         }
-        validatePointerEscapes(pointerPath);
+        PointerUtils.validatePointerEscapes(pointerPath);
         String normalized = pointerPath.startsWith("/") ? pointerPath.substring(1) : pointerPath;
         if (normalized.isEmpty()) {
             return new String[0];
         }
         return normalized.split("/", -1);
-    }
-
-    private void validatePointerEscapes(String pointer) {
-        PointerUtils.validatePointerEscapes(pointer);
     }
 
     public static class Builder {
@@ -160,18 +156,10 @@ public class PathLimits implements Limits {
         }
 
         private void validatePointerEscapes(String pointer) {
-            for (int i = 1; i < pointer.length(); i++) {
-                char c = pointer.charAt(i);
-                if (c != '~') {
-                    continue;
-                }
-                if (i + 1 >= pointer.length()) {
-                    throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
-                }
-                char next = pointer.charAt(++i);
-                if (next != '0' && next != '1') {
-                    throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
-                }
+            try {
+                PointerUtils.validatePointerEscapes(pointer);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Invalid JSON pointer escape in allowed path: " + pointer);
             }
         }
     }

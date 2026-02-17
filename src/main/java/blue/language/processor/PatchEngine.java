@@ -77,7 +77,7 @@ final class PatchEngine {
             if ("-".equals(leaf)) {
                 throw new IllegalArgumentException("Direct write does not support append token '-' for path " + normalized);
             }
-            if (isArrayIndexSegment(leaf)) {
+            if (PointerUtils.isArrayIndexSegment(leaf)) {
                 List<Node> mutable = ensureMutableItems(parent);
                 int index = parseArrayIndex(leaf, normalized);
                 if (value == null) {
@@ -123,7 +123,7 @@ final class PatchEngine {
 
             List<Node> items = parent.getItems();
             if (items != null) {
-                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                     List<Node> mutable = ensureMutableItems(parent);
                     if ("-".equals(leaf)) {
                         mutable.add(value);
@@ -165,7 +165,7 @@ final class PatchEngine {
 
             List<Node> items = parent.getItems();
             if (items != null) {
-                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                     if ("-".equals(leaf)) {
                         throw new IllegalStateException("Replace does not support append token at path: " + path);
                     }
@@ -206,7 +206,7 @@ final class PatchEngine {
 
             List<Node> items = parent.getItems();
             if (items != null) {
-                if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                     if ("-".equals(leaf)) {
                         throw new IllegalStateException("Remove does not support append token at path: " + path);
                     }
@@ -271,7 +271,7 @@ final class PatchEngine {
         }
 
         List<Node> items = current.getItems();
-        if (items != null && ("-".equals(segment) || isArrayIndexSegment(segment))) {
+        if (items != null && ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 if (!last) {
                     throw new IllegalStateException("Append token '-' must be final segment: " + path);
@@ -332,7 +332,7 @@ final class PatchEngine {
         }
 
         List<Node> items = current.getItems();
-        if (items != null && ("-".equals(segment) || isArrayIndexSegment(segment))) {
+        if (items != null && ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 throw new IllegalStateException("Append token '-' must be final segment: " + fullPath);
             }
@@ -418,10 +418,6 @@ final class PatchEngine {
             throw new IllegalStateException("Expected numeric array index in path: " + path);
         }
         return index;
-    }
-
-    private boolean isArrayIndexSegment(String segment) {
-        return PointerUtils.isArrayIndexSegment(segment);
     }
 
     private List<String> splitPointer(String path) {

@@ -126,7 +126,7 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+            if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                 if ("-".equals(leaf)) {
                     items.add(incoming);
                     return;
@@ -161,7 +161,7 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+            if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Replace does not support append token at path: " + path);
                 }
@@ -193,7 +193,7 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = parent.getItems();
         if (items != null) {
-            if ("-".equals(leaf) || isArrayIndexSegment(leaf)) {
+            if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Remove does not support append token at path: " + path);
                 }
@@ -241,7 +241,7 @@ public final class WorkingDocumentV2 {
 
         List<Node> items = currentNode.getItems();
         if (items != null) {
-            if ("-".equals(segment) || isArrayIndexSegment(segment)) {
+            if ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment)) {
                 if ("-".equals(segment)) {
                     throw new IllegalStateException("Append token '-' is only allowed on final segment: " + path);
                 }
@@ -303,7 +303,4 @@ public final class WorkingDocumentV2 {
         return index;
     }
 
-    private boolean isArrayIndexSegment(String value) {
-        return PointerUtils.isArrayIndexSegment(value);
-    }
 }
