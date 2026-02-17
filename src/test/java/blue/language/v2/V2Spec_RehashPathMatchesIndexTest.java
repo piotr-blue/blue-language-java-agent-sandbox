@@ -228,6 +228,16 @@ class V2Spec_RehashPathMatchesIndexTest {
     }
 
     @Test
+    void rehashPathSupportsBuiltInBlueSegmentWhenPresent() {
+        Node canonicalRoot = new Node()
+                .name("Root")
+                .blue(new Node().name("BlueNode"));
+
+        String blueHash = BlueIdCalculatorV2.calculateSemanticBlueId(canonicalRoot.getBlue());
+        assertEquals(blueHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/blue"));
+    }
+
+    @Test
     void rehashPathSupportsTrailingEmptySegmentWhenPropertyExists() {
         Blue blue = new Blue();
         Node withEmptyPropertySegment = new Node()
