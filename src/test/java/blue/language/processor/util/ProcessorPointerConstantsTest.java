@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProcessorPointerConstantsTest {
 
@@ -42,12 +43,20 @@ class ProcessorPointerConstantsTest {
 
     @Test
     void pointerHelpersRejectNullSegments() {
-        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeContractsEntry(null));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastEvent("checkpoint", null));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastSignature("checkpoint", null));
+        IllegalArgumentException contractNull = assertThrows(IllegalArgumentException.class,
+                () -> ProcessorPointerConstants.relativeContractsEntry(null));
+        assertTrue(contractNull.getMessage().contains("Contract key"));
+
+        IllegalArgumentException channelNull = assertThrows(IllegalArgumentException.class,
+                () -> ProcessorPointerConstants.relativeCheckpointLastEvent("checkpoint", null));
+        assertTrue(channelNull.getMessage().contains("Channel key"));
+
+        IllegalArgumentException channelEmpty = assertThrows(IllegalArgumentException.class,
+                () -> ProcessorPointerConstants.relativeCheckpointLastSignature("checkpoint", ""));
+        assertTrue(channelEmpty.getMessage().contains("Channel key"));
+
         assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeContractsEntry(""));
         assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastEvent("", "channelA"));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorPointerConstants.relativeCheckpointLastSignature("checkpoint", ""));
     }
 }
 
