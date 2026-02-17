@@ -18,7 +18,13 @@ public class NodePathAccessor {
     }
 
     public static Object get(Node node, String path, Function<Node, Node> linkingProvider, boolean resolveFinalLink) {
-        if (path == null || !path.startsWith("/")) {
+        if (path == null) {
+            throw new IllegalArgumentException("Invalid path: " + path);
+        }
+        if (path.isEmpty()) {
+            path = "/";
+        }
+        if (!path.startsWith("/")) {
             throw new IllegalArgumentException("Invalid path: " + path);
         }
 
@@ -50,6 +56,9 @@ public class NodePathAccessor {
     }
 
     private static Node getNodeForSegment(Node node, String segment, Function<Node, Node> linkingProvider, boolean resolveLink) {
+        if (node == null) {
+            throw new IllegalArgumentException("Property not found: " + segment);
+        }
         Node result;
 
         Map<String, Node> properties = node.getProperties();

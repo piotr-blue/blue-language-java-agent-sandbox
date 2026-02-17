@@ -102,9 +102,11 @@ class NodePathAccessorTest {
         Node nodeWithoutValue = new Node().name("Test");
 
         assertEquals("TestValue", NodePathAccessor.get(nodeWithValue, "/"));
+        assertEquals("TestValue", NodePathAccessor.get(nodeWithValue, ""));
         assertEquals("Test", NodePathAccessor.get(nodeWithValue, "/name"));
 
         assertTrue(NodePathAccessor.get(nodeWithoutValue, "/") instanceof Node);
+        assertTrue(NodePathAccessor.get(nodeWithoutValue, "") instanceof Node);
         assertEquals("Test", NodePathAccessor.get(nodeWithoutValue, "/name"));
     }
 
@@ -156,5 +158,12 @@ class NodePathAccessorTest {
         Node node = new Node().properties("x", new Node().value("y"));
         assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/x~"));
         assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/x~2"));
+    }
+
+    @Test
+    void testMissingIntermediateBuiltInSegmentFailsDeterministically() {
+        Node node = new Node().name("Root");
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/type/name"));
+        assertThrows(IllegalArgumentException.class, () -> NodePathAccessor.get(node, "/blue/name"));
     }
 }
