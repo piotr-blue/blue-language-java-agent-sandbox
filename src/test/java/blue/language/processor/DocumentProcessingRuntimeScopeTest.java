@@ -28,4 +28,14 @@ class DocumentProcessingRuntimeScopeTest {
         assertThrows(UnsupportedOperationException.class,
                 () -> scopes.put("/x", new ScopeRuntimeContext("/x")));
     }
+
+    @Test
+    void scopeApisRejectNonPointerScopeInputs() {
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+
+        assertThrows(IllegalArgumentException.class, () -> runtime.scope("scope"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.existingScope("scope"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.isScopeTerminated("scope"));
+        assertThrows(IllegalArgumentException.class, () -> runtime.chargeScopeEntry("scope"));
+    }
 }
