@@ -169,6 +169,28 @@ class V2Spec_RehashPathMatchesIndexTest {
     }
 
     @Test
+    void rehashPathUsesLeadingZeroNumericPropertyOnMixedParentWhenKeyExists() {
+        Blue blue = new Blue();
+        Node mixedNode = new Node()
+                .name("Root")
+                .properties("mixed", new Node()
+                        .items(new Node().name("Item0"), new Node().name("Item1"))
+                        .properties("01", new Node().value("leading-zero-property"))
+                        .properties("existing", new Node().value("keep")));
+
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(mixedNode);
+        Node canonicalRoot = snapshot.canonicalRoot().toNode();
+
+        Node mixedCanonical = canonicalRoot.getProperties().get("mixed");
+        String propertyHash = BlueIdCalculatorV2.calculateSemanticBlueId(mixedCanonical.getProperties().get("01"));
+        String itemHash = BlueIdCalculatorV2.calculateSemanticBlueId(mixedCanonical.getItems().get(1));
+
+        assertEquals(propertyHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/mixed/01"));
+        assertEquals(propertyHash, snapshot.blueIdsByPointer().blueIdAt("/mixed/01"));
+        assertEquals(itemHash, BlueIdCalculatorV2.rehashPath(canonicalRoot, "/mixed/1"));
+    }
+
+    @Test
     void rehashPathAllowsLeadingZeroNumericPropertyKeys() {
         Blue blue = new Blue();
         Node withLeadingZeroProperty = new Node()
