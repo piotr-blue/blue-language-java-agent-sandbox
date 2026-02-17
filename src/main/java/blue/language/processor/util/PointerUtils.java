@@ -12,24 +12,22 @@ public final class PointerUtils {
         if (scopePath == null || scopePath.isEmpty()) {
             return "/";
         }
-        String result = scopePath;
-        if (result.charAt(0) != '/') {
-            result = "/" + result;
+        if (scopePath.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + scopePath);
         }
-        validatePointerEscapes(result);
-        return result;
+        validatePointerEscapes(scopePath);
+        return scopePath;
     }
 
     public static String normalizePointer(String pointer) {
         if (pointer == null || pointer.isEmpty()) {
             return "/";
         }
-        String result = pointer;
-        if (result.charAt(0) != '/') {
-            result = "/" + result;
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
         }
-        validatePointerEscapes(result);
-        return result;
+        validatePointerEscapes(pointer);
+        return pointer;
     }
 
     public static String stripSlashes(String value) {

@@ -26,8 +26,16 @@ class PointerUtilsTest {
     }
 
     @Test
+    void normalizePointerRejectsNonPointerPaths() {
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("x"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("scope"));
+    }
+
+    @Test
     void resolvePointerRejectsMalformedEscapes() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "/x~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "/x~2"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("scope", "/x"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "x"));
     }
 }
