@@ -281,6 +281,21 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
+    void replacePrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("0", new Node().value("property-zero"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.applyPatch("/", JsonPatch.replace("/mixed/0", new Node().value("property-updated")));
+
+        Node mixedAfter = property(document, "mixed");
+        assertEquals("property-updated", property(mixedAfter, "0").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
+
+    @Test
     void appendObjectAllowsNestedStructure() {
         Node document = arrayDocument("rows", 1);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);

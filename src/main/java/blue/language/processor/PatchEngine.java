@@ -100,8 +100,14 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                ensureMutableProperties(parent).put(leaf, value);
+                return;
+            }
+
             List<Node> items = parent.getItems();
-            if (items != null) {
+            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
                 List<Node> mutable = ensureMutableItems(parent);
                 if ("-".equals(leaf)) {
                     mutable.add(value);
@@ -131,8 +137,14 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                ensureMutableProperties(parent).put(leaf, value);
+                return;
+            }
+
             List<Node> items = parent.getItems();
-            if (items != null) {
+            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Replace does not support append token at path: " + path);
                 }
@@ -161,8 +173,14 @@ final class PatchEngine {
             Node parent = ctx.parent;
             String leaf = ctx.leaf;
 
+            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
+            if (existingProperties != null && existingProperties.containsKey(leaf)) {
+                existingProperties.remove(leaf);
+                return;
+            }
+
             List<Node> items = parent.getItems();
-            if (items != null) {
+            if (items != null && ("-".equals(leaf) || isArrayIndexSegment(leaf))) {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Remove does not support append token at path: " + path);
                 }
@@ -217,6 +235,11 @@ final class PatchEngine {
             return null;
         }
 
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
+        }
+
         List<Node> items = current.getItems();
         if (items != null) {
             if ("-".equals(segment)) {
@@ -234,12 +257,7 @@ final class PatchEngine {
             }
             return items.get(index);
         }
-
-        Map<String, Node> properties = ensureMutableProperties(current, false);
-        if (properties == null || !properties.containsKey(segment)) {
-            return null;
-        }
-        return properties.get(segment);
+        return null;
     }
 
     private ParentContext resolveParent(Node root,
@@ -278,8 +296,13 @@ final class PatchEngine {
             throw new IllegalStateException("Path does not exist: " + pointerPrefix(segments, index));
         }
 
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        if (properties != null && properties.containsKey(segment)) {
+            return properties.get(segment);
+        }
+
         List<Node> items = current.getItems();
-        if (items != null) {
+        if (items != null && ("-".equals(segment) || isArrayIndexSegment(segment))) {
             if ("-".equals(segment)) {
                 throw new IllegalStateException("Append token '-' must be final segment: " + fullPath);
             }
@@ -303,7 +326,6 @@ final class PatchEngine {
             return child;
         }
 
-        Map<String, Node> properties = ensureMutableProperties(current, false);
         if (properties == null && current.getValue() != null) {
             throw new IllegalStateException("Cannot traverse into scalar at path: " + pointerPrefix(segments, index + 1));
         }
