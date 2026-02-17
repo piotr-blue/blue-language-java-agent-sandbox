@@ -11,6 +11,9 @@ import blue.language.processor.ContractProcessor;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.model.Contract;
 import blue.language.preprocess.Preprocessor;
+import blue.language.snapshot.v2.ResolvedSnapshotV2;
+import blue.language.snapshot.v2.SnapshotFactoryV2;
+import blue.language.snapshot.v2.SnapshotTrustV2;
 import blue.language.utils.*;
 import blue.language.utils.limits.CompositeLimits;
 import blue.language.utils.limits.Limits;
@@ -32,6 +35,7 @@ public class Blue implements NodeResolver {
     private Map<String, String> preprocessingAliases = new HashMap<>();
     private Limits globalLimits = NO_LIMITS;
     private DocumentProcessor documentProcessor;
+    private SnapshotFactoryV2 snapshotFactoryV2 = new SnapshotFactoryV2();
 
 
 
@@ -167,6 +171,27 @@ public class Blue implements NodeResolver {
 
     public String calculateBlueId(Object object) {
         return calculateBlueId(objectToNode(object));
+    }
+
+    public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring) {
+        return resolveToSnapshotV2(authoring, SnapshotTrustV2.RESOLVE);
+    }
+
+    public ResolvedSnapshotV2 resolveToSnapshotV2(Node authoring, SnapshotTrustV2 trust) {
+        if (trust == SnapshotTrustV2.BLIND_TRUST_RESOLVED) {
+            return snapshotFactoryV2.fromResolved(this, authoring, trust);
+        }
+        return snapshotFactoryV2.fromAuthoring(this, authoring);
+    }
+
+    public String calculateSemanticBlueIdV2(Node authoring) {
+        return resolveToSnapshotV2(authoring).rootBlueId();
+    }
+
+    public String calculateSemanticBlueIdV2FromResolved(Node resolved) {
+        return snapshotFactoryV2
+                .fromResolved(this, resolved, SnapshotTrustV2.BLIND_TRUST_RESOLVED)
+                .rootBlueId();
     }
 
     public void addPreprocessingAliases(Map<String, String> aliases) {

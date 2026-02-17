@@ -89,6 +89,30 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
                 .forEach(this::processNode);
     }
 
+    public String addSingleDocsV2(String yaml) {
+        NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(yaml, preprocessor);
+        if (parsedContent.isMultipleDocuments) {
+            throw new IllegalArgumentException("addSingleDocsV2 expects a single document payload.");
+        }
+        storeParsedContent(parsedContent);
+        addNodeToNameMap(parsedContent.content, parsedContent.blueId);
+        return parsedContent.blueId;
+    }
+
+    public String addMultipleDocsV2(String yaml) {
+        NodeContentHandler.ParsedContent parsedContent = NodeContentHandler.parseAndCalculateBlueId(yaml, preprocessor);
+        storeParsedContent(parsedContent);
+
+        if (parsedContent.content.isArray()) {
+            IntStream.range(0, parsedContent.content.size()).forEach(i ->
+                    addNodeToNameMap(parsedContent.content.get(i), parsedContent.blueId + "#" + i));
+        } else {
+            addNodeToNameMap(parsedContent.content, parsedContent.blueId);
+        }
+
+        return parsedContent.blueId;
+    }
+
     public String getBlueIdByName(String name) {
         return nameToBlueIdsMap.get(name).get(0);
     }
@@ -109,5 +133,17 @@ public class BasicNodeProvider extends PreloadedNodeProvider {
 
     public void addList(List<Node> list) {
         processNodeList(list);
+    }
+
+    private void storeParsedContent(NodeContentHandler.ParsedContent parsedContent) {
+        blueIdToContentMap.put(parsedContent.blueId, parsedContent.content);
+        blueIdToMultipleDocumentsMap.put(parsedContent.blueId, parsedContent.isMultipleDocuments);
+    }
+
+    private void addNodeToNameMap(JsonNode node, String blueId) {
+        JsonNode nameNode = node.get("name");
+        if (nameNode != null && !nameNode.isNull()) {
+            addToNameMap(nameNode.asText(), blueId);
+        }
     }
 }

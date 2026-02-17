@@ -26,6 +26,7 @@ public class Node implements Cloneable {
     private List<Node> items;
     private Map<String, Node> properties;
     private String blueId;
+    private transient String computedBlueId;
     private Constraints constraints;
     private Node blue;
     private boolean inlineValue;
@@ -80,6 +81,22 @@ public class Node implements Cloneable {
 
     public String getBlueId() {
         return blueId;
+    }
+
+    public String getReferenceBlueId() {
+        return blueId;
+    }
+
+    public void setReferenceBlueId(String referenceBlueId) {
+        this.blueId = referenceBlueId;
+    }
+
+    public String getComputedBlueId() {
+        return computedBlueId;
+    }
+
+    public void setComputedBlueId(String computedBlueId) {
+        this.computedBlueId = computedBlueId;
     }
 
     public Constraints getConstraints() {
@@ -215,6 +232,16 @@ public class Node implements Cloneable {
         return this;
     }
 
+    public Node referenceBlueId(String referenceBlueId) {
+        this.blueId = referenceBlueId;
+        return this;
+    }
+
+    public Node computedBlueId(String computedBlueId) {
+        this.computedBlueId = computedBlueId;
+        return this;
+    }
+
     public Node constraints(Constraints constraints) {
         this.constraints = constraints;
         return this;
@@ -270,6 +297,7 @@ public class Node implements Cloneable {
             cloned.name = this.name;
             cloned.description = this.description;
             cloned.value = this.value;
+            cloned.computedBlueId = this.computedBlueId;
 
             if (this.type != null) {
                 cloned.type = this.type.clone();
@@ -330,6 +358,7 @@ public class Node implements Cloneable {
                ", items=" + items +
                ", properties=" + properties +
                ", blueId='" + blueId + '\'' +
+               ", computedBlueId='" + computedBlueId + '\'' +
                ", constraints=" + constraints +
                ", blue=" + blue +
                ", inlineValue=" + inlineValue +
