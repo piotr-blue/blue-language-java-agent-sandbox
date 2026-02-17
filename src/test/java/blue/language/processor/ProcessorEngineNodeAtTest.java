@@ -50,6 +50,17 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
+    void nodeAtFallsBackToArrayIndexWhenMixedParentHasNoNumericPropertyMatch() {
+        Node root = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"), new Node().value("index-one"))
+                        .properties("existing", new Node().value("keep")));
+
+        assertEquals("index-one", ProcessorEngine.nodeAt(root, "/list/1").getValue());
+        assertEquals("keep", ProcessorEngine.nodeAt(root, "/list/existing").getValue());
+    }
+
+    @Test
     void nodeAtSupportsBuiltInTypeAndBlueTraversal() {
         Node root = new Node()
                 .type(new Node().name("TypeRoot"))

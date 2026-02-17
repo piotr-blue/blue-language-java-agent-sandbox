@@ -135,6 +135,22 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
+    void documentHelpersFallBackToArrayIndexWhenMixedParentHasNoNumericPropertyMatch() {
+        Node document = new Node()
+                .properties("list", new Node()
+                        .items(new Node().value("index-zero"), new Node().value("index-one"))
+                        .properties("existing", new Node().value("keep")));
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        assertEquals("index-one", context.documentAt("/list/1").getValue());
+        assertEquals("keep", context.documentAt("/list/existing").getValue());
+    }
+
+    @Test
     void documentHelpersTreatEmptyPointerAsRoot() {
         Node document = new Node()
                 .properties("value", new Node().value(1));
