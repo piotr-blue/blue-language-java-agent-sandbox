@@ -200,14 +200,7 @@ public final class ContractBundle {
                     if (trimmed.isEmpty()) {
                         continue;
                     }
-                    try {
-                        normalizedPaths.add(PointerUtils.normalizeRequiredPointer(trimmed, "Embedded path"));
-                    } catch (IllegalArgumentException ex) {
-                        if (!trimmed.startsWith("/")) {
-                            throw new IllegalArgumentException("Embedded path must start with '/': " + path);
-                        }
-                        throw ex;
-                    }
+                    normalizedPaths.add(PointerUtils.normalizeRequiredPointer(trimmed, "Embedded path"));
                 }
                 embeddedPaths.addAll(normalizedPaths);
             }

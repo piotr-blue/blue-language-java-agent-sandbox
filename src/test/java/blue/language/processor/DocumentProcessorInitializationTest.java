@@ -448,7 +448,7 @@ class DocumentProcessorInitializationTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> blue.initializeDocument(document));
-        assertTrue(ex.getMessage().contains("start with '/'"));
+        assertTrue(ex.getMessage().contains("JSON pointer"));
     }
 
     @Test
