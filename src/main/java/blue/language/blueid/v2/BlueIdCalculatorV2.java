@@ -193,7 +193,7 @@ public final class BlueIdCalculatorV2 {
             return properties.get(segment);
         }
 
-        if (isNonNegativeInteger(segment)) {
+        if (isArrayIndexSegment(segment)) {
             List<Node> items = current.getItems();
             if (items != null) {
                 int index = parseArrayIndex(segment);
@@ -259,6 +259,13 @@ public final class BlueIdCalculatorV2 {
             }
         }
         return true;
+    }
+
+    private static boolean isArrayIndexSegment(String value) {
+        if (!isNonNegativeInteger(value)) {
+            return false;
+        }
+        return "0".equals(value) || value.charAt(0) != '0';
     }
 
     private static int parseArrayIndex(String segment) {
