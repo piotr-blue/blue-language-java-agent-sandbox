@@ -158,6 +158,7 @@ public final class ContractBundle {
         private final Map<String, ChannelContract> channels = new LinkedHashMap<>();
         private final Map<String, List<HandlerBinding>> handlersByChannel = new LinkedHashMap<>();
         private final Map<String, MarkerContract> markers = new LinkedHashMap<>();
+        private final Set<String> handlerKeys = new LinkedHashSet<>();
         private final List<String> embeddedPaths = new ArrayList<>();
         private boolean embeddedDeclared;
         private boolean checkpointDeclared;
@@ -166,12 +167,20 @@ public final class ContractBundle {
         }
 
         public Builder addChannel(String key, ChannelContract contract) {
-            channels.put(validateContractKey(key, "Channel"), contract);
+            String normalizedKey = validateContractKey(key, "Channel");
+            if (channels.containsKey(normalizedKey)) {
+                throw new IllegalStateException("Duplicate channel contract key: " + normalizedKey);
+            }
+            channels.put(normalizedKey, contract);
             return this;
         }
 
         public Builder addHandler(String key, HandlerContract contract) {
             String normalizedKey = validateContractKey(key, "Handler");
+            if (handlerKeys.contains(normalizedKey)) {
+                throw new IllegalStateException("Duplicate handler contract key: " + normalizedKey);
+            }
+            handlerKeys.add(normalizedKey);
             String channelKey = normalizeChannelKey(contract.getChannelKey(), normalizedKey);
             contract.setChannelKey(channelKey);
             handlersByChannel
@@ -205,7 +214,10 @@ public final class ContractBundle {
 
         public Builder addMarker(String key, MarkerContract contract) {
             String normalizedKey = validateContractKey(key, "Marker");
-            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(key) && !(contract instanceof ChannelEventCheckpoint)) {
+            if (markers.containsKey(normalizedKey)) {
+                throw new IllegalStateException("Duplicate marker contract key: " + normalizedKey);
+            }
+            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey) && !(contract instanceof ChannelEventCheckpoint)) {
                 throw new IllegalStateException(
                         "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
             }
@@ -236,7 +248,7 @@ public final class ContractBundle {
             if (key == null || key.trim().isEmpty()) {
                 throw new IllegalStateException(contractKind + " contract key must not be blank");
             }
-            return key;
+            return key.trim();
         }
 
         private String normalizeChannelKey(String channelKey, String handlerKey) {

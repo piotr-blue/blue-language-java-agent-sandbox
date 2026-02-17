@@ -71,7 +71,7 @@ class ContractBundleBuilderTest {
         handler.setChannelKey(" life ");
 
         ContractBundle bundle = ContractBundle.builder()
-                .addChannel("life", new LifecycleChannel())
+                .addChannel(" life ", new LifecycleChannel())
                 .addHandler("setX", handler)
                 .build();
 
@@ -85,5 +85,29 @@ class ContractBundleBuilderTest {
 
         assertThrows(IllegalStateException.class,
                 () -> ContractBundle.builder().addHandler("setX", handler).build());
+    }
+
+    @Test
+    void builderRejectsDuplicateNormalizedContractKeys() {
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder()
+                        .addChannel("life", new LifecycleChannel())
+                        .addChannel(" life ", new LifecycleChannel()));
+
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder()
+                        .addMarker("checkpointA", new ProcessEmbedded())
+                        .addMarker(" checkpointA ", new ProcessEmbedded()));
+
+        SetProperty handlerA = new SetProperty();
+        handlerA.setChannelKey("life");
+        SetProperty handlerB = new SetProperty();
+        handlerB.setChannelKey("life");
+        assertThrows(IllegalStateException.class,
+                () -> ContractBundle.builder()
+                        .addChannel("life", new LifecycleChannel())
+                        .addHandler("setX", handlerA)
+                        .addHandler(" setX ", handlerB)
+                        .build());
     }
 }
