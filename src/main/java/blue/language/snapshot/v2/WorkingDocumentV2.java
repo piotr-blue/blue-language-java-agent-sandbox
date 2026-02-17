@@ -131,7 +131,7 @@ public final class WorkingDocumentV2 {
                     items.add(incoming);
                     return;
                 }
-                int index = parseArrayIndex(leaf, path);
+                int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
                 if (index < 0 || index > items.size()) {
                     throw new IllegalStateException("Array index out of bounds for add: " + path);
                 }
@@ -165,7 +165,7 @@ public final class WorkingDocumentV2 {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Replace does not support append token at path: " + path);
                 }
-                int index = parseArrayIndex(leaf, path);
+                int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
                 if (index < 0 || index >= items.size()) {
                     throw new IllegalStateException("Array index out of bounds for replace: " + path);
                 }
@@ -197,7 +197,7 @@ public final class WorkingDocumentV2 {
                 if ("-".equals(leaf)) {
                     throw new IllegalStateException("Remove does not support append token at path: " + path);
                 }
-                int index = parseArrayIndex(leaf, path);
+                int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
                 if (index < 0 || index >= items.size()) {
                     throw new IllegalStateException("Array index out of bounds for remove: " + path);
                 }
@@ -245,7 +245,7 @@ public final class WorkingDocumentV2 {
                 if ("-".equals(segment)) {
                     throw new IllegalStateException("Append token '-' is only allowed on final segment: " + path);
                 }
-                int index = parseArrayIndex(segment, path);
+                int index = PointerUtils.parseArrayIndexOrThrow(segment, path);
                 if (index < 0 || index >= items.size()) {
                     throw new IllegalStateException("Array index out of bounds: " + path);
                 }
@@ -293,14 +293,6 @@ public final class WorkingDocumentV2 {
             return node.getProperties();
         }
         return properties;
-    }
-
-    private int parseArrayIndex(String segment, String path) {
-        int index = PointerUtils.parseArrayIndex(segment);
-        if (index < 0) {
-            throw new IllegalStateException("Expected numeric array index in path: " + path);
-        }
-        return index;
     }
 
 }

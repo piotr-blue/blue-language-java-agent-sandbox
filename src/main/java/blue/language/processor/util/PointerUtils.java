@@ -93,6 +93,14 @@ public final class PointerUtils {
         }
     }
 
+    public static int parseArrayIndexOrThrow(String segment, String path) {
+        int index = parseArrayIndex(segment);
+        if (index < 0) {
+            throw new IllegalStateException("Expected numeric array index in path: " + path);
+        }
+        return index;
+    }
+
     public static String stripSlashes(String value) {
         if (value == null || value.trim().isEmpty()) {
             return "";
