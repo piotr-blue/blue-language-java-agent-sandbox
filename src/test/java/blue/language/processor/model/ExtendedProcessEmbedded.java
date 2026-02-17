@@ -1,7 +1,7 @@
 package blue.language.processor.model;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("ExtendedProcessEmbedded")
+@TypeBlueId("ExtendedProcessEmbedded")
 public class ExtendedProcessEmbedded extends ProcessEmbedded {
 }

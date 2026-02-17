@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Channel.Webhook")
+@TypeBlueId("Example.Channel.Webhook")
 public class ExampleWebhookChannel extends ExampleChannelBase {
     public String route;
 }

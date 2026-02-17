@@ -1,6 +1,5 @@
 package blue.language.utils;
 
-import blue.language.model.BlueType;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.blueid.BlueIdCalculator;
@@ -10,7 +9,6 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
-import java.util.LinkedHashSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,9 +25,7 @@ public class TypeClassResolver {
                     .filterInputsBy(new FilterBuilder().includePackage(packageName))
                     .setScanners(Scanners.TypesAnnotated, Scanners.SubTypes));
 
-            Set<Class<?>> annotatedClasses = new LinkedHashSet<Class<?>>();
-            annotatedClasses.addAll(reflections.getTypesAnnotatedWith(TypeBlueId.class));
-            annotatedClasses.addAll(reflections.getTypesAnnotatedWith(BlueType.class));
+            Set<Class<?>> annotatedClasses = reflections.getTypesAnnotatedWith(TypeBlueId.class);
 
             for (Class<?> clazz : annotatedClasses) {
                 registerClass(clazz);

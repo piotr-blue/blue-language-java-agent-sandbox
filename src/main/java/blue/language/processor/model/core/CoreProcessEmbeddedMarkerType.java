@@ -1,11 +1,11 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@BlueType("Core.ProcessEmbedded")
+@TypeBlueId("Core.ProcessEmbedded")
 public class CoreProcessEmbeddedMarkerType extends CoreMarkerType {
 
     private List<String> paths = new ArrayList<String>();

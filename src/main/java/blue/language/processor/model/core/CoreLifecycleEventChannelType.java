@@ -1,7 +1,7 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.LifecycleEventChannel")
+@TypeBlueId("Core.LifecycleEventChannel")
 public class CoreLifecycleEventChannelType extends CoreChannelType {
 }

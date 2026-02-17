@@ -1,9 +1,9 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.Channel")
+@TypeBlueId("Core.Channel")
 public class CoreChannelType extends CoreContractType {
 
     private Node event;

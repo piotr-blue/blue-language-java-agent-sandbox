@@ -1,8 +1,8 @@
 package blue.language.processor.model;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("AdvancedTestEventChannel")
+@TypeBlueId("AdvancedTestEventChannel")
 public class AdvancedTestEventChannel extends TestEventChannel {
     private String route;
 

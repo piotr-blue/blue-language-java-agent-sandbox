@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Contract.Base")
+@TypeBlueId("Example.Contract.Base")
 public class ExampleContractBase {
     public Integer order;
 }

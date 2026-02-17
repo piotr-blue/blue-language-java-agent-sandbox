@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Document.Order.Premium")
+@TypeBlueId("Example.Document.Order.Premium")
 public class ExamplePremiumOrderDocument extends ExampleOrderDocument {
     public Boolean priority;
 }

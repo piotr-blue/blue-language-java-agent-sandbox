@@ -1,9 +1,9 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.JsonPatchEntry")
+@TypeBlueId("Core.JsonPatchEntry")
 public class CoreJsonPatchEntryType {
 
     private String op;

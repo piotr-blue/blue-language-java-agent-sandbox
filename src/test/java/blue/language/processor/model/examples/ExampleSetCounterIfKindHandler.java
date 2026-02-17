@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Handler.SetCounterIfKind")
+@TypeBlueId("Example.Handler.SetCounterIfKind")
 public class ExampleSetCounterIfKindHandler extends ExampleSetCounterHandler {
     public String expectedKind;
 }

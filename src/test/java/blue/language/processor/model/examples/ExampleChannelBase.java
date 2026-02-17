@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Channel.Base")
+@TypeBlueId("Example.Channel.Base")
 public class ExampleChannelBase extends ExampleContractBase {
     public String eventType;
 }

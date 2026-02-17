@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class CoreTypesAndExamplesMappingTest {
 
     @Test
-    void coreTypeBeansSerializeWithBlueTypeMetadata() throws Exception {
+    void coreTypeBeansSerializeWithTypeBlueIdMetadata() throws Exception {
         ObjectMapper mapper = mapperWithBlueAnnotations();
         CoreDocumentUpdateChannelType channel = new CoreDocumentUpdateChannelType();
         channel.setPath("/orders");

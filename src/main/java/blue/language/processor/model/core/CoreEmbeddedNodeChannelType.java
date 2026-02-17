@@ -1,8 +1,8 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.EmbeddedNodeChannel")
+@TypeBlueId("Core.EmbeddedNodeChannel")
 public class CoreEmbeddedNodeChannelType extends CoreChannelType {
 
     private String childPath;

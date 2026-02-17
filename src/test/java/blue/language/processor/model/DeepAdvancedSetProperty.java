@@ -1,8 +1,8 @@
 package blue.language.processor.model;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("DeepAdvancedSetProperty")
+@TypeBlueId("DeepAdvancedSetProperty")
 public class DeepAdvancedSetProperty extends AdvancedSetProperty {
     private String level;
 

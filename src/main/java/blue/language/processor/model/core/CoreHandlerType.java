@@ -1,9 +1,9 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.Handler")
+@TypeBlueId("Core.Handler")
 public class CoreHandlerType extends CoreContractType {
 
     private String channel;

@@ -1,6 +1,5 @@
 package blue.language.utils;
 
-import blue.language.model.BlueType;
 import blue.language.model.TypeBlueId;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
@@ -15,16 +14,16 @@ public class BlueIdResolver {
     private static final Logger logger = LoggerFactory.getLogger(BlueIdResolver.class);
 
     public static String resolveBlueId(Class<?> clazz) {
-        AnnotationMetadata annotation = resolveAnnotationMetadata(clazz);
+        TypeBlueId annotation = clazz.getAnnotation(TypeBlueId.class);
         if (annotation == null) {
             return null;
         }
 
-        if (!annotation.defaultValue.isEmpty()) {
-            return annotation.defaultValue;
+        if (!annotation.defaultValue().isEmpty()) {
+            return annotation.defaultValue();
         }
 
-        String[] values = annotation.values;
+        String[] values = annotation.value();
         if (values.length > 0) {
             return values[0];
         }
@@ -32,38 +31,11 @@ public class BlueIdResolver {
         return getRepositoryBlueId(annotation, clazz);
     }
 
-    private static AnnotationMetadata resolveAnnotationMetadata(Class<?> clazz) {
-        BlueType blueType = clazz.getAnnotation(BlueType.class);
-        if (blueType != null) {
-            return new AnnotationMetadata(
-                    blueType.value(),
-                    blueType.defaultValue(),
-                    blueType.defaultValueRepositoryLocation(),
-                    blueType.defaultValuePropertyFile(),
-                    blueType.defaultValueRepositoryDir(),
-                    blueType.defaultValueRepositoryKey()
-            );
-        }
-
-        TypeBlueId typeBlueId = clazz.getAnnotation(TypeBlueId.class);
-        if (typeBlueId == null) {
-            return null;
-        }
-        return new AnnotationMetadata(
-                typeBlueId.value(),
-                typeBlueId.defaultValue(),
-                typeBlueId.defaultValueRepositoryLocation(),
-                typeBlueId.defaultValuePropertyFile(),
-                typeBlueId.defaultValueRepositoryDir(),
-                typeBlueId.defaultValueRepositoryKey()
-        );
-    }
-
-    private static String getRepositoryBlueId(AnnotationMetadata annotation, Class<?> clazz) {
-        String repositoryLocation = annotation.defaultValueRepositoryLocation;
-        String repositoryDir = annotation.defaultValueRepositoryDir;
-        String repositoryKey = annotation.defaultValueRepositoryKey;
-        String yamlFile = annotation.defaultValuePropertyFile;
+    private static String getRepositoryBlueId(TypeBlueId annotation, Class<?> clazz) {
+        String repositoryLocation = annotation.defaultValueRepositoryLocation();
+        String repositoryDir = annotation.defaultValueRepositoryDir();
+        String repositoryKey = annotation.defaultValueRepositoryKey();
+        String yamlFile = annotation.defaultValuePropertyFile();
 
         String packageYamlPath = repositoryLocation + "/" + repositoryDir + "/" + yamlFile;
         try (InputStream is = BlueIdResolver.class.getClassLoader().getResourceAsStream(packageYamlPath)) {
@@ -120,36 +92,5 @@ public class BlueIdResolver {
             result.append(input.charAt(i));
         }
         return result.toString();
-    }
-
-    private static final class AnnotationMetadata {
-        private final String[] values;
-        private final String defaultValue;
-        private final String defaultValueRepositoryLocation;
-        private final String defaultValuePropertyFile;
-        private final String defaultValueRepositoryDir;
-        private final String defaultValueRepositoryKey;
-
-        private AnnotationMetadata(String[] values,
-                                   String defaultValue,
-                                   String defaultValueRepositoryLocation,
-                                   String defaultValuePropertyFile,
-                                   String defaultValueRepositoryDir,
-                                   String defaultValueRepositoryKey) {
-            this.values = values != null ? values : new String[0];
-            this.defaultValue = defaultValue != null ? defaultValue : "";
-            this.defaultValueRepositoryLocation = defaultValueRepositoryLocation != null
-                    ? defaultValueRepositoryLocation
-                    : "blue-preprocessed";
-            this.defaultValuePropertyFile = defaultValuePropertyFile != null
-                    ? defaultValuePropertyFile
-                    : "blue-ids.yaml";
-            this.defaultValueRepositoryDir = defaultValueRepositoryDir != null
-                    ? defaultValueRepositoryDir
-                    : "";
-            this.defaultValueRepositoryKey = defaultValueRepositoryKey != null
-                    ? defaultValueRepositoryKey
-                    : "";
-        }
     }
 }

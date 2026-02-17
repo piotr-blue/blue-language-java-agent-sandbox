@@ -1,8 +1,8 @@
 package blue.language.processor.model.examples;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Example.Channel.Webhook.Secure")
+@TypeBlueId("Example.Channel.Webhook.Secure")
 public class ExampleSecureWebhookChannel extends ExampleWebhookChannel {
     public String signatureAlgorithm;
 }

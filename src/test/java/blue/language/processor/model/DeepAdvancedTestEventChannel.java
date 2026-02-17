@@ -1,8 +1,8 @@
 package blue.language.processor.model;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("DeepAdvancedTestEventChannel")
+@TypeBlueId("DeepAdvancedTestEventChannel")
 public class DeepAdvancedTestEventChannel extends AdvancedTestEventChannel {
     private String transport;
 

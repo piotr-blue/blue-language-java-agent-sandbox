@@ -1,8 +1,8 @@
 package blue.language.processor.model.core;
 
-import blue.language.model.BlueType;
+import blue.language.model.TypeBlueId;
 
-@BlueType("Core.DocumentUpdateChannel")
+@TypeBlueId("Core.DocumentUpdateChannel")
 public class CoreDocumentUpdateChannelType extends CoreChannelType {
 
     private String path;
