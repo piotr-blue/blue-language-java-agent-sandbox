@@ -29,6 +29,8 @@ class MapBlueIdIndexTest {
 
         MapBlueIdIndex index = MapBlueIdIndex.from(ids);
         assertThrows(IllegalArgumentException.class, () -> index.blueIdAt("root"));
+        assertThrows(IllegalArgumentException.class, () -> index.blueIdAt("/x~"));
+        assertThrows(IllegalArgumentException.class, () -> index.blueIdAt("/x~2"));
     }
 
     @Test
@@ -57,6 +59,9 @@ class MapBlueIdIndexTest {
         Map<String, String> ids = new LinkedHashMap<String, String>();
         ids.put("root", "bad");
 
+        assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
+        ids.clear();
+        ids.put("/x~", "bad");
         assertThrows(IllegalArgumentException.class, () -> MapBlueIdIndex.from(ids));
     }
 
