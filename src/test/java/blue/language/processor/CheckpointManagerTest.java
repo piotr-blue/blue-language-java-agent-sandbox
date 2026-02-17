@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,6 +49,27 @@ final class CheckpointManagerTest {
         assertEquals("payload", stored.getValue());
         assertEquals(20L, runtime.totalGas(), "Checkpoint update should charge gas");
         assertEquals("nextSig", record.lastEventSignature);
+    }
+
+    @Test
+    void persistEscapesChannelKeyInStoredPointer() {
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? "sig" : null);
+        ContractBundle bundle = ContractBundle.builder().build();
+        manager.ensureCheckpointMarker("/", bundle);
+
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(bundle, "channel/a");
+        Node eventNode = new Node().value("payload");
+        manager.persist("/", bundle, record, "sig-1", eventNode);
+
+        Node escaped = ProcessorEngine.nodeAt(runtime.document(),
+                "/contracts/checkpoint/lastEvents/channel~1a");
+        assertNotNull(escaped);
+        assertEquals("payload", escaped.getValue());
+
+        Node nested = ProcessorEngine.nodeAt(runtime.document(),
+                "/contracts/checkpoint/lastEvents/channel/a");
+        assertNull(nested);
     }
 
     private static final class DummyMarker extends MarkerContract {

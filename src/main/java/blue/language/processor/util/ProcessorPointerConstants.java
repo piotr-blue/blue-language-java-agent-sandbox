@@ -22,14 +22,21 @@ public final class ProcessorPointerConstants {
     }
 
     public static String relativeContractsEntry(String key) {
-        return RELATIVE_CONTRACTS + "/" + key;
+        return RELATIVE_CONTRACTS + "/" + escapePointerSegment(key);
     }
 
     public static String relativeCheckpointLastEvent(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX + "/" + channelKey;
+        return relativeContractsEntry(markerKey) + LAST_EVENTS_SUFFIX + "/" + escapePointerSegment(channelKey);
     }
 
     public static String relativeCheckpointLastSignature(String markerKey, String channelKey) {
-        return relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX + "/" + channelKey;
+        return relativeContractsEntry(markerKey) + LAST_SIGNATURES_SUFFIX + "/" + escapePointerSegment(channelKey);
+    }
+
+    private static String escapePointerSegment(String segment) {
+        if (segment == null) {
+            throw new IllegalArgumentException("Pointer segment cannot be null");
+        }
+        return segment.replace("~", "~0").replace("/", "~1");
     }
 }
