@@ -6,6 +6,7 @@ import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.util.ProcessorContractConstants;
+import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -183,7 +184,14 @@ public final class ContractBundle {
             embeddedDeclared = true;
             if (embedded.getPaths() != null) {
                 embeddedPaths.clear();
-                embeddedPaths.addAll(embedded.getPaths());
+                Set<String> normalizedPaths = new LinkedHashSet<>();
+                for (String path : embedded.getPaths()) {
+                    if (path == null) {
+                        continue;
+                    }
+                    normalizedPaths.add(PointerUtils.normalizePointer(path));
+                }
+                embeddedPaths.addAll(normalizedPaths);
             }
             return this;
         }
