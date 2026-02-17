@@ -1,15 +1,10 @@
 package blue.language.snapshot.v2;
 
 import blue.language.Blue;
-import blue.language.blueid.v2.BlueIdCalculatorV2;
+import blue.language.blueid.v2.BlueIdTreeHasherV2;
 import blue.language.blueid.v2.BlueIdIndex;
-import blue.language.blueid.v2.MapBlueIdIndex;
 import blue.language.model.Node;
-import blue.language.processor.util.PointerUtils;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 public final class SnapshotFactoryV2 {
@@ -37,53 +32,15 @@ public final class SnapshotFactoryV2 {
     }
 
     private ResolvedSnapshotV2 buildSnapshot(Node canonical, Node resolved) {
-        String rootBlueId = BlueIdCalculatorV2.calculateSemanticBlueId(canonical);
-        BlueIdIndex index = buildBlueIdIndex(canonical);
+        BlueIdTreeHasherV2.BlueIdTreeHashResult hashResult = BlueIdTreeHasherV2.hashAndIndex(canonical);
+        String rootBlueId = hashResult.rootBlueId();
+        BlueIdIndex index = hashResult.index();
         return new ResolvedSnapshotV2(
                 FrozenNode.fromNode(canonical),
                 FrozenNode.fromNode(resolved),
                 rootBlueId,
                 index
         );
-    }
-
-    private BlueIdIndex buildBlueIdIndex(Node canonicalRoot) {
-        Map<String, String> ids = new LinkedHashMap<String, String>();
-        indexNode("/", canonicalRoot, ids);
-        return MapBlueIdIndex.from(ids);
-    }
-
-    private void indexNode(String pointer, Node node, Map<String, String> ids) {
-        if (node == null) {
-            return;
-        }
-        ids.put(pointer, BlueIdCalculatorV2.calculateSemanticBlueId(node));
-
-        indexSingle(pointer, "type", node.getType(), ids);
-        indexSingle(pointer, "itemType", node.getItemType(), ids);
-        indexSingle(pointer, "keyType", node.getKeyType(), ids);
-        indexSingle(pointer, "valueType", node.getValueType(), ids);
-        indexSingle(pointer, "blue", node.getBlue(), ids);
-
-        List<Node> items = node.getItems();
-        if (items != null) {
-            for (int i = 0; i < items.size(); i++) {
-                indexNode(PointerUtils.appendPointerSegment(pointer, String.valueOf(i)), items.get(i), ids);
-            }
-        }
-
-        Map<String, Node> properties = node.getProperties();
-        if (properties != null) {
-            for (Map.Entry<String, Node> entry : properties.entrySet()) {
-                indexNode(PointerUtils.appendPointerSegment(pointer, entry.getKey()), entry.getValue(), ids);
-            }
-        }
-    }
-
-    private void indexSingle(String parentPointer, String segment, Node child, Map<String, String> ids) {
-        if (child != null) {
-            indexNode(PointerUtils.appendPointerSegment(parentPointer, segment), child, ids);
-        }
     }
 
 }
