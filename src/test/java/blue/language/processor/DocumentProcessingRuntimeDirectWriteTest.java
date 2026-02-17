@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DocumentProcessingRuntimeDirectWriteTest {
@@ -58,6 +59,21 @@ class DocumentProcessingRuntimeDirectWriteTest {
 
         Node mixedAfter = document.getProperties().get("mixed");
         assertEquals("property-updated", mixedAfter.getProperties().get("0").getValue());
+        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+    }
+
+    @Test
+    void directWriteNullPrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
+        Node mixed = new Node()
+                .items(new Node().value("item-zero"))
+                .properties("0", new Node().value("property-zero"));
+        Node document = new Node().properties("mixed", mixed);
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
+
+        runtime.directWrite("/mixed/0", null);
+
+        Node mixedAfter = document.getProperties().get("mixed");
+        assertFalse(mixedAfter.getProperties().containsKey("0"));
         assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
     }
 

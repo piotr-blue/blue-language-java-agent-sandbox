@@ -8,6 +8,7 @@ import blue.language.snapshot.v2.WorkingDocumentV2;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -120,6 +121,25 @@ class V2Spec_WorkingDocumentPatchGuardsTest {
 
         Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
         assertEquals("property-updated", mixed.getProperties().get("0").getValue());
+        assertEquals("item-zero", mixed.getItems().get(0).getValue());
+    }
+
+    @Test
+    void removePrefersNumericPropertyOverArrayIndexWhenParentContainsBoth() {
+        Blue blue = new Blue();
+        Node node = new Node()
+                .name("Guarded")
+                .properties("mixed", new Node()
+                        .items(new Node().value("item-zero"))
+                        .properties("0", new Node().value("property-zero")));
+        ResolvedSnapshotV2 snapshot = blue.resolveToSnapshotV2(node);
+
+        WorkingDocumentV2 workingDocument = WorkingDocumentV2.forSnapshot(blue, snapshot);
+        workingDocument.applyPatch(JsonPatch.remove("/mixed/0"));
+        ResolvedSnapshotV2 committed = workingDocument.commit();
+
+        Node mixed = committed.resolvedRoot().toNode().getProperties().get("mixed");
+        assertFalse(mixed.getProperties().containsKey("0"));
         assertEquals("item-zero", mixed.getItems().get(0).getValue());
     }
 
