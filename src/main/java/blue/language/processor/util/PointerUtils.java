@@ -80,7 +80,7 @@ public final class PointerUtils {
         if ("/".equals(normalizedScope)) {
             return normalizedAbsolute;
         }
-        if (normalizedAbsolute.length() == normalizedScope.length()) {
+        if (normalizedAbsolute.equals(normalizedScope)) {
             return "/";
         }
         String prefix = normalizedScope + "/";

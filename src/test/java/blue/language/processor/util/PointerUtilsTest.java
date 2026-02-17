@@ -19,6 +19,11 @@ class PointerUtilsTest {
     }
 
     @Test
+    void relativizePointerKeepsAbsoluteWhenScopeIsSameLengthButDifferent() {
+        assertEquals("/bar", PointerUtils.relativizePointer("/foo", "/bar"));
+    }
+
+    @Test
     void normalizePointerRejectsMalformedEscapes() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~2"));

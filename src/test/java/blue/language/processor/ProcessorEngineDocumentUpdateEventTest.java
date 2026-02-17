@@ -97,4 +97,19 @@ final class ProcessorEngineDocumentUpdateEventTest {
         Node event = ProcessorEngine.createDocumentUpdateEvent(data, "/scope");
         assertEquals("/other/path", event.getProperties().get("path").getValue());
     }
+
+    @Test
+    void createDocumentUpdateEventKeepsAbsolutePathWhenScopeLengthMatchesButDiffers() {
+        DocumentProcessingRuntime.DocumentUpdateData data = new DocumentProcessingRuntime.DocumentUpdateData(
+                "/bar",
+                new Node().value("before"),
+                new Node().value("after"),
+                JsonPatch.Op.REPLACE,
+                "/foo",
+                Collections.singletonList("/foo")
+        );
+
+        Node event = ProcessorEngine.createDocumentUpdateEvent(data, "/foo");
+        assertEquals("/bar", event.getProperties().get("path").getValue());
+    }
 }
