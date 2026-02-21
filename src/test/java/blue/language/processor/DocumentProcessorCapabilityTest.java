@@ -76,4 +76,27 @@ class DocumentProcessorCapabilityTest {
         assertNotNull(resultContracts.getProperties().get("unsupportedHandler"));
         assertNotNull(result.failureReason());
     }
+
+    @Test
+    void initializeDocumentFailsWithCapabilityFailureForUnknownContractBlueId() {
+        String yaml = "name: Unknown Contract Doc\n" +
+                "contracts:\n" +
+                "  mystery:\n" +
+                "    type:\n" +
+                "      blueId: CompletelyUnknownContract\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+        String originalJson = blue.nodeToJson(document.clone());
+
+        DocumentProcessingResult result = blue.initializeDocument(document);
+
+        assertTrue(result.capabilityFailure());
+        assertEquals(0L, result.totalGas());
+        assertTrue(result.triggeredEvents().isEmpty());
+        assertEquals(originalJson, blue.nodeToJson(result.document()));
+        assertNotNull(result.failureReason());
+        assertTrue(result.failureReason().contains("Unsupported contract type"));
+        assertTrue(result.failureReason().contains("CompletelyUnknownContract"));
+    }
 }

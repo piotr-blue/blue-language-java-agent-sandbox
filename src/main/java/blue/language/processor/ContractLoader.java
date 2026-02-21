@@ -48,6 +48,12 @@ final class ContractLoader {
                 throw new IllegalStateException(
                         "Duplicate normalized contract key '" + key + "' at scope " + scopePath);
             }
+            String declaredBlueId = extractBlueId(entry.getValue());
+            if (declaredBlueId != null
+                    && !ProcessorContractConstants.isBuiltInContractBlueId(declaredBlueId)
+                    && !registry.processors().containsKey(declaredBlueId)) {
+                throw new MustUnderstandFailureException("Unsupported contract type: " + declaredBlueId);
+            }
             Contract contract = converter.convertWithType(entry.getValue(), Contract.class, false);
             if (contract == null) {
                 continue;
@@ -109,6 +115,26 @@ final class ContractLoader {
                     "childPath",
                     true));
         }
+    }
+
+    private String extractBlueId(Node contractNode) {
+        if (contractNode == null || contractNode.getType() == null) {
+            return null;
+        }
+        Node typeNode = contractNode.getType();
+        if (typeNode.getBlueId() != null && !typeNode.getBlueId().trim().isEmpty()) {
+            return typeNode.getBlueId().trim();
+        }
+        Map<String, Node> typeProps = typeNode.getProperties();
+        if (typeProps == null) {
+            return null;
+        }
+        Node blueIdNode = typeProps.get("blueId");
+        if (blueIdNode == null || !(blueIdNode.getValue() instanceof String)) {
+            return null;
+        }
+        String blueId = ((String) blueIdNode.getValue()).trim();
+        return blueId.isEmpty() ? null : blueId;
     }
 
     private String normalizeContractPointer(String pointer,
