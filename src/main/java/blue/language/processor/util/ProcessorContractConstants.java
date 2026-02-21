@@ -37,6 +37,32 @@ public final class ProcessorContractConstants {
                     EmbeddedNodeChannel.class
             )));
 
+    public static final Set<String> BUILT_IN_CONTRACT_BLUE_IDS =
+            Collections.unmodifiableSet(new LinkedHashSet<String>(Arrays.asList(
+                    "DocumentUpdateChannel",
+                    "Core/Document Update Channel",
+                    "TriggeredEventChannel",
+                    "Core/Triggered Event Channel",
+                    "LifecycleChannel",
+                    "Core/Lifecycle Event Channel",
+                    "EmbeddedNodeChannel",
+                    "Core/Embedded Node Channel",
+                    "ProcessEmbedded",
+                    "Core/Process Embedded",
+                    "InitializationMarker",
+                    "Core/Processing Initialized Marker",
+                    "ProcessingTerminatedMarker",
+                    "Core/Processing Terminated Marker",
+                    "ProcessingFailureMarker",
+                    "Core/Processing Failure Marker",
+                    "ChannelEventCheckpoint",
+                    "Core/Channel Event Checkpoint",
+                    "DocumentUpdate",
+                    "Core/Document Update",
+                    "JsonPatch",
+                    "Core/Json Patch"
+            )));
+
     private ProcessorContractConstants() {
     }
 
@@ -54,5 +80,9 @@ public final class ProcessorContractConstants {
             }
         }
         return false;
+    }
+
+    public static boolean isBuiltInContractBlueId(String blueId) {
+        return blueId != null && BUILT_IN_CONTRACT_BLUE_IDS.contains(blueId);
     }
 }

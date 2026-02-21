@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@TypeBlueId("ProcessEmbedded")
+@TypeBlueId({"ProcessEmbedded", "Core/Process Embedded"})
 public class ProcessEmbedded extends MarkerContract {
 
     private final List<String> paths = new ArrayList<>();

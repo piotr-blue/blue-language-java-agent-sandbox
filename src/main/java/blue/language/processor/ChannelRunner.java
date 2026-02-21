@@ -2,8 +2,10 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.HandlerContract;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -71,6 +73,9 @@ final class ChannelRunner {
             if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
                 break;
             }
+            if (!matchesHandlerEventFilter(handler.contract(), event)) {
+                continue;
+            }
             runtime.chargeHandlerOverhead();
             ProcessorExecutionContext context = execution.createContext(scopePath, bundle, event, allowTerminatedWork);
             ProcessorEngine.executeHandler(owner, handler.contract(), context);
@@ -78,5 +83,96 @@ final class ChannelRunner {
                 break;
             }
         }
+    }
+
+    private boolean matchesHandlerEventFilter(HandlerContract handler, Node event) {
+        Node expectedEvent = handler != null ? handler.getEvent() : null;
+        if (expectedEvent == null) {
+            return true;
+        }
+        if (event == null) {
+            return false;
+        }
+        return matchesNodeFilter(event, expectedEvent);
+    }
+
+    private boolean matchesNodeFilter(Node actual, Node expected) {
+        if (expected == null) {
+            return true;
+        }
+        if (actual == null) {
+            return false;
+        }
+
+        if (expected.getType() != null && !matchesType(actual.getType(), expected.getType())) {
+            return false;
+        }
+
+        if (expected.getValue() != null && !Objects.equals(actual.getValue(), expected.getValue())) {
+            return false;
+        }
+
+        List<Node> expectedItems = expected.getItems();
+        if (expectedItems != null && !expectedItems.isEmpty()) {
+            List<Node> actualItems = actual.getItems();
+            if (actualItems == null || actualItems.size() < expectedItems.size()) {
+                return false;
+            }
+            for (int i = 0; i < expectedItems.size(); i++) {
+                if (!matchesNodeFilter(actualItems.get(i), expectedItems.get(i))) {
+                    return false;
+                }
+            }
+        }
+
+        Map<String, Node> expectedProps = expected.getProperties();
+        if (expectedProps != null && !expectedProps.isEmpty()) {
+            Map<String, Node> actualProps = actual.getProperties();
+            if (actualProps == null) {
+                return false;
+            }
+            for (Map.Entry<String, Node> entry : expectedProps.entrySet()) {
+                if (!actualProps.containsKey(entry.getKey())) {
+                    return false;
+                }
+                if (!matchesNodeFilter(actualProps.get(entry.getKey()), entry.getValue())) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private boolean matchesType(Node actualType, Node expectedType) {
+        if (expectedType == null) {
+            return true;
+        }
+        if (actualType == null) {
+            return false;
+        }
+        String expectedBlueId = expectedType.getBlueId();
+        if (expectedBlueId != null && !expectedBlueId.trim().isEmpty()) {
+            return blueIdsEquivalent(expectedBlueId, actualType.getBlueId());
+        }
+        return matchesNodeFilter(actualType, expectedType);
+    }
+
+    private boolean blueIdsEquivalent(String expectedBlueId, String actualBlueId) {
+        if (expectedBlueId == null || actualBlueId == null) {
+            return false;
+        }
+        if (expectedBlueId.equals(actualBlueId)) {
+            return true;
+        }
+        return (isAliasPair(expectedBlueId, actualBlueId, "DocumentProcessingInitiated", "Core/Document Processing Initiated")
+                || isAliasPair(expectedBlueId, actualBlueId, "DocumentProcessingTerminated", "Core/Document Processing Terminated")
+                || isAliasPair(expectedBlueId, actualBlueId, "DocumentProcessingFatalError", "Core/Document Processing Fatal Error")
+                || isAliasPair(expectedBlueId, actualBlueId, "DocumentUpdate", "Core/Document Update"));
+    }
+
+    private boolean isAliasPair(String left, String right, String first, String second) {
+        return (first.equals(left) && second.equals(right))
+                || (second.equals(left) && first.equals(right));
     }
 }

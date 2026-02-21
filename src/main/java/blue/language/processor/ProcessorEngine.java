@@ -102,7 +102,9 @@ final class ProcessorEngine {
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Initiated"));
+        Node event = new Node()
+                .type(new Node().blueId("DocumentProcessingInitiated"))
+                .properties("type", new Node().value("Document Processing Initiated"));
         event.properties("documentId", new Node().value(documentId));
         return event;
     }
@@ -122,7 +124,9 @@ final class ProcessorEngine {
 
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
         String relativePath = PointerUtils.relativizePointer(scopePath, data.path());
-        Node event = new Node().properties("type", new Node().value("Document Update"));
+        Node event = new Node()
+                .type(new Node().blueId("DocumentUpdate"))
+                .properties("type", new Node().value("Document Update"));
         event.properties("op", new Node().value(data.op().name().toLowerCase()));
         Node beforeNode = data.before() != null ? data.before().clone() : new Node().value(null);
         Node afterNode = data.after() != null ? data.after().clone() : new Node().value(null);
@@ -217,7 +221,10 @@ final class ProcessorEngine {
             return;
         }
         Node type = marker.getType();
-        if (type == null || type.getBlueId() == null || !"InitializationMarker".equals(type.getBlueId())) {
+        String blueId = type != null ? type.getBlueId() : null;
+        boolean valid = "InitializationMarker".equals(blueId)
+                || "Core/Processing Initialized Marker".equals(blueId);
+        if (!valid) {
             throw new IllegalStateException(
                     "Reserved key 'initialized' must contain an Initialization Marker at " + pointer);
         }

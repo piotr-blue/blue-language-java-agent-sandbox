@@ -5,7 +5,7 @@ import blue.language.model.TypeBlueId;
 
 import java.util.Objects;
 
-@TypeBlueId("JsonPatch")
+@TypeBlueId({"JsonPatch", "Core/Json Patch"})
 public class JsonPatch {
 
     public enum Op {
