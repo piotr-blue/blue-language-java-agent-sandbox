@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("DocumentUpdate")
+@TypeBlueId({"DocumentUpdate", "Core/Document Update"})
 public class DocumentUpdate {
 
     private String op;

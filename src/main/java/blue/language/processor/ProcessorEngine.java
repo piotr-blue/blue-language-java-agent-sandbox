@@ -217,7 +217,10 @@ final class ProcessorEngine {
             return;
         }
         Node type = marker.getType();
-        if (type == null || type.getBlueId() == null || !"InitializationMarker".equals(type.getBlueId())) {
+        String blueId = type != null ? type.getBlueId() : null;
+        boolean valid = "InitializationMarker".equals(blueId)
+                || "Core/Processing Initialized Marker".equals(blueId);
+        if (!valid) {
             throw new IllegalStateException(
                     "Reserved key 'initialized' must contain an Initialization Marker at " + pointer);
         }

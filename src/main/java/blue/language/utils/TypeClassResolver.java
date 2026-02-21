@@ -35,13 +35,36 @@ public class TypeClassResolver {
     }
 
     private void registerClass(Class<?> clazz, TypeBlueId annotation) {
-        String blueId = BlueIdResolver.resolveBlueId(clazz);
-        if (blueId != null) {
-            if (blueIdMap.containsKey(blueId)) {
-                throw new IllegalStateException("Duplicate BlueId value: " + blueId);
+        boolean registered = false;
+
+        String[] declaredBlueIds = annotation.value();
+        if (declaredBlueIds != null && declaredBlueIds.length > 0) {
+            for (String declaredBlueId : declaredBlueIds) {
+                registerBlueId(clazz, declaredBlueId);
+                registered = true;
             }
-            blueIdMap.put(blueId, clazz);
         }
+
+        if (!registered && annotation.defaultValue() != null && !annotation.defaultValue().trim().isEmpty()) {
+            registerBlueId(clazz, annotation.defaultValue());
+            registered = true;
+        }
+
+        if (!registered) {
+            registerBlueId(clazz, BlueIdResolver.resolveBlueId(clazz));
+        }
+    }
+
+    private void registerBlueId(Class<?> clazz, String blueId) {
+        if (blueId == null || blueId.trim().isEmpty()) {
+            return;
+        }
+        String normalizedBlueId = blueId.trim();
+        Class<?> existing = blueIdMap.get(normalizedBlueId);
+        if (existing != null && !existing.equals(clazz)) {
+            throw new IllegalStateException("Duplicate BlueId value: " + normalizedBlueId);
+        }
+        blueIdMap.put(normalizedBlueId, clazz);
     }
 
     public Class<?> resolveClass(Node node) {

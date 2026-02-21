@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("DocumentUpdateChannel")
+@TypeBlueId({"DocumentUpdateChannel", "Core/Document Update Channel"})
 public class DocumentUpdateChannel extends ChannelContract {
 
     private String path;

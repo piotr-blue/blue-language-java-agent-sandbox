@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("EmbeddedNodeChannel")
+@TypeBlueId({"EmbeddedNodeChannel", "Core/Embedded Node Channel"})
 public class EmbeddedNodeChannel extends ChannelContract {
 
     private String childPath;

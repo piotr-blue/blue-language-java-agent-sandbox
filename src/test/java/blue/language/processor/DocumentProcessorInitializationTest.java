@@ -635,4 +635,79 @@ class DocumentProcessorInitializationTest {
         assertNotNull(childLifecycle, "Parent should observe child lifecycle through Embedded Node channel");
         assertEquals(new BigInteger("1"), childLifecycle.getValue());
     }
+
+    @Test
+    void coreBlueIdAliasesAreAcceptedForProcessorManagedContracts() {
+        String yaml = "name: Core Alias Doc\n" +
+                "child:\n" +
+                "  name: Inner\n" +
+                "  contracts: {}\n" +
+                "contracts:\n" +
+                "  lifecycle:\n" +
+                "    type:\n" +
+                "      blueId: Core/Lifecycle Event Channel\n" +
+                "  onLifecycle:\n" +
+                "    channel: lifecycle\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /rootLifecycle\n" +
+                "    propertyValue: 1\n" +
+                "  embedded:\n" +
+                "    type:\n" +
+                "      blueId: Core/Process Embedded\n" +
+                "    paths:\n" +
+                "      - /child\n" +
+                "  childBridge:\n" +
+                "    type:\n" +
+                "      blueId: Core/Embedded Node Channel\n" +
+                "    childPath: /child\n" +
+                "  captureChildLifecycle:\n" +
+                "    channel: childBridge\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /childLifecycle\n" +
+                "    propertyValue: 2\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        Node original = blue.yamlToNode(yaml);
+
+        DocumentProcessingResult result = blue.initializeDocument(original);
+        Node document = result.document();
+        assertEquals(new BigInteger("1"), document.getProperties().get("rootLifecycle").getValue());
+        assertEquals(new BigInteger("2"), document.getProperties().get("childLifecycle").getValue());
+    }
+
+    @Test
+    void coreDocumentUpdateChannelAliasUsesPathValidationRules() {
+        String yaml = "name: Core Update Channel Path Validation\n" +
+                "contracts:\n" +
+                "  watch:\n" +
+                "    type:\n" +
+                "      blueId: Core/Document Update Channel\n" +
+                "    path: not-a-pointer\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> blue.initializeDocument(document));
+        assertTrue(ex.getMessage().contains("DocumentUpdateChannel"));
+        assertTrue(ex.getMessage().contains("invalid path"));
+    }
+
+    @Test
+    void isInitializedAcceptsCoreInitializationMarkerAlias() {
+        String yaml = "name: Core Marker Doc\n" +
+                "contracts:\n" +
+                "  initialized:\n" +
+                "    type:\n" +
+                "      blueId: Core/Processing Initialized Marker\n" +
+                "    documentId: doc-1\n";
+
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode(yaml);
+
+        assertTrue(blue.isInitialized(document));
+    }
 }
