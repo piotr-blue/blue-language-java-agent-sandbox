@@ -405,6 +405,42 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepExposesEventCanonicalAndCanonHelpers() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Event Canonical Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: |\n" +
+                "          ({ changeset: [\n" +
+                "            { op: 'ADD', path: '/eventPlain', val: event.payload.id },\n" +
+                "            { op: 'ADD', path: '/eventCanonical', val: canon.unwrap(canon.at(eventCanonical, '/payload/id')) }\n" +
+                "          ] })\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-canon-event\n" +
+                "kind: TestEvent\n" +
+                "payload:\n" +
+                "  id: evt-123\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("evt-123", result.document().getProperties().get("eventPlain").getValue());
+        assertEquals("evt-123", result.document().getProperties().get("eventCanonical").getValue());
+    }
+
+    @Test
     void updateDocumentStepResolvesExpressionValues() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
