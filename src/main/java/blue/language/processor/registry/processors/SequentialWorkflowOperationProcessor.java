@@ -9,6 +9,7 @@ import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.OperationMarker;
 import blue.language.processor.model.SequentialWorkflowOperation;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.workflow.WorkflowStepRunner;
 
 import java.util.List;
@@ -80,7 +81,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (steps == null || steps.isEmpty()) {
             return;
         }
-        stepRunner.run(contract, steps, context.event(), context);
+        stepRunner.run(contract, steps, context.event(), context, resolveContractNode(contract, context));
     }
 
     @Override
@@ -282,5 +283,14 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
 
     private String normalizeChannel(String channel) {
         return normalize(channel);
+    }
+
+    private Node resolveContractNode(SequentialWorkflowOperation contract, ProcessorExecutionContext context) {
+        if (contract == null || contract.getKey() == null || contract.getKey().trim().isEmpty()) {
+            return null;
+        }
+        String contractPointer = context.resolvePointer(
+                ProcessorPointerConstants.relativeContractsEntry(contract.getKey().trim()));
+        return context.documentAt(contractPointer);
     }
 }

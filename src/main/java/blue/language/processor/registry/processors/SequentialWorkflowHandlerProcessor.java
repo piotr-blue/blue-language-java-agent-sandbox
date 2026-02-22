@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.SequentialWorkflow;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.processor.workflow.WorkflowStepRunner;
 
 import java.util.List;
@@ -36,6 +37,15 @@ public class SequentialWorkflowHandlerProcessor implements HandlerProcessor<Sequ
         if (steps == null || steps.isEmpty()) {
             return;
         }
-        stepRunner.run(contract, steps, context.event(), context);
+        stepRunner.run(contract, steps, context.event(), context, resolveContractNode(contract, context));
+    }
+
+    private Node resolveContractNode(SequentialWorkflow contract, ProcessorExecutionContext context) {
+        if (contract == null || contract.getKey() == null || contract.getKey().trim().isEmpty()) {
+            return null;
+        }
+        String contractPointer = context.resolvePointer(
+                ProcessorPointerConstants.relativeContractsEntry(contract.getKey().trim()));
+        return context.documentAt(contractPointer);
     }
 }

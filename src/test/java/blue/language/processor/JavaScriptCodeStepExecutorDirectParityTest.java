@@ -268,4 +268,46 @@ class JavaScriptCodeStepExecutorDirectParityTest {
         Map<String, Object> resultMap = (Map<String, Object>) result;
         assertEquals("42", String.valueOf(resultMap.get("value")));
     }
+
+    @Test
+    void usesExplicitContractNodeBindingsWhenProvided() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("ContractNodeBindings")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value(
+                        "return { simple: currentContract.channel, canonical: currentContractCanonical.channel.value };"));
+        Node contractNode = new Node()
+                .description("Provided Contract")
+                .type(new Node().blueId("Conversation/Sequential Workflow"))
+                .properties("channel", new Node().value("provided-channel"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0,
+                contractNode);
+
+        Object result = executor.execute(args);
+        assertTrue(result instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultMap = (Map<String, Object>) result;
+        assertEquals("provided-channel", String.valueOf(resultMap.get("simple")));
+        assertEquals("provided-channel", String.valueOf(resultMap.get("canonical")));
+    }
 }

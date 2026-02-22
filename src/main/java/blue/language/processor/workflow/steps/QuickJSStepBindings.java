@@ -39,12 +39,7 @@ final class QuickJSStepBindings {
         bindings.put("__documentDataSimple", documentSimple);
         bindings.put("__documentDataCanonical", documentCanonical);
         bindings.put("__scopePath", args.context().resolvePointer("/"));
-        String workflowKey = args.workflow() != null ? args.workflow().getKey() : null;
-        Node contractSnapshot = null;
-        if (workflowKey != null && !workflowKey.trim().isEmpty()) {
-            String contractPointer = args.context().resolvePointer(ProcessorPointerConstants.relativeContractsEntry(workflowKey.trim()));
-            contractSnapshot = args.context().documentAt(contractPointer);
-        }
+        Node contractSnapshot = resolveContractSnapshot(args);
         if (contractSnapshot != null) {
             Object currentContract = NodeToMapListOrValue.get(contractSnapshot, Strategy.SIMPLE);
             Object currentContractCanonical = NodeToMapListOrValue.get(contractSnapshot, Strategy.OFFICIAL);
@@ -57,6 +52,19 @@ final class QuickJSStepBindings {
             bindings.put("currentContractCanonical", currentContract);
         }
         return bindings;
+    }
+
+    private static Node resolveContractSnapshot(StepExecutionArgs args) {
+        if (args.contractNode() != null) {
+            return args.contractNode().clone();
+        }
+        String workflowKey = args.workflow() != null ? args.workflow().getKey() : null;
+        if (workflowKey == null || workflowKey.trim().isEmpty()) {
+            return null;
+        }
+        String contractPointer = args.context().resolvePointer(
+                ProcessorPointerConstants.relativeContractsEntry(workflowKey.trim()));
+        return args.context().documentAt(contractPointer);
     }
 
     @SuppressWarnings("unchecked")

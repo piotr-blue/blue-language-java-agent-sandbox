@@ -44,6 +44,14 @@ public final class WorkflowStepRunner {
     }
 
     public Map<String, Object> run(HandlerContract workflow, List<Node> steps, Node eventNode, ProcessorExecutionContext context) {
+        return run(workflow, steps, eventNode, context, null);
+    }
+
+    public Map<String, Object> run(HandlerContract workflow,
+                                   List<Node> steps,
+                                   Node eventNode,
+                                   ProcessorExecutionContext context,
+                                   Node contractNode) {
         if (steps == null || steps.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -66,7 +74,8 @@ public final class WorkflowStepRunner {
                     eventNode,
                     context,
                     results,
-                    i));
+                    i,
+                    contractNode));
             if (value != null) {
                 String key = resolveResultKey(stepNode, i);
                 results.put(key, value);
