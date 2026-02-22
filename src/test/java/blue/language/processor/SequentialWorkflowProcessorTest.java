@@ -499,6 +499,34 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepSupportsDocumentGetAliases() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Document Alias API Doc\n" +
+                "base: 5\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/plainAlias', val: document.get('/base') }, { op: 'ADD', path: '/canonicalAlias', val: document.getCanonical('/base').type.blueId }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-document-alias").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("5"), result.document().getProperties().get("plainAlias").getValue());
+        assertEquals(INTEGER_TYPE_BLUE_ID, result.document().getProperties().get("canonicalAlias").getValue());
+    }
+
+    @Test
     void javaScriptCodeStepExposesEventCanonicalAndCanonHelpers() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());

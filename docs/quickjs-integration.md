@@ -80,6 +80,8 @@ Evaluator prelude host APIs:
   - for raw terminal segments (`/blueId`, `/name`, `/description`, `/value`) falls back to canonical snapshot when needed
 - `document.canonical(pointer?)`
   - resolves from canonical snapshot (preserves metadata/type wrappers)
+- `document.get(pointer?)` / `document.getCanonical(pointer?)`
+  - alias helpers for parity with host-handler style API names used in JS workflows
 - `canon.at(value, pointer)` and `canon.unwrap(value)`
 
 Document snapshots are charged via `chargeDocumentSnapshot`.

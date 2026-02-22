@@ -113,7 +113,9 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("return current;");
         prelude.append("};");
         prelude.append("const fn = function(pointer){ return __readInternal(__simpleSource, pointer, true); };");
+        prelude.append("fn.get = function(pointer){ return __readInternal(__simpleSource, pointer, true); };");
         prelude.append("fn.canonical = function(pointer){ return __readInternal(__canonicalSource, pointer, false); };");
+        prelude.append("fn.getCanonical = function(pointer){ return __readInternal(__canonicalSource, pointer, false); };");
         prelude.append("return fn;");
         prelude.append("})();");
         prelude.append("\n");
