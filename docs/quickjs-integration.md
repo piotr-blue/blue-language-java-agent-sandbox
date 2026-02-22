@@ -124,9 +124,17 @@ WASM usage is charged via `chargeWasmGas`.
 
 - Sidecar startup, protocol, or evaluation failures => `ScriptRuntimeException`.
   - sidecar error payloads (`name`, `message`, optional `stack`) are normalized into readable exception text.
+  - structured error metadata is exposed for downstream parity/error handling:
+    - `ScriptRuntimeException#errorName()`
+    - `ScriptRuntimeException#runtimeMessage()`
+    - `ScriptRuntimeException#stackAvailable()`
 - Evaluator wraps script failures => `CodeBlockEvaluationError` with:
   - original source code available via `code()`
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
+  - structured runtime error metadata passthrough for wrapped sidecar failures:
+    - `CodeBlockEvaluationError#runtimeErrorName()`
+    - `CodeBlockEvaluationError#runtimeErrorMessage()`
+    - `CodeBlockEvaluationError#runtimeStackAvailable()`
 - Evaluator validates binding keys against supported runtime bindings and rejects unsupported keys up-front (`Unsupported QuickJS binding: "<key>"`).
 - Evaluator also validates host-handler binding shapes for parity:
   - `document` must be function-shaped (non-null non-function values are rejected)
