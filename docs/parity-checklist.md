@@ -43,7 +43,7 @@ Status legend:
 | QuickJS evaluator | `src/util/expression/quickjs-evaluator.ts` | _missing_ | TODO |
 | Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | _missing_ | TODO |
 | QuickJS config exports | `src/util/expression/quickjs-config.ts` | _missing_ | TODO |
-| Script runtime integration | JS runtime usage in evaluator/steps | _missing_ | TODO |
+| Script runtime integration | JS runtime usage in evaluator/steps | `processor/script/*`, `tools/quickjs-sidecar/index.js` | IN_PROGRESS |
 | JavaScript Code step | `src/registry/processors/steps/javascript-code-step-executor.ts` | _missing_ | TODO |
 
 ## 4) Workflow step runtime
