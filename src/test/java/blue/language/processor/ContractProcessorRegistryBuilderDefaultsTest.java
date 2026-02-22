@@ -18,5 +18,8 @@ class ContractProcessorRegistryBuilderDefaultsTest {
         assertTrue(registry.lookupHandler("Conversation/Sequential Workflow").isPresent());
         assertTrue(registry.lookupHandler("Conversation/Sequential Workflow Operation").isPresent());
         assertTrue(registry.lookupMarker("Conversation/Operation").isPresent());
+        assertTrue(registry.lookupMarker("Operation").isPresent());
+        assertTrue(registry.lookupMarker("Conversation/Change Operation").isPresent());
+        assertTrue(registry.lookupMarker("ChangeOperation").isPresent());
     }
 }
