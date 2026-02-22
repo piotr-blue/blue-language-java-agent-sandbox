@@ -35,6 +35,14 @@ public final class ScopeRuntimeContext {
         return triggeredQueue;
     }
 
+    public int triggeredSize() {
+        return triggeredQueue.size();
+    }
+
+    public Node pollTriggered() {
+        return triggeredQueue.pollFirst();
+    }
+
     public void enqueueTriggered(Node node) {
         if (cutOff && triggeredLimit >= 0 && triggeredQueue.size() >= triggeredLimit) {
             return;

@@ -85,7 +85,7 @@ Status legend:
 | Area | JS tests | Java tests | Status |
 |---|---|---|---|
 | Constants/pointers | `src/constants/__tests__/*`, `src/util/__tests__/pointer-utils.test.ts` | `processor/util/*Test.java` | IN_PROGRESS |
-| Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `EmissionRegistryTest.java` | IN_PROGRESS |
+| Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `ScopeRuntimeContextTest`, `EmissionRegistryTest.java` | IN_PROGRESS |
 | Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, etc. | IN_PROGRESS |
 | Registry/timeline/workflow | `src/registry/__tests__/*` | `ContractProcessorRegistryBuilderDefaultsTest`, `CompositeTimelineChannelProcessorTest`, `TimelineChannelProcessorTest`, `MyOSTimelineChannelProcessorTest`, `SequentialWorkflowProcessorTest`, `DeepEmbeddedInitializationPropagationTest`, `SharedTimelineCheckpointIntegrationTest`, `TriggerEventIntegrationTest`, `workflow/WorkflowStepRunnerTest` | IN_PROGRESS |
 | Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
