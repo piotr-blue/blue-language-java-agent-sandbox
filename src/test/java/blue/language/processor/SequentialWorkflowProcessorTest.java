@@ -730,6 +730,49 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepCanonUnwrapSupportsDeepAndShallowModes() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Canon Unwrap Modes Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: |\n" +
+                "          ({ changeset: [\n" +
+                "            { op: 'ADD', path: '/eventIdDeep', val: canon.unwrap(eventCanonical).payload.id },\n" +
+                "            { op: 'ADD', path: '/eventIdShallow', val: canon.unwrap(eventCanonical, false).payload.id.value },\n" +
+                "            { op: 'ADD', path: '/eventTagDeep', val: canon.unwrap(eventCanonical).payload.tags[0] },\n" +
+                "            { op: 'ADD', path: '/eventTagShallow', val: canon.unwrap(eventCanonical, false).payload.tags.items[0].value }\n" +
+                "          ] })\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-canon-unwrap\n" +
+                "kind: TestEvent\n" +
+                "payload:\n" +
+                "  id: evt-123\n" +
+                "  tags:\n" +
+                "    - a\n" +
+                "    - b\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("evt-123", result.document().getProperties().get("eventIdDeep").getValue());
+        assertEquals("evt-123", result.document().getProperties().get("eventIdShallow").getValue());
+        assertEquals("a", result.document().getProperties().get("eventTagDeep").getValue());
+        assertEquals("a", result.document().getProperties().get("eventTagShallow").getValue());
+    }
+
+    @Test
     void javaScriptCodeStepDoesNotExposeDateGlobal() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
