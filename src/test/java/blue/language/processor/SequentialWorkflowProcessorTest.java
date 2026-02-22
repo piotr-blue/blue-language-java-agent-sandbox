@@ -211,6 +211,44 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationExecutesDerivedChangeWorkflow() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
+                null,
+                "ownerChannel",
+                "Conversation/Change Workflow",
+                "Conversation/Change Operation",
+                "type: Conversation/Change Request",
+                null,
+                "${event.message.request.changeset[0].val}")).document();
+
+        String storedBlueId = storedDocumentBlueId(initialized);
+        Node changeEvent = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-change\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Conversation/Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Change Request\n" +
+                "    changeset:\n" +
+                "      - op: REPLACE\n" +
+                "        path: /counter\n" +
+                "        val: 11\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, changeEvent);
+
+        assertEquals(new BigInteger("11"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void javaScriptCodeStepCanApplyChangesetAndEmitEvents() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
