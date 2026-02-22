@@ -126,6 +126,51 @@ class QuickJsExpressionUtilsTest {
         }
     }
 
+    @Test
+    void createPathPredicateSupportsIncludeExcludePatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/include/**"),
+                Arrays.asList("/include/skip/**"));
+
+        assertTrue(predicate.test("/include/path", null));
+        assertFalse(predicate.test("/include/skip/here", null));
+        assertFalse(predicate.test("/other", null));
+    }
+
+    @Test
+    void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Node root = new Node()
+                    .properties("resolve", new Node().value("${steps.answer}"))
+                    .properties("literal", new Node()
+                            .properties("nested", new Node().value("${steps.answer}")));
+
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            Map<String, Object> steps = new LinkedHashMap<>();
+            steps.put("answer", 42);
+            bindings.put("steps", steps);
+
+            Node resolved = QuickJsExpressionUtils.resolveExpressions(
+                    root,
+                    evaluator,
+                    bindings,
+                    null,
+                    QuickJsExpressionUtils.createPathPredicate(Arrays.asList("/**"), null),
+                    new QuickJsExpressionUtils.PointerPredicate() {
+                        @Override
+                        public boolean test(String pointer, Node node) {
+                            return !"/literal".equals(pointer);
+                        }
+                    },
+                    null);
+
+            assertEquals(new BigInteger("42"), resolved.getProperties().get("resolve").getValue());
+            assertEquals("${steps.answer}", resolved.getProperties().get("literal").getProperties().get("nested").getValue());
+        }
+    }
+
     private boolean nodeAvailable() throws IOException, InterruptedException {
         Process process = new ProcessBuilder("node", "--version").start();
         int exit = process.waitFor();
