@@ -29,6 +29,10 @@ public final class JsArrayBuilder {
         return this;
     }
 
+    public JsArrayBuilder itemTypedEvent(Class<?> eventTypeClass) {
+        return itemObject(JsCommon.typedEvent(eventTypeClass, null));
+    }
+
     public String build() {
         StringBuilder out = new StringBuilder();
         out.append("[");

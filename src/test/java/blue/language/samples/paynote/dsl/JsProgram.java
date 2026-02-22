@@ -81,6 +81,14 @@ public final class JsProgram {
             return line("const " + name + " = " + expression + ";");
         }
 
+        public Builder readRequest(String variableName) {
+            return constVar(variableName, JsCommon.readRequest());
+        }
+
+        public Builder safeNumber(String variableName, String rawExpression, String fallbackExpression) {
+            return constVar(variableName, JsCommon.safeNumber(rawExpression, fallbackExpression));
+        }
+
         public Builder returnStatement(String expression) {
             return line("return " + expression + ";");
         }

@@ -11,12 +11,20 @@ public final class JsPatchBuilder {
         return new JsPatchBuilder();
     }
 
+    public static JsPatchBuilder changeset() {
+        return patch();
+    }
+
     public JsPatchBuilder replaceValue(String path, String rawValueExpression) {
         entries.itemObject(JsObjectBuilder.object()
                 .propString("op", "replace")
                 .propString("path", path)
                 .propRaw("val", rawValueExpression));
         return this;
+    }
+
+    public JsPatchBuilder replaceExpression(String path, String rawExpression) {
+        return replaceValue(path, rawExpression);
     }
 
     public JsPatchBuilder addValue(String path, String rawValueExpression) {

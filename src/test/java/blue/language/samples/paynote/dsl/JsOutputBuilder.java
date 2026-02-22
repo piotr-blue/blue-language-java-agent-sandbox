@@ -26,6 +26,11 @@ public final class JsOutputBuilder {
         return this;
     }
 
+    public JsOutputBuilder emptyEvents() {
+        out.propRaw("events", "[]");
+        return this;
+    }
+
     public String build() {
         return out.build();
     }
