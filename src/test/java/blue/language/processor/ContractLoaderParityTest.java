@@ -148,4 +148,19 @@ class ContractLoaderParityTest {
 
         assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
     }
+
+    @Test
+    void failsWhenRegisteredCustomHandlerOmitsChannel() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        ContractLoader loader = blue.getDocumentProcessor().contractLoader();
+        Node scope = blue.yamlToNode("contracts:\n" +
+                "  handler:\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n");
+
+        assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+    }
 }
