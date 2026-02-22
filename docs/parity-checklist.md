@@ -90,7 +90,7 @@ Status legend:
 | Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, `ContractBundleParityTest`, `ContractLoaderParityTest`, `ScopeExecutorParityTest`, `ScopeExecutorDerivedChannelParityTest`, `TerminationServiceParityTest`, etc. | DONE |
 | Contract model schemas | `src/model/__tests__/contract-models.test.ts` | `ContractModelsParityTest`, `ContractMappingIntegrationTest` | DONE |
 | Registry/timeline/workflow | `src/registry/__tests__/*` | `ContractProcessorRegistryTest`, `ContractProcessorRegistryBuilderDefaultsTest`, `CompositeTimelineChannelProcessorTest`, `CompositeTimelineChannelIntegrationParityTest`, `TimelineChannelProcessorTest`, `TimelineChannelProcessorIntegrationParityTest`, `MyOSTimelineChannelProcessorTest`, `MyOSTimelineChannelIntegrationParityTest`, `SequentialWorkflowProcessorTest`, `SequentialWorkflowHandlerProcessorIntegrationParityTest`, `DeepEmbeddedInitializationPropagationTest`, `DeepEmbeddedPropagationIntegrationTest`, `CrossTriggeringIntegrationTest`, `ProcessMultiPathsIntegrationTest`, `ProcessProtectedPathRemovalTerminatesRootIntegrationTest`, `DynamicWorkflowRegistrationIntegrationTest`, `SharedTimelineCheckpointIntegrationTest`, `TriggerEventIntegrationTest`, `TriggerEventStepLeakageReproIntegrationTest`, `TriggerEventStepNoDocumentProcessingIntegrationTest`, `EmbeddedRoutingBridgeIntegrationTest`, `workflow/WorkflowStepRunnerTest` | IN_PROGRESS |
-| Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `UpdateDocumentStepExecutorIntegrationParityTest`, `TriggerEventStepExecutorIntegrationParityTest`, `JavaScriptCodeStepExecutorIntegrationParityTest`, `JavaScriptCodeStepExecutorDirectParityTest`, `QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`, `QuickJsFuelCalibrationTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
+| Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `UpdateDocumentStepExecutorIntegrationParityTest`, `UpdateDocumentStepExecutorDirectParityTest`, `TriggerEventStepExecutorIntegrationParityTest`, `TriggerEventStepExecutorDirectParityTest`, `JavaScriptCodeStepExecutorIntegrationParityTest`, `JavaScriptCodeStepExecutorDirectParityTest`, `QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`, `QuickJsFuelCalibrationTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
 | Integration parity | `src/__tests__/integration/**/*` | `DynamicWorkflowRegistrationIntegrationTest`, `TriggerEventStepLeakageReproIntegrationTest`, `TriggerEventStepNoDocumentProcessingIntegrationTest`, `DeepEmbeddedPropagationIntegrationTest`, `CrossTriggeringIntegrationTest`, `ProcessMultiPathsIntegrationTest`, `ProcessProtectedPathRemovalTerminatesRootIntegrationTest`, `SharedTimelineCheckpointIntegrationTest`, `EmbeddedRoutingBridgeIntegrationTest` | DONE |
 | Golden parity fixtures | fixture/golden strategy in plan | `parity-fixtures/*`, `ParityFixturesTest` | IN_PROGRESS |
 
@@ -125,12 +125,22 @@ Current in-flight work:
   - expression-generated multi-patch changesets
   - applying changesets produced by JavaScript step outputs
   (`UpdateDocumentStepExecutorIntegrationParityTest`).
+- Update Document direct step parity now includes:
+  - real context execution for expression-resolved value changes
+  - expression-returned `changeset` array execution
+  - base gas charging side-effect assertions
+  (`UpdateDocumentStepExecutorDirectParityTest`).
 - Trigger Event step integration parity now has dedicated lifecycle-init migration coverage for:
   - initialization-time payload emission
   - routed delivery to Triggered Event Channel consumers
   - expression resolution in emitted payloads
   - `currentContract` binding visibility in Trigger Event expressions
   (`TriggerEventStepExecutorIntegrationParityTest`).
+- Trigger Event direct step parity now includes:
+  - real context emission path with expression-resolved payload values
+  - trigger-base gas charging side-effect assertions
+  - nested embedded-document expression preservation in emitted payloads
+  (`TriggerEventStepExecutorDirectParityTest`).
 - JavaScript Code step integration parity now has dedicated lifecycle-init migration coverage for:
   - emitted payload composition across multiple JS steps
   - fatal termination wrapping for thrown JS errors
