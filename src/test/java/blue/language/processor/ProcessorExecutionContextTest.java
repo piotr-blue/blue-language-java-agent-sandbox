@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.model.Node;
+import blue.language.processor.model.JsonPatch;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,6 +16,55 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Focused tests for the slim handler context surface.
  */
 final class ProcessorExecutionContextTest {
+
+    @Test
+    void applyPatchMutatesDocumentWhenScopeIsActive() {
+        Node document = new Node().properties("child", new Node());
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/child",
+                ContractBundle.empty(),
+                new Node(),
+                false,
+                false);
+
+        context.applyPatch(JsonPatch.add("/child/value", new Node().value(7)));
+
+        Node value = context.documentAt("/child/value");
+        assertNotNull(value);
+        assertEquals(7, Integer.parseInt(String.valueOf(value.getValue())));
+    }
+
+    @Test
+    void applyPatchSkipsWhenScopeInactiveUnlessAllowed() {
+        Node document = new Node().properties("child", new Node());
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        execution.runtime().scope("/child")
+                .finalizeTermination(ScopeRuntimeContext.TerminationKind.GRACEFUL, "done");
+
+        ProcessorExecutionContext blocked = execution.createContext(
+                "/child",
+                ContractBundle.empty(),
+                new Node(),
+                false,
+                false);
+        blocked.applyPatch(JsonPatch.add("/child/value", new Node().value(1)));
+        assertNull(blocked.documentAt("/child/value"));
+
+        ProcessorExecutionContext allowed = execution.createContext(
+                "/child",
+                ContractBundle.empty(),
+                new Node(),
+                true,
+                false);
+        allowed.applyPatch(JsonPatch.add("/child/value", new Node().value(2)));
+        assertEquals(2, Integer.parseInt(String.valueOf(allowed.documentAt("/child/value").getValue())));
+    }
 
     @Test
     void documentHelpersExposeSnapshots() {
@@ -37,6 +87,7 @@ final class ProcessorExecutionContextTest {
 
         assertTrue(context.documentContains("/value"));
         assertFalse(context.documentContains("/value/missing"));
+        assertFalse(context.documentContains("/items/-"));
 
         // Ensure the returned node is a clone (mutation should not leak back).
         snapshot.value("mutated");
@@ -55,7 +106,53 @@ final class ProcessorExecutionContextTest {
 
         ScopeRuntimeContext scopeRuntime = execution.runtime().scope("/");
         assertEquals(1, scopeRuntime.triggeredQueue().size());
+        assertEquals(1, execution.runtime().rootEmissions().size());
         assertTrue(execution.runtime().totalGas() >= 20L);
+    }
+
+    @Test
+    void consumeGasAddsUnitsToRuntime() {
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
+
+        context.consumeGas(42);
+
+        assertEquals(42L, execution.runtime().totalGas());
+    }
+
+    @Test
+    void terminationMethodsDelegateToExecutionTerminationService() {
+        DocumentProcessor owner = new DocumentProcessor();
+
+        ProcessorEngine.Execution gracefulExecution = new ProcessorEngine.Execution(owner, new Node());
+        gracefulExecution.loadBundles("/");
+        ProcessorExecutionContext graceful = gracefulExecution.createContext(
+                "/child",
+                ContractBundle.empty(),
+                new Node(),
+                true,
+                false);
+        graceful.terminateGracefully("done");
+        ScopeRuntimeContext gracefulScope = gracefulExecution.runtime().scope("/child");
+        assertTrue(gracefulScope.isTerminated());
+        assertEquals(ScopeRuntimeContext.TerminationKind.GRACEFUL, gracefulScope.terminationKind());
+        assertEquals("done", gracefulScope.terminationReason());
+
+        ProcessorEngine.Execution fatalExecution = new ProcessorEngine.Execution(owner, new Node());
+        fatalExecution.loadBundles("/");
+        ProcessorExecutionContext fatal = fatalExecution.createContext(
+                "/child",
+                ContractBundle.empty(),
+                new Node(),
+                true,
+                false);
+        fatal.terminateFatally("fatal");
+        ScopeRuntimeContext fatalScope = fatalExecution.runtime().scope("/child");
+        assertTrue(fatalScope.isTerminated());
+        assertEquals(ScopeRuntimeContext.TerminationKind.FATAL, fatalScope.terminationKind());
+        assertEquals("fatal", fatalScope.terminationReason());
     }
 
     @Test

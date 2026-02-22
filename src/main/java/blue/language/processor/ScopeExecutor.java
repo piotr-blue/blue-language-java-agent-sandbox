@@ -155,8 +155,9 @@ final class ScopeExecutor {
     void handlePatch(String scopePath,
                      ContractBundle bundle,
                      JsonPatch patch,
-                     boolean allowReservedMutation) {
-        if (execution.isScopeInactive(scopePath)) {
+                     boolean allowReservedMutation,
+                     boolean allowTerminatedWork) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
         }
         runtime.chargeBoundaryCheck();
@@ -190,7 +191,7 @@ final class ScopeExecutor {
                 if (targetBundle == null) {
                     continue;
                 }
-                if (execution.isScopeInactive(cascadeScope)) {
+                if (!allowTerminatedWork && execution.isScopeInactive(cascadeScope)) {
                     continue;
                 }
                 Node updateEvent = ProcessorEngine.createDocumentUpdateEvent(data, cascadeScope);
@@ -200,7 +201,7 @@ final class ScopeExecutor {
                         continue;
                     }
                     channelRunner.runHandlers(cascadeScope, targetBundle, channel.key(), updateEvent, false);
-                    if (execution.isScopeInactive(cascadeScope)) {
+                    if (!allowTerminatedWork && execution.isScopeInactive(cascadeScope)) {
                         break;
                     }
                 }

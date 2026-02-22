@@ -41,7 +41,7 @@ public final class ProcessorExecutionContext {
         if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
         }
-        execution.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+        execution.handlePatch(scopePath, bundle, patch, allowReservedMutation, allowTerminatedWork);
     }
 
     public void emitEvent(Node emission) {

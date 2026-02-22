@@ -269,7 +269,15 @@ final class ProcessorEngine {
                          ContractBundle bundle,
                          JsonPatch patch,
                          boolean allowReservedMutation) {
-            scopeExecutor.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+            handlePatch(scopePath, bundle, patch, allowReservedMutation, false);
+        }
+
+        void handlePatch(String scopePath,
+                         ContractBundle bundle,
+                         JsonPatch patch,
+                         boolean allowReservedMutation,
+                         boolean allowTerminatedWork) {
+            scopeExecutor.handlePatch(scopePath, bundle, patch, allowReservedMutation, allowTerminatedWork);
         }
 
         ProcessorExecutionContext createContext(String scopePath,
