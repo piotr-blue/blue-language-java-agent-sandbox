@@ -132,6 +132,7 @@ Current in-flight work:
   - expression-returned `changeset` array execution
   - path-expression evaluation failure surfacing as `CodeBlockEvaluationError`
   - fatal validation for non-string/empty patch paths
+  - provider-backed derived step-type acceptance in direct execution
   - base gas charging side-effect assertions
   - direct fatal error path for unsupported patch operations
   - direct fatal error path for invalid step schema/type payloads
@@ -146,6 +147,7 @@ Current in-flight work:
   - real context emission path with expression-resolved payload values
   - trigger-base gas charging side-effect assertions
   - nested embedded-document expression preservation in emitted payloads
+  - provider-backed derived step-type acceptance in direct execution
   - direct fatal error path for missing event payloads
   - direct fatal error path for invalid step schema/type payloads
   (`TriggerEventStepExecutorDirectParityTest`).
@@ -161,6 +163,7 @@ Current in-flight work:
   - direct wrapped script-error metadata via `CodeBlockEvaluationError`
   - direct out-of-gas error surfacing for runaway code
   - deterministic `Date`/`process` masking in direct execution path
+  - provider-backed derived step-type acceptance in direct execution
   - direct fatal error path for invalid step schema/type payloads
   - wasm gas charging side effect on processor runtime totals
   (`JavaScriptCodeStepExecutorDirectParityTest`).

@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
 import blue.language.processor.script.CodeBlockEvaluationError;
@@ -222,5 +224,48 @@ class JavaScriptCodeStepExecutorDirectParityTest {
         Map<String, Object> resultMap = (Map<String, Object>) result;
         assertEquals("undefined", String.valueOf(resultMap.get("dateType")));
         assertEquals("undefined", String.valueOf(resultMap.get("processType")));
+    }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueId() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived JavaScript Code".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().type(new Node().blueId("Conversation/JavaScript Code"));
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("DerivedStep")
+                .type(new Node().blueId("Custom/Derived JavaScript Code"))
+                .properties("code", new Node().value("return { value: 21 * 2 };"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        Object result = executor.execute(args);
+        assertTrue(result instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultMap = (Map<String, Object>) result;
+        assertEquals("42", String.valueOf(resultMap.get("value")));
     }
 }

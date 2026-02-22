@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
 import blue.language.processor.workflow.StepExecutionArgs;
@@ -163,5 +165,49 @@ class TriggerEventStepExecutorDirectParityTest {
 
         ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
         assertTrue(String.valueOf(fatal.getMessage()).contains("step payload is invalid"));
+    }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueId() {
+        TriggerEventStepExecutor executor = new TriggerEventStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Trigger Event".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().type(new Node().blueId("Conversation/Trigger Event"));
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Emit")
+                .type(new Node().blueId("Custom/Derived Trigger Event"))
+                .properties("event", new Node()
+                        .properties("kind", new Node().value("derived-step")));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        Node emitted = execution.runtime().scope("/").triggeredQueue().peekFirst();
+        assertNotNull(emitted);
+        assertEquals("derived-step", String.valueOf(emitted.getProperties().get("kind").getValue()));
     }
 }

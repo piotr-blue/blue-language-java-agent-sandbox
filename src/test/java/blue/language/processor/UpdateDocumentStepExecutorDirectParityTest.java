@@ -1,5 +1,7 @@
 package blue.language.processor;
 
+import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
 import blue.language.processor.script.CodeBlockEvaluationError;
@@ -247,6 +249,51 @@ class UpdateDocumentStepExecutorDirectParityTest {
 
         ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
         assertTrue(String.valueOf(fatal.getMessage()).contains("requires a non-empty path"));
+    }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueId() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Update Document".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().type(new Node().blueId("Conversation/Update Document"));
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("counter", new Node().value(0)));
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Custom/Derived Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("REPLACE"))
+                                .properties("path", new Node().value("/counter"))
+                                .properties("val", new Node().value(3))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        assertEquals("3", String.valueOf(context.documentAt("/counter").getValue()));
     }
 
     @Test
