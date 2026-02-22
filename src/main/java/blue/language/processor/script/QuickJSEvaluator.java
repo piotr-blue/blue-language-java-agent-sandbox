@@ -34,9 +34,7 @@ public class QuickJSEvaluator implements AutoCloseable {
     }
 
     public ScriptRuntimeResult evaluate(String code, Map<String, Object> bindings, BigInteger wasmGasLimit) {
-        Map<String, Object> safeBindings = bindings == null
-                ? Collections.<String, Object>emptyMap()
-                : new LinkedHashMap<>(bindings);
+        Map<String, Object> safeBindings = normalizeBindings(bindings);
         validateBindings(safeBindings);
         try {
             return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
@@ -183,5 +181,32 @@ public class QuickJSEvaluator implements AutoCloseable {
                 throw new IllegalArgumentException("QuickJS emit binding must be a function");
             }
         }
+    }
+
+    private Map<String, Object> normalizeBindings(Map<String, Object> bindings) {
+        Map<String, Object> normalized = bindings == null
+                ? new LinkedHashMap<String, Object>()
+                : new LinkedHashMap<String, Object>(bindings);
+        Object event = normalized.get("event");
+        if (!normalized.containsKey("event")) {
+            normalized.put("event", null);
+            event = null;
+        }
+        if (!normalized.containsKey("eventCanonical") || normalized.get("eventCanonical") == null) {
+            normalized.put("eventCanonical", event);
+        }
+        if (!normalized.containsKey("steps") || normalized.get("steps") == null) {
+            normalized.put("steps", Collections.emptyList());
+        }
+        Object currentContract = normalized.get("currentContract");
+        if (!normalized.containsKey("currentContract")) {
+            normalized.put("currentContract", null);
+            currentContract = null;
+        }
+        if (!normalized.containsKey("currentContractCanonical")
+                || normalized.get("currentContractCanonical") == null) {
+            normalized.put("currentContractCanonical", currentContract);
+        }
+        return normalized;
     }
 }

@@ -96,6 +96,14 @@ Evaluator prelude host APIs:
     - deep unwrapping (default) across canonical wrappers (`{ value: ... }`, `{ items: [...] }`) and nested objects
     - shallow mode (`deep=false`) that only unwraps the top-level wrapper
 
+QuickJS evaluator binding defaults/fallbacks:
+
+- missing `event` defaults to `null`
+- missing `eventCanonical` defaults to `event`
+- missing `steps` defaults to `[]`
+- missing `currentContract` defaults to `null`
+- missing `currentContractCanonical` defaults to `currentContract`
+
 Document snapshots are charged via `chargeDocumentSnapshot`.
 WASM usage is charged via `chargeWasmGas`.
 

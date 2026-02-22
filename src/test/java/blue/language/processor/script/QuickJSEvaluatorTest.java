@@ -187,6 +187,59 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void providesDefaultBindingsWhenMissing() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ eventIsNull: event === null, eventCanonicalIsNull: eventCanonical === null, " +
+                            "stepsIsArray: Array.isArray(steps), stepsLength: steps.length, " +
+                            "currentContractIsNull: currentContract === null, " +
+                            "currentContractCanonicalIsNull: currentContractCanonical === null })",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertEquals(Boolean.TRUE, value.get("eventIsNull"));
+            assertEquals(Boolean.TRUE, value.get("eventCanonicalIsNull"));
+            assertEquals(Boolean.TRUE, value.get("stepsIsArray"));
+            assertEquals("0", String.valueOf(value.get("stepsLength")));
+            assertEquals(Boolean.TRUE, value.get("currentContractIsNull"));
+            assertEquals(Boolean.TRUE, value.get("currentContractCanonicalIsNull"));
+        }
+    }
+
+    @Test
+    void fallsBackCanonicalBindingsToPlainBindingsWhenMissing() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            bindings.put("event", new LinkedHashMap<String, Object>() {{
+                put("payload", new LinkedHashMap<String, Object>() {{
+                    put("id", "evt-456");
+                }});
+            }});
+            bindings.put("currentContract", new LinkedHashMap<String, Object>() {{
+                put("channel", "test");
+            }});
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ eventId: eventCanonical.payload.id, contractChannel: currentContractCanonical.channel })",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertEquals("evt-456", String.valueOf(value.get("eventId")));
+            assertEquals("test", String.valueOf(value.get("contractChannel")));
+        }
+    }
+
+    @Test
     void rejectsUnsupportedBindingKeys() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
