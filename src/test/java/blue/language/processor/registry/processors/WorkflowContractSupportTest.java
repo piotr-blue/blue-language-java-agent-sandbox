@@ -96,4 +96,40 @@ class WorkflowContractSupportTest {
         assertFalse(WorkflowContractSupport.matchesEventFilter(event, filter));
         assertTrue(WorkflowContractSupport.matchesEventFilter(event, filter, provider));
     }
+
+    @Test
+    void matchesEventFilterResolvesProviderDefinitionPropertyBlueIdChains() {
+        Node event = new Node().properties("payload", new Node().blueId("Custom/Derived Payload"));
+        Node filter = new Node().properties("payload",
+                new Node().properties("blueId", new Node().value("Custom/Base Payload")));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node().properties("blueId", new Node().value("Custom/Base Payload"));
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesEventFilter(event, filter));
+        assertTrue(WorkflowContractSupport.matchesEventFilter(event, filter, provider));
+    }
+
+    @Test
+    void matchesEventFilterResolvesProviderDefinitionScalarBlueIdChains() {
+        Node event = new Node().properties("payload", new Node().blueId("Custom/Derived Payload"));
+        Node filter = new Node().properties("payload",
+                new Node().properties("blueId", new Node().value("Custom/Base Payload")));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node().value("Custom/Base Payload");
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesEventFilter(event, filter));
+        assertTrue(WorkflowContractSupport.matchesEventFilter(event, filter, provider));
+    }
 }

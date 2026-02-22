@@ -250,7 +250,7 @@ final class WorkflowContractSupport {
             if (nodeProvider != null && visitedProviderBlueIds.add(normalized)) {
                 Node fetchedTypeDefinition = fetchTypeDefinition(nodeProvider, normalized);
                 if (fetchedTypeDefinition != null
-                        && hasTypeInChain(fetchedTypeDefinition.getType(),
+                        && hasTypeInChain(fetchedTypeDefinition,
                         expectedBlueId,
                         nodeProvider,
                         visitedBlueIds,
@@ -288,6 +288,9 @@ final class WorkflowContractSupport {
             if (blueIdNode != null && blueIdNode.getValue() != null) {
                 addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
             }
+        }
+        if (node.getValue() instanceof String) {
+            addBlueId(blueIds, String.valueOf(node.getValue()));
         }
         return blueIds;
     }
