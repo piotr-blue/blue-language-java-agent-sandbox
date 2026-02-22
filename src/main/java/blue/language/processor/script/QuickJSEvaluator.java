@@ -14,6 +14,8 @@ public class QuickJSEvaluator implements AutoCloseable {
                     "event",
                     "eventCanonical",
                     "steps",
+                    "document",
+                    "emit",
                     "currentContract",
                     "currentContractCanonical",
                     "__documentData",
@@ -150,6 +152,13 @@ public class QuickJSEvaluator implements AutoCloseable {
         for (String key : bindings.keySet()) {
             if (!SUPPORTED_BINDINGS.contains(key)) {
                 throw new IllegalArgumentException("Unsupported QuickJS binding: \"" + key + "\"");
+            }
+            Object value = bindings.get(key);
+            if ("document".equals(key) && value != null) {
+                throw new IllegalArgumentException("QuickJS document binding must be a function");
+            }
+            if ("emit".equals(key) && value != null) {
+                throw new IllegalArgumentException("QuickJS emit binding must be a function");
             }
         }
     }

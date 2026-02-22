@@ -103,6 +103,9 @@ WASM usage is charged via `chargeWasmGas`.
   - original source code available via `code()`
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
 - Evaluator validates binding keys against supported runtime bindings and rejects unsupported keys up-front (`Unsupported QuickJS binding: "<key>"`).
+- Evaluator also validates host-handler binding shapes for parity:
+  - `document` must be function-shaped (non-null non-function values are rejected)
+  - `emit` must be function-shaped (non-null non-function values are rejected)
 - Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
 - Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
 - Sidecar masks non-deterministic globals (`Date`, `process`) to align workflow execution with deterministic runtime expectations.

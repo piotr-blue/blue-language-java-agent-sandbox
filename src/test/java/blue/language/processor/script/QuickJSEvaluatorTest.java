@@ -144,6 +144,40 @@ class QuickJSEvaluatorTest {
         }
     }
 
+    @Test
+    void rejectsNonFunctionDocumentBinding() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            IllegalArgumentException thrown = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> evaluator.evaluate(
+                            "1",
+                            new LinkedHashMap<String, Object>() {{
+                                put("document", new LinkedHashMap<String, Object>());
+                            }},
+                            BigInteger.valueOf(100L)));
+            assertTrue(thrown.getMessage().contains("document binding must be a function"));
+        }
+    }
+
+    @Test
+    void rejectsNonFunctionEmitBinding() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            IllegalArgumentException thrown = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> evaluator.evaluate(
+                            "1",
+                            new LinkedHashMap<String, Object>() {{
+                                put("emit", Boolean.TRUE);
+                            }},
+                            BigInteger.valueOf(100L)));
+            assertTrue(thrown.getMessage().contains("emit binding must be a function"));
+        }
+    }
+
     private boolean nodeAvailable() throws IOException, InterruptedException {
         Process process = new ProcessBuilder("node", "--version").start();
         int exit = process.waitFor();
