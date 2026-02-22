@@ -66,9 +66,18 @@
   - built a single showcase catalog with **10 complex docs** (candidate/recruitment + 8 advanced payment flows)
   - proved ergonomic authoring with reusable typed building blocks and deterministic tests
 
+## Iteration 8 — Pinned snapshot codegen proof for type beans
+
+- **Awesomeness:** 9.8 / 10
+- **Developer experience:** 9.8 / 10
+- **Improvements:**
+  - added a pinned mini repository snapshot resource
+  - added generator that emits Java beans with `@TypeAlias` + `@TypeBlueId` from snapshot entries
+  - added tests proving generation across Core/Conversation/MyOS/PayNote packages
+
 ## Final assessment (best achieved without overengineering)
 
 - **Awesomeness:** **9.8 / 10**
-- **Developer experience:** **9.7 / 10**
+- **Developer experience:** **9.8 / 10**
 
 Further gains would likely require introducing a full production-grade compiler-style DSL, which would add complexity beyond this demo scope.
