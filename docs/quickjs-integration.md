@@ -61,15 +61,35 @@ Workflow expression/step evaluation charges gas through:
 
 `QuickJSStepBindings` provides default bindings used by step executors:
 
-- `event` (json snapshot of current event)
+- `event` (simple/plain JSON snapshot of current event)
+- `eventCanonical` (official/canonical JSON event snapshot)
 - `steps` (results from prior workflow steps)
-- `document` (snapshot of current document)
+- `currentContract` (handler contract payload)
+- `currentContractCanonical` (canonical-form contract payload)
+- internal document snapshots used by evaluator prelude:
+  - `__documentDataSimple`
+  - `__documentDataCanonical`
+  - `__scopePath`
 
-Document reads also charge snapshot gas via `chargeDocumentSnapshot`.
+Evaluator prelude host APIs:
+
+- `document(pointer?)`
+  - resolves relative pointers against `__scopePath`
+  - reads from simple snapshot
+  - unwraps scalar node wrappers
+- `document.canonical(pointer?)`
+  - resolves from canonical snapshot (preserves metadata/type wrappers)
+- `canon.at(value, pointer)` and `canon.unwrap(value)`
+
+Document snapshots are charged via `chargeDocumentSnapshot`.
+WASM usage is charged via `chargeWasmGas`.
 
 ## Failure handling
 
 - Sidecar startup, protocol, or evaluation failures => `ScriptRuntimeException`.
-- Evaluator wraps script failures => `CodeBlockEvaluationError`.
+- Evaluator wraps script failures => `CodeBlockEvaluationError` with:
+  - original source code available via `code()`
+  - truncated code snippet in message (`Failed to evaluate code block: ...`)
 - Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
+- Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
 
