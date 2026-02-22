@@ -2,6 +2,8 @@ package blue.language.samples.paynote.sdk.vnext;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
+import blue.language.samples.paynote.dsl.ChannelKey;
+import blue.language.samples.paynote.dsl.DocPath;
 import blue.language.samples.paynote.dsl.DocumentBuilder;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
@@ -26,6 +28,15 @@ public final class PayNoteBuilderVNext {
                 .documentName(name)
                 .documentType(typeAlias)
                 .putDocumentObject("amount", amount -> amount.put("total", 0));
+
+        // PayNote defaults: payer/payee/guarantor are implicit participants.
+        bootstrap.role(PayNoteRole.PAYER.roleKey(), PayNoteRole.PAYER.channelKey().value());
+        bootstrap.role(PayNoteRole.PAYEE.roleKey(), PayNoteRole.PAYEE.channelKey().value());
+        bootstrap.role(PayNoteRole.GUARANTOR.roleKey(), PayNoteRole.GUARANTOR.channelKey().value());
+        bootstrap.contracts(c -> c.timelineChannels(
+                PayNoteRole.PAYER.channelKey().value(),
+                PayNoteRole.PAYEE.channelKey().value(),
+                PayNoteRole.GUARANTOR.channelKey().value()));
     }
 
     public PayNoteBuilderVNext currency(String currency) {
@@ -50,6 +61,21 @@ public final class PayNoteBuilderVNext {
 
     public PayNoteBuilderVNext compositeParticipants(String compositeChannelKey, String... channels) {
         bootstrap.contracts(c -> c.compositeTimelineChannel(compositeChannelKey, channels));
+        return this;
+    }
+
+    public PayNoteBuilderVNext participantsUnion(ChannelKey compositeChannelKey, PayNoteRole... roles) {
+        List<String> channels = new ArrayList<String>();
+        if (roles != null) {
+            for (PayNoteRole role : roles) {
+                if (role != null) {
+                    channels.add(role.channelKey().value());
+                }
+            }
+        }
+        bootstrap.contracts(c -> c.compositeTimelineChannel(
+                compositeChannelKey.value(),
+                channels.toArray(new String[0])));
         return this;
     }
 
@@ -86,12 +112,20 @@ public final class PayNoteBuilderVNext {
         return this;
     }
 
+    public PayNoteBuilderVNext lockCardCaptureOnInit(DocPath cardTransactionDetailsPath) {
+        return lockCardCaptureOnInit(cardTransactionDetailsPath.pointer());
+    }
+
     public PayNoteBuilderVNext unlockCardCaptureWhen(Class<?> eventTypeClass, String cardTransactionDetailsPath) {
         bootstrap.contracts(c -> c.onTriggered("unlockCardCaptureWhenEvent", eventTypeClass, steps -> steps
                 .emitType("RequestCaptureUnlock", PayNoteTypes.CardTransactionCaptureUnlockRequested.class,
                         payload -> payload.putExpression("cardTransactionDetails",
                                 "document('" + cardTransactionDetailsPath + "')"))));
         return this;
+    }
+
+    public PayNoteBuilderVNext unlockCardCaptureWhen(Class<?> eventTypeClass, DocPath cardTransactionDetailsPath) {
+        return unlockCardCaptureWhen(eventTypeClass, cardTransactionDetailsPath.pointer());
     }
 
     public PayNoteBuilderVNext confirmLockOperation(String channelKey) {
@@ -101,11 +135,19 @@ public final class PayNoteBuilderVNext {
                 steps -> steps.emitType("ConfirmCaptureLocked", PayNoteTypes.CardTransactionCaptureLocked.class, null));
     }
 
+    public PayNoteBuilderVNext confirmLockOperation(PayNoteRole role) {
+        return confirmLockOperation(role.channelKey().value());
+    }
+
     public PayNoteBuilderVNext confirmUnlockOperation(String channelKey) {
         return operation("confirmCardTransactionCaptureUnlocked",
                 channelKey,
                 "Confirm card transaction capture unlock.",
                 steps -> steps.emitType("ConfirmCaptureUnlocked", PayNoteTypes.CardTransactionCaptureUnlocked.class, null));
+    }
+
+    public PayNoteBuilderVNext confirmUnlockOperation(PayNoteRole role) {
+        return confirmUnlockOperation(role.channelKey().value());
     }
 
     public PayNoteBuilderVNext operation(String key,
@@ -137,6 +179,13 @@ public final class PayNoteBuilderVNext {
         return this;
     }
 
+    public PayNoteBuilderVNext directChangeWithAllowList(String operationName,
+                                                         PayNoteRole role,
+                                                         String description,
+                                                         String... allowedPaths) {
+        return directChangeWithAllowList(operationName, role.channelKey().value(), description, allowedPaths);
+    }
+
     public PayNoteBuilderVNext captureOnEvent(Class<?> triggerEventType, String workflowKey) {
         return captureOnEvent(triggerEventType, workflowKey, null);
     }
@@ -162,6 +211,10 @@ public final class PayNoteBuilderVNext {
                         new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
     }
 
+    public PayNoteBuilderVNext refundFullOperation(PayNoteRole role) {
+        return refundFullOperation(role.channelKey().value());
+    }
+
     public PayNoteBuilderVNext releaseOperation(String operationKey, String channelKey) {
         return operation(operationKey,
                 channelKey,
@@ -170,11 +223,19 @@ public final class PayNoteBuilderVNext {
                         new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
     }
 
+    public PayNoteBuilderVNext releaseOperation(String operationKey, PayNoteRole role) {
+        return releaseOperation(operationKey, role.channelKey().value());
+    }
+
     public PayNoteBuilderVNext requestCancellationOperation(String channelKey) {
         return operation("requestCancellation",
                 channelKey,
                 "Request paynote cancellation.",
                 steps -> steps.replaceValue("SetCancellationRequested", "/status", "cancellation-requested"));
+    }
+
+    public PayNoteBuilderVNext requestCancellationOperation(PayNoteRole role) {
+        return requestCancellationOperation(role.channelKey().value());
     }
 
     public PayNoteBuilderVNext issueChildPayNoteOnEvent(String workflowKey,
@@ -262,9 +323,17 @@ public final class PayNoteBuilderVNext {
         return this;
     }
 
+    public PayNoteBuilderVNext bindRoleAccount(PayNoteRole role, String accountId) {
+        return bindRoleAccount(role.roleKey(), accountId);
+    }
+
     public PayNoteBuilderVNext bindRoleEmail(String role, String email) {
         bootstrap.bindRoleEmail(role, email);
         return this;
+    }
+
+    public PayNoteBuilderVNext bindRoleEmail(PayNoteRole role, String email) {
+        return bindRoleEmail(role.roleKey(), email);
     }
 
     public Node build() {
@@ -289,20 +358,29 @@ public final class PayNoteBuilderVNext {
         }
 
         public ParticipantsBuilder payer() {
-            parent.bootstrap.role("payer", "payerChannel");
-            parent.bootstrap.contracts(c -> c.timelineChannel("payerChannel"));
+            parent.bootstrap.role(PayNoteRole.PAYER.roleKey(), PayNoteRole.PAYER.channelKey().value());
+            parent.bootstrap.contracts(c -> c.timelineChannel(PayNoteRole.PAYER.channelKey().value()));
             return this;
         }
 
         public ParticipantsBuilder payee() {
-            parent.bootstrap.role("payee", "payeeChannel");
-            parent.bootstrap.contracts(c -> c.timelineChannel("payeeChannel"));
+            parent.bootstrap.role(PayNoteRole.PAYEE.roleKey(), PayNoteRole.PAYEE.channelKey().value());
+            parent.bootstrap.contracts(c -> c.timelineChannel(PayNoteRole.PAYEE.channelKey().value()));
             return this;
         }
 
         public ParticipantsBuilder guarantor() {
-            parent.bootstrap.role("guarantor", "guarantorChannel");
-            parent.bootstrap.contracts(c -> c.timelineChannel("guarantorChannel"));
+            parent.bootstrap.role(PayNoteRole.GUARANTOR.roleKey(), PayNoteRole.GUARANTOR.channelKey().value());
+            parent.bootstrap.contracts(c -> c.timelineChannel(PayNoteRole.GUARANTOR.channelKey().value()));
+            return this;
+        }
+
+        public ParticipantsBuilder add(PayNoteRole role) {
+            if (role == PayNoteRole.SHIPPER) {
+                return shipper(role.channelKey().value());
+            }
+            parent.bootstrap.role(role.roleKey(), role.channelKey().value());
+            parent.bootstrap.contracts(c -> c.timelineChannel(role.channelKey().value()));
             return this;
         }
 

@@ -1,6 +1,8 @@
 package blue.language.samples.paynote.sdk.vnext;
 
 import blue.language.model.Node;
+import blue.language.samples.paynote.dsl.ChannelKey;
+import blue.language.samples.paynote.dsl.DocPath;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
@@ -77,5 +79,41 @@ class PayNoteBuilderVNextTest {
                 bootstrap.getAsText("/document/policies/changesetAllowList/directChange/1/value"));
         assertEquals("alice@gmail.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
         assertEquals("acc_dhl_001", bootstrap.getAsText("/channelBindings/shipmentCompanyChannel/accountId/value"));
+    }
+
+    @Test
+    void supportsTypedRoleChannelAndPathOverloadsWithImplicitCoreParticipants() {
+        Node bootstrap = PayNotes.cardTransaction("Typed Overloads")
+                .currency("USD")
+                .amountTotal(1200)
+                .participants(p -> p.add(PayNoteRole.SHIPPER))
+                .participantsUnion(ChannelKey.of("allParticipants"),
+                        PayNoteRole.PAYER, PayNoteRole.PAYEE, PayNoteRole.GUARANTOR, PayNoteRole.SHIPPER)
+                .lockCardCaptureOnInit(DocPath.of("/cardTransactionDetails"))
+                .unlockCardCaptureWhen(ShippingEvents.ShipmentConfirmed.class, DocPath.of("/cardTransactionDetails"))
+                .confirmLockOperation(PayNoteRole.GUARANTOR)
+                .confirmUnlockOperation(PayNoteRole.GUARANTOR)
+                .directChangeWithAllowList("directChange",
+                        PayNoteRole.PAYEE,
+                        "Typed role allow list",
+                        "/note")
+                .bindRoleEmail(PayNoteRole.PAYER, "payer@demo.com")
+                .bindRoleAccount(PayNoteRole.PAYEE, "acc_payee_demo")
+                .bindRoleAccount(PayNoteRole.GUARANTOR, "acc_bank_demo")
+                .bindRoleAccount(PayNoteRole.SHIPPER, "acc_shipper_demo")
+                .build();
+
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                bootstrap.getAsText("/document/contracts/payerChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                bootstrap.getAsText("/document/contracts/payeeChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                bootstrap.getAsText("/document/contracts/guarantorChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                bootstrap.getAsText("/document/contracts/shipmentCompanyChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_COMPOSITE_TIMELINE_CHANNEL,
+                bootstrap.getAsText("/document/contracts/allParticipants/type/value"));
+        assertEquals("payer@demo.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
+        assertEquals("acc_shipper_demo", bootstrap.getAsText("/channelBindings/shipmentCompanyChannel/accountId/value"));
     }
 }
