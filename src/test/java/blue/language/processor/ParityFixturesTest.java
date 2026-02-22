@@ -55,6 +55,7 @@ class ParityFixturesTest {
         List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
         boolean expectedCapabilityFailure = boolValue(expected.get("capabilityFailure"), false);
+        String expectedFailureReasonContains = stringValue(expected.get("failureReasonContains"), null);
         Long expectedTotalGas = nullableLongValue(expected.get("totalGas"));
         Long expectedTotalGasMin = nullableLongValue(expected.get("totalGasMin"));
         Long expectedTotalGasMax = nullableLongValue(expected.get("totalGasMax"));
@@ -176,6 +177,12 @@ class ParityFixturesTest {
         assertEquals(expectedCapabilityFailure,
                 result.capabilityFailure(),
                 fixtureName + " unexpected capabilityFailure flag");
+        if (expectedFailureReasonContains != null && !expectedFailureReasonContains.trim().isEmpty()) {
+            String reason = result.failureReason() != null ? result.failureReason() : "";
+            assertTrue(reason.contains(expectedFailureReasonContains),
+                    fixtureName + " expected failure reason containing: " + expectedFailureReasonContains
+                            + " but got: " + reason);
+        }
         if (expectedTotalGas != null) {
             assertEquals(expectedTotalGas.longValue(),
                     result.totalGas(),
