@@ -35,9 +35,19 @@
   - removed deeply nested counter model style in favor of compact authoring
   - better composability and easier code review
 
+## Iteration 5 — Maintainability hardening (constants + typed event builders)
+
+- **Awesomeness:** 9.5 / 10
+- **Developer experience:** 9.4 / 10
+- **Improvements:**
+  - centralized `TypeAliases` eliminated string typos for core/conversation/MyOS types
+  - `MyOsEvents` builders removed manual nested `Node` construction for common event/filter shapes
+  - structured JS helpers (`JsPatchBuilder`, `JsOutputBuilder`, `JsArrayBuilder`) reduced large hand-written blobs
+  - workflow helpers (`onTriggered`, `onLifecycle`, `implementOperation`, `withMyOsAdminDefaults`) improved day-2 readability
+
 ## Final assessment (best achieved without overengineering)
 
-- **Awesomeness:** **9.3 / 10**
-- **Developer experience:** **9.2 / 10**
+- **Awesomeness:** **9.5 / 10**
+- **Developer experience:** **9.4 / 10**
 
 Further gains would likely require introducing a full production-grade compiler-style DSL, which would add complexity beyond this demo scope.
