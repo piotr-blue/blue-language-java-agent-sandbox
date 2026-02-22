@@ -83,6 +83,8 @@ class PayNoteOverlayTest {
                 payNote.getAsText("/contracts/initLifecycleChannel/type/value"));
         assertEquals(TypeAliases.CONVERSATION_OPERATION,
                 payNote.getAsText("/contracts/confirmShipment/type/value"));
+        assertEquals(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED,
+                payNote.getAsText("/contracts/confirmShipmentImpl/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.RESERVE_FUNDS_REQUESTED,
                 payNote.getAsText("/contracts/onInitReserveFunds/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.CAPTURE_FUNDS_REQUESTED,

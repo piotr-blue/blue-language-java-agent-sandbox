@@ -11,6 +11,7 @@ import blue.language.samples.paynote.dsl.PayNoteEvents;
 import blue.language.samples.paynote.dsl.StepsBuilder;
 import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.types.conversation.ConversationTypes;
+import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
@@ -69,7 +70,8 @@ public final class PayNoteOverlay {
     public PayNoteOverlay confirmShipmentUnlocksCapture(int amount) {
         contracts().operation("confirmShipment", "shipmentCompanyChannel", "Confirm delivery; trigger capture.");
         contracts().implementOperation("confirmShipmentImpl", "confirmShipment", steps -> steps
-                .emitAdHocEvent("ShipmentConfirmed", "shipment-confirmed", payload -> payload.put("source", "shipmentCompany"))
+                .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                        payload -> payload.put("source", "shipmentCompanyChannel"))
                 .triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(amount)));
         return this;
     }

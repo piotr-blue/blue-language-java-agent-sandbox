@@ -35,6 +35,8 @@ class CardTransactionPayNoteBootstrapExampleTest {
         String unlockProgram = bootstrap.getAsText("/document/contracts/confirmShipmentImpl/steps/1/code/value");
         assertTrue(lockProgram.contains(PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED));
         assertTrue(unlockProgram.contains(PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED));
+        assertEquals(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED,
+                bootstrap.getAsText("/document/contracts/confirmShipmentImpl/steps/0/event/type/value"));
 
         assertEquals("allow-listed-direct-change",
                 bootstrap.getAsText("/document/policies/contractsChangePolicy/mode/value"));

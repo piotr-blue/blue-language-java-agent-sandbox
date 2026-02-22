@@ -9,6 +9,7 @@ import blue.language.samples.paynote.dsl.JsProgram;
 import blue.language.samples.paynote.dsl.MyOsDsl;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
+import blue.language.samples.paynote.types.domain.ShippingEvents;
 
 import java.util.Arrays;
 
@@ -58,7 +59,8 @@ public final class CardTransactionPayNoteBootstrapExample {
 
                     c.operation("confirmShipment", "shipmentCompanyChannel", "Confirm that delivery is complete.");
                     c.implementOperation("confirmShipmentImpl", "confirmShipment", steps -> steps
-                            .triggerEvent("ShipmentConfirmed", shipmentConfirmedEvent())
+                            .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                    payload -> payload.put("source", "shipmentCompanyChannel"))
                             .js("RequestCardTransactionCaptureUnlock", requestCaptureUnlockProgram()));
 
                     c.operation("confirmCardTransactionCaptureLocked",
@@ -91,12 +93,6 @@ public final class CardTransactionPayNoteBootstrapExample {
                 .bindAccount("guarantorChannel", guarantorAccountId)
                 .bindAccount("shipmentCompanyChannel", shipmentCompanyAccountId)
                 .build();
-    }
-
-    private static Node shipmentConfirmedEvent() {
-        return new Node()
-                .type(TypeAliases.CONVERSATION_EVENT)
-                .properties("kind", new Node().value("Shipment Confirmed"));
     }
 
     private static JsProgram requestCaptureLockProgram() {
