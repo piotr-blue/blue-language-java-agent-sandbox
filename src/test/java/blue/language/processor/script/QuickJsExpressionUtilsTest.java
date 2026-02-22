@@ -242,6 +242,31 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsBraceOptionsContainingParenthesizedCommas() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{alpha,@(beta,gamma)}/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/alpha/value", null));
+        assertTrue(predicate.test("/items/beta,gamma/value", null));
+        assertFalse(predicate.test("/items/beta/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsBraceOptionsContainingCharacterClassCommas() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{alpha,[a,b]}/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/alpha/value", null));
+        assertTrue(predicate.test("/items/,/value", null));
+        assertTrue(predicate.test("/items/a/value", null));
+        assertFalse(predicate.test("/items/c/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNumericBraceRanges() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/items/{1..3}"),

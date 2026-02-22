@@ -454,7 +454,9 @@ public final class QuickJsExpressionUtils {
             return rangeExpansion;
         }
         StringBuilder current = new StringBuilder();
-        int depth = 0;
+        int braceDepth = 0;
+        int parenDepth = 0;
+        int bracketDepth = 0;
         boolean escaping = false;
         for (int i = 0; i < body.length(); i++) {
             char ch = body.charAt(i);
@@ -468,15 +470,23 @@ public final class QuickJsExpressionUtils {
                 escaping = true;
                 continue;
             }
-            if (ch == ',' && depth == 0) {
+            if (ch == ',' && braceDepth == 0 && parenDepth == 0 && bracketDepth == 0) {
                 options.add(current.toString());
                 current.setLength(0);
                 continue;
             }
             if (ch == '{') {
-                depth++;
-            } else if (ch == '}' && depth > 0) {
-                depth--;
+                braceDepth++;
+            } else if (ch == '}' && braceDepth > 0) {
+                braceDepth--;
+            } else if (ch == '(') {
+                parenDepth++;
+            } else if (ch == ')' && parenDepth > 0) {
+                parenDepth--;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']' && bracketDepth > 0) {
+                bracketDepth--;
             }
             current.append(ch);
         }
