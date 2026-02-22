@@ -22,6 +22,11 @@ Branch: `cursor/blue-java-sdk-vnext-5cee`
   - `channelSourceBinding(...)`
 - Added `ChannelSourceBindingBuilder`.
 - Added role-driven binding APIs in bootstrap and document builders.
+- Added typed value wrappers:
+  - `DocPath`
+  - `ChannelKey`
+  - `PayNoteRole`
+  with builder overloads to reduce stringly-typed wiring.
 
 ### Template pipeline
 - Added immutable template wrappers:
@@ -46,6 +51,8 @@ Branch: `cursor/blue-java-sdk-vnext-5cee`
   - child issuance
   - lifecycle hooks (`onFundsReserved`, `onCaptureRequested`, `onFundsCaptured`, `onReleased`)
   - once/barrier and allow-list direct change helpers
+  - flattened `operation("...").channel(...).description(...).steps(...).done()` authoring API
+  - fail-fast validation for incomplete operation builder configuration
 
 ### Required examples
 - Added vNext examples:
@@ -57,6 +64,11 @@ Branch: `cursor/blue-java-sdk-vnext-5cee`
   - milestone contractor paynote
   - reverse voucher paynote
   - recruitment classifier vNext
+- Added shipment-focused class chain examples:
+  - `ShipmentPayNote` (base template)
+  - `DHLShipmentPayNote` (specialized overlay)
+  - `AliceBobShipmentPayNote` (final instantiated document)
+  - `ShipmentPayNoteNodeChaining` (ad-hoc Node extension path)
 
 ### Legacy alignment
 - Migrated legacy shipment confirmation flows to typed shipment event emission.
