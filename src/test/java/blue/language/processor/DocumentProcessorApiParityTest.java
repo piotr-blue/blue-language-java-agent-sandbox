@@ -1,0 +1,100 @@
+package blue.language.processor;
+
+import blue.language.Blue;
+import blue.language.model.Node;
+import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.MarkerContract;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigInteger;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DocumentProcessorApiParityTest {
+
+    @Test
+    void initializesAndProcessesDocumentThroughApiSurface() {
+        Blue blue = new Blue();
+        DocumentProcessor processor = new DocumentProcessor();
+        processor.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node original = blue.yamlToNode(documentWithLifecycleAndEventHandlers());
+        DocumentProcessingResult init = processor.initializeDocument(original);
+        assertTrue(processor.isInitialized(init.document()));
+        assertEquals(1, init.triggeredEvents().size());
+        assertEquals("Core/Document Processing Initiated",
+                String.valueOf(init.triggeredEvents().get(0).getProperties().get("type").getValue()));
+        assertEquals(new BigInteger("1"), init.document().getProperties().get("initialized").getValue());
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-1\n");
+        DocumentProcessingResult processed = processor.processDocument(init.document(), event);
+        assertEquals(new BigInteger("5"), processed.document().getProperties().get("processed").getValue());
+    }
+
+    @Test
+    void apiGuardsInitializationStateAndExposesMarkers() {
+        Blue blue = new Blue();
+        DocumentProcessor processor = new DocumentProcessor();
+        processor.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node original = blue.yamlToNode(documentWithLifecycleAndEventHandlers());
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-uninitialized\n");
+
+        RuntimeException uninitializedError = assertThrows(
+                RuntimeException.class,
+                () -> processor.processDocument(original.clone(), event));
+        assertTrue(String.valueOf(uninitializedError.getMessage()).contains("Document not initialized"));
+
+        DocumentProcessingResult initialized = processor.initializeDocument(original.clone());
+        RuntimeException alreadyInitializedError = assertThrows(
+                RuntimeException.class,
+                () -> processor.initializeDocument(initialized.document()));
+        assertTrue(String.valueOf(alreadyInitializedError.getMessage()).contains("Document already initialized"));
+
+        Map<String, MarkerContract> markers = processor.markersFor(initialized.document(), "/");
+        assertTrue(markers.containsKey("initialized"));
+    }
+
+    private String documentWithLifecycleAndEventHandlers() {
+        return "name: API Parity Doc\n" +
+                "contracts:\n" +
+                "  lifecycleChannel:\n" +
+                "    type:\n" +
+                "      blueId: Core/Lifecycle Event Channel\n" +
+                "  onLifecycle:\n" +
+                "    channel: lifecycleChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    event:\n" +
+                "      type:\n" +
+                "        blueId: Core/Document Processing Initiated\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /initialized\n" +
+                "            val: 1\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  onTestEvent:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /processed\n" +
+                "            val: 5\n";
+    }
+}
