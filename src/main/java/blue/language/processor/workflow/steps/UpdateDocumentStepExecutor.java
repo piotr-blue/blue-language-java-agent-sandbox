@@ -2,6 +2,8 @@ package blue.language.processor.workflow.steps;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.script.QuickJSEvaluator;
+import blue.language.processor.script.QuickJsExpressionUtils;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.processor.workflow.WorkflowStepExecutor;
 
@@ -11,6 +13,16 @@ import java.util.Locale;
 import java.util.Set;
 
 public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
+
+    private final QuickJSEvaluator evaluator;
+
+    public UpdateDocumentStepExecutor() {
+        this(new QuickJSEvaluator());
+    }
+
+    public UpdateDocumentStepExecutor(QuickJSEvaluator evaluator) {
+        this.evaluator = evaluator;
+    }
 
     @Override
     public Set<String> supportedBlueIds() {
@@ -22,7 +34,18 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
 
     @Override
     public Object execute(StepExecutionArgs args) {
-        Node stepNode = args.stepNode();
+        Node stepNode = QuickJsExpressionUtils.resolveExpressions(
+                args.stepNode(),
+                evaluator,
+                QuickJSStepBindings.create(args),
+                args.context(),
+                new QuickJsExpressionUtils.PointerPredicate() {
+                    @Override
+                    public boolean test(String pointer, Node node) {
+                        return "/changeset".equals(pointer) || pointer.startsWith("/changeset/");
+                    }
+                },
+                null);
         List<Node> changes = readChangeset(stepNode);
         args.context().chargeUpdateDocumentBase(changes.size());
         for (Node change : changes) {

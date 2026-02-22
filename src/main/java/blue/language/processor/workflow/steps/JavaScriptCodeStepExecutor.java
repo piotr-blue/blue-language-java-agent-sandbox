@@ -7,7 +7,6 @@ import blue.language.processor.script.QuickJSEvaluator;
 import blue.language.processor.script.ScriptRuntimeResult;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.processor.workflow.WorkflowStepExecutor;
-import blue.language.utils.NodeToMapListOrValue;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -47,22 +46,12 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
         }
         ScriptRuntimeResult runtimeResult = evaluator.evaluate(
                 code,
-                createBindings(args),
+                QuickJSStepBindings.create(args),
                 ProcessorGasSchedule.DEFAULT_WASM_GAS_LIMIT);
         args.context().chargeWasmGas(runtimeResult.wasmGasUsed());
         Object result = runtimeResult.value();
         applyRuntimeEffects(args, result);
         return result;
-    }
-
-    private Map<String, Object> createBindings(StepExecutionArgs args) {
-        Map<String, Object> bindings = new LinkedHashMap<>();
-        bindings.put("event", NodeToMapListOrValue.get(args.eventNode()));
-        bindings.put("steps", args.stepResults());
-        Node documentSnapshot = args.context().documentAt("/");
-        args.context().chargeDocumentSnapshot("/", documentSnapshot);
-        bindings.put("document", documentSnapshot != null ? NodeToMapListOrValue.get(documentSnapshot) : null);
-        return bindings;
     }
 
     @SuppressWarnings("unchecked")

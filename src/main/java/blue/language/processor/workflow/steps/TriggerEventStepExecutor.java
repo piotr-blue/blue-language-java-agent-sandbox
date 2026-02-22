@@ -1,6 +1,8 @@
 package blue.language.processor.workflow.steps;
 
 import blue.language.model.Node;
+import blue.language.processor.script.QuickJSEvaluator;
+import blue.language.processor.script.QuickJsExpressionUtils;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.processor.workflow.WorkflowStepExecutor;
 
@@ -9,6 +11,16 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class TriggerEventStepExecutor implements WorkflowStepExecutor {
+
+    private final QuickJSEvaluator evaluator;
+
+    public TriggerEventStepExecutor() {
+        this(new QuickJSEvaluator());
+    }
+
+    public TriggerEventStepExecutor(QuickJSEvaluator evaluator) {
+        this.evaluator = evaluator;
+    }
 
     @Override
     public Set<String> supportedBlueIds() {
@@ -20,7 +32,26 @@ public class TriggerEventStepExecutor implements WorkflowStepExecutor {
 
     @Override
     public Object execute(StepExecutionArgs args) {
-        Node stepNode = args.stepNode();
+        Node stepNode = QuickJsExpressionUtils.resolveExpressions(
+                args.stepNode(),
+                evaluator,
+                QuickJSStepBindings.create(args),
+                args.context(),
+                new QuickJsExpressionUtils.PointerPredicate() {
+                    @Override
+                    public boolean test(String pointer, Node node) {
+                        return "/event".equals(pointer) || pointer.startsWith("/event/");
+                    }
+                },
+                new QuickJsExpressionUtils.PointerPredicate() {
+                    @Override
+                    public boolean test(String pointer, Node node) {
+                        if (!pointer.startsWith("/event/")) {
+                            return true;
+                        }
+                        return !isEmbeddedDocumentNode(node);
+                    }
+                });
         if (stepNode == null || stepNode.getProperties() == null) {
             args.context().throwFatal("Trigger Event step payload is invalid");
             return null;
@@ -33,5 +64,11 @@ public class TriggerEventStepExecutor implements WorkflowStepExecutor {
         args.context().chargeTriggerEventBase();
         args.context().emitEvent(eventNode.clone());
         return null;
+    }
+
+    private boolean isEmbeddedDocumentNode(Node node) {
+        return node != null
+                && node.getProperties() != null
+                && node.getProperties().containsKey("contracts");
     }
 }

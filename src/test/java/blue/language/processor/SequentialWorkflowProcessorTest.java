@@ -138,4 +138,75 @@ class SequentialWorkflowProcessorTest {
         assertEquals(new BigInteger("9"), result.document().getProperties().get("jsValue").getValue());
         assertEquals(new BigInteger("1"), result.document().getProperties().get("jsObserved").getValue());
     }
+
+    @Test
+    void updateDocumentStepResolvesExpressionValues() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Update Expression Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: ADD\n" +
+                "            path: /computed\n" +
+                "            val: \"${event.count.value + 2}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-4\n" +
+                "kind: TestEvent\n" +
+                "count: 3\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("5"), result.document().getProperties().get("computed").getValue());
+    }
+
+    @Test
+    void triggerEventStepResolvesEventExpressions() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
+
+        Node document = blue.yamlToNode("name: Trigger Expression Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  triggered:\n" +
+                "    type:\n" +
+                "      blueId: TriggeredEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Trigger Event\n" +
+                "        event:\n" +
+                "          kind: \"${event.kind.value}\"\n" +
+                "  observer:\n" +
+                "    channel: triggered\n" +
+                "    type:\n" +
+                "      blueId: SetPropertyOnEvent\n" +
+                "    expectedKind: TestEvent\n" +
+                "    propertyKey: /triggerResolved\n" +
+                "    propertyValue: 1\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-5").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("1"), result.document().getProperties().get("triggerResolved").getValue());
+    }
 }

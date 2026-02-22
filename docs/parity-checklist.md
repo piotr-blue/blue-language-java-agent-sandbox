@@ -41,7 +41,7 @@ Status legend:
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
 | QuickJS evaluator | `src/util/expression/quickjs-evaluator.ts` | `processor/script/QuickJSEvaluator.java` | IN_PROGRESS |
-| Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | _missing_ | TODO |
+| Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | `processor/script/QuickJsExpressionUtils.java` | IN_PROGRESS |
 | QuickJS config exports | `src/util/expression/quickjs-config.ts` | _missing_ | TODO |
 | Script runtime integration | JS runtime usage in evaluator/steps | `processor/script/*`, `tools/quickjs-sidecar/index.js` | IN_PROGRESS |
 | JavaScript Code step | `src/registry/processors/steps/javascript-code-step-executor.ts` | `processor/workflow/steps/JavaScriptCodeStepExecutor.java` | IN_PROGRESS |
