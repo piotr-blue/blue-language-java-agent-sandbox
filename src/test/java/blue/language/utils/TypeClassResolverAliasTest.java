@@ -5,9 +5,14 @@ import blue.language.model.Node;
 import blue.language.mapping.model.AliasMappedType;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.DocumentAnchorsMarker;
+import blue.language.processor.model.DocumentLinksMarker;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.InitializationMarker;
 import blue.language.processor.model.LifecycleChannel;
+import blue.language.processor.model.MyOSParticipantsOrchestrationMarker;
+import blue.language.processor.model.MyOSSessionInteractionMarker;
+import blue.language.processor.model.MyOSWorkerAgencyMarker;
 import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ProcessingTerminatedMarker;
 import blue.language.processor.model.TriggeredEventChannel;
@@ -85,5 +90,15 @@ class TypeClassResolverAliasTest {
                 resolver.resolveClass(new Node().type(new Node().blueId("Core/Processing Terminated Marker"))));
         assertSame(ChannelEventCheckpoint.class,
                 resolver.resolveClass(new Node().type(new Node().blueId("Core/Channel Event Checkpoint"))));
+        assertSame(DocumentAnchorsMarker.class,
+                resolver.resolveClass(new Node().type(new Node().blueId("MyOS/Document Anchors"))));
+        assertSame(DocumentLinksMarker.class,
+                resolver.resolveClass(new Node().type(new Node().blueId("MyOS/Document Links"))));
+        assertSame(MyOSParticipantsOrchestrationMarker.class,
+                resolver.resolveClass(new Node().type(new Node().blueId("MyOS/MyOS Participants Orchestration"))));
+        assertSame(MyOSSessionInteractionMarker.class,
+                resolver.resolveClass(new Node().type(new Node().blueId("MyOS/MyOS Session Interaction"))));
+        assertSame(MyOSWorkerAgencyMarker.class,
+                resolver.resolveClass(new Node().type(new Node().blueId("MyOS/MyOS Worker Agency"))));
     }
 }

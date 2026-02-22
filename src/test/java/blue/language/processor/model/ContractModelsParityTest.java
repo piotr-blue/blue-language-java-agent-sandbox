@@ -102,4 +102,34 @@ class ContractModelsParityTest {
         assertEquals("data", String.valueOf(event.getProperties().get("payload").getValue()));
         assertEquals(1, checkpoint.getLastEvents().size());
     }
+
+    @Test
+    void convertsMyosMarkerContracts() {
+        Contract anchors = converter.convertWithType(
+                blue.yamlToNode("type:\n  blueId: MyOS/Document Anchors\n"),
+                Contract.class,
+                false);
+        Contract links = converter.convertWithType(
+                blue.yamlToNode("type:\n  blueId: MyOS/Document Links\n"),
+                Contract.class,
+                false);
+        Contract participants = converter.convertWithType(
+                blue.yamlToNode("type:\n  blueId: MyOS/MyOS Participants Orchestration\n"),
+                Contract.class,
+                false);
+        Contract session = converter.convertWithType(
+                blue.yamlToNode("type:\n  blueId: MyOS/MyOS Session Interaction\n"),
+                Contract.class,
+                false);
+        Contract worker = converter.convertWithType(
+                blue.yamlToNode("type:\n  blueId: MyOS/MyOS Worker Agency\n"),
+                Contract.class,
+                false);
+
+        assertTrue(anchors instanceof DocumentAnchorsMarker);
+        assertTrue(links instanceof DocumentLinksMarker);
+        assertTrue(participants instanceof MyOSParticipantsOrchestrationMarker);
+        assertTrue(session instanceof MyOSSessionInteractionMarker);
+        assertTrue(worker instanceof MyOSWorkerAgencyMarker);
+    }
 }
