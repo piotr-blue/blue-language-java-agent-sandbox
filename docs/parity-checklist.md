@@ -1,0 +1,98 @@
+# Document Processor parity checklist
+
+Pinned target: `blue-js` commit `bf9e1cfd200d35801d8237f7080895372c1572c6` (`libs/document-processor`)
+
+Status legend:
+
+- `DONE` — behavior implemented in Java and covered by tests
+- `IN_PROGRESS` — partially aligned, gaps remain
+- `TODO` — not yet implemented
+
+---
+
+## 1) Engine/runtime surface
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| Processor engine orchestration | `src/engine/processor-engine.ts` | `processor/ProcessorEngine.java` | IN_PROGRESS |
+| Scope executor lifecycle | `src/engine/scope-executor.ts` | `processor/ScopeExecutor.java` | IN_PROGRESS |
+| Channel runner + checkpoints | `src/engine/channel-runner.ts` | `processor/ChannelRunner.java` | IN_PROGRESS |
+| Contract loader validation | `src/engine/contract-loader.ts` | `processor/ContractLoader.java` | IN_PROGRESS |
+| Contract bundle semantics | `src/engine/contract-bundle.ts` | `processor/ContractBundle.java` | IN_PROGRESS |
+| Patch engine | `src/runtime/patch-engine.ts` | `processor/PatchEngine.java` | IN_PROGRESS |
+| Runtime state + emissions | `src/runtime/document-processing-runtime.ts` | `processor/DocumentProcessingRuntime.java` | IN_PROGRESS |
+| Termination service semantics | `src/engine/termination-service.ts` | `processor/TerminationService.java` | IN_PROGRESS |
+
+## 2) Default processors and registry
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| Registry lookup by BlueId/type chain | `src/registry/contract-processor-registry.ts` | `processor/ContractProcessorRegistry.java` | TODO |
+| Default processor registration | `src/registry/contract-processor-registry-builder.ts` | `processor/ContractProcessorRegistryBuilder.java` | TODO |
+| Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | _missing_ | TODO |
+| Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | _missing_ | TODO |
+| MyOS timeline channel processor | `src/registry/processors/myos-timeline-channel-processor.ts` | _missing_ | TODO |
+| Sequential workflow handler processor | `src/registry/processors/sequential-workflow-processor.ts` | _missing_ | TODO |
+| Sequential workflow operation processor | `src/registry/processors/sequential-workflow-operation-processor.ts` | _missing_ | TODO |
+| Operation marker processor | `src/registry/processors/operation-marker-processor.ts` | _missing_ | TODO |
+
+## 3) Expression + QuickJS runtime
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| QuickJS evaluator | `src/util/expression/quickjs-evaluator.ts` | _missing_ | TODO |
+| Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | _missing_ | TODO |
+| QuickJS config exports | `src/util/expression/quickjs-config.ts` | _missing_ | TODO |
+| Script runtime integration | JS runtime usage in evaluator/steps | _missing_ | TODO |
+| JavaScript Code step | `src/registry/processors/steps/javascript-code-step-executor.ts` | _missing_ | TODO |
+
+## 4) Workflow step runtime
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| Step runner framework | `src/registry/processors/workflow/step-runner.ts` | _missing_ | TODO |
+| Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | _missing_ | TODO |
+| Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | _missing_ | TODO |
+| Operation matcher helpers | `src/registry/processors/workflow/operation-matcher.ts` | _missing_ | TODO |
+
+## 5) Merge behavior
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| ExpressionPreserver | `src/merge/processors/ExpressionPreserver.ts` | _missing_ | TODO |
+| Default merge pipeline ordering | `src/merge/utils/default.ts` | `Blue#createDefaultNodeProcessor` | TODO |
+
+## 6) Constants, pointers, error/result model
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| Processor constants | `src/constants/processor-contract-constants.ts` | `processor/util/ProcessorContractConstants.java` | IN_PROGRESS |
+| Pointer constants | `src/constants/processor-pointer-constants.ts` | `processor/util/ProcessorPointerConstants.java` | IN_PROGRESS |
+| Pointer utils | `src/util/pointer-utils.ts` | `processor/util/PointerUtils.java` | IN_PROGRESS |
+| Processing result shape | `src/types/document-processing-result.ts` | `processor/DocumentProcessingResult.java` | IN_PROGRESS |
+| Processor error factory model | `src/types/errors.ts` | _missing_ | TODO |
+
+## 7) Gas accounting + canonicalization
+
+| Area | JS reference | Java reference | Status |
+|---|---|---|---|
+| Canonical signature/size helpers | `src/util/node-canonicalizer.ts` | `processor/util/NodeCanonicalizer.java` + `ProcessorEngine#canonicalSignature` | IN_PROGRESS |
+| Gas meter methods | `src/runtime/gas-meter.ts` | `processor/GasMeter.java` | IN_PROGRESS |
+| Gas schedule conversions | `src/runtime/gas-schedule.ts` | _missing_ | TODO |
+
+## 8) Test coverage mapping
+
+| Area | JS tests | Java tests | Status |
+|---|---|---|---|
+| Constants/pointers | `src/constants/__tests__/*`, `src/util/__tests__/pointer-utils.test.ts` | `processor/util/*Test.java` | IN_PROGRESS |
+| Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `EmissionRegistryTest.java` | IN_PROGRESS |
+| Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, etc. | IN_PROGRESS |
+| Registry/timeline/workflow | `src/registry/__tests__/*` | _missing_ | TODO |
+| Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | _missing_ | TODO |
+| Integration parity | `src/__tests__/integration/**/*` | partial processor integration tests | IN_PROGRESS |
+
+---
+
+## Next updates
+
+This checklist is updated after each parity feature group lands, with status transitions and Java test links.
