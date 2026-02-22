@@ -101,6 +101,27 @@ class ContractProcessorRegistryTest {
     }
 
     @Test
+    void lookupMarkerByNodeSupportsProviderDerivedMarkerTypes() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"Derived/Marker".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node().type(new Node().blueId("BaseMarker"));
+                return Collections.singletonList(definition);
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.registerMarker(markerProcessor);
+
+        Node derivedMarkerNode = new Node().type(new Node().blueId("Derived/Marker"));
+
+        assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
+    }
+
+    @Test
     void lookupChannelByNodeSupportsProviderDerivedTimelineTypes() {
         NodeProvider provider = new NodeProvider() {
             @Override
