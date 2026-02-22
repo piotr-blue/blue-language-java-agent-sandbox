@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.ChannelEvaluationContext;
 import blue.language.processor.ChannelProcessor;
 import blue.language.processor.model.MyOSTimelineChannel;
+import blue.language.NodeProvider;
 
 public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimelineChannel> {
 
@@ -25,7 +26,8 @@ public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimeli
         if (!expectedTimelineId.trim().equals(eventTimelineId)) {
             return false;
         }
-        return WorkflowContractSupport.matchesEventFilter(context.event(), contract.getEvent());
+        NodeProvider nodeProvider = context.registry() != null ? context.registry().nodeProvider() : null;
+        return WorkflowContractSupport.matchesEventFilter(context.event(), contract.getEvent(), nodeProvider);
     }
 
     @Override

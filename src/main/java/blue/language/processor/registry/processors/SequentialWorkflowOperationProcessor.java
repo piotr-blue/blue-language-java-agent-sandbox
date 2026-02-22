@@ -1,6 +1,7 @@
 package blue.language.processor.registry.processors;
 
 import blue.language.model.Node;
+import blue.language.NodeProvider;
 import blue.language.processor.ContractBundle;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
@@ -47,7 +48,8 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (requestNode == null) {
             return false;
         }
-        if (!isOperationRequestForContract(contract, eventNode, requestNode)) {
+        NodeProvider nodeProvider = context.nodeProvider();
+        if (!isOperationRequestForContract(contract, eventNode, requestNode, nodeProvider)) {
             return false;
         }
 
@@ -61,7 +63,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (!channelsCompatible(operationChannel, handlerChannel)) {
             return false;
         }
-        if (!isRequestTypeCompatible(requestNode, operationNode)) {
+        if (!isRequestTypeCompatible(requestNode, operationNode, nodeProvider)) {
             return false;
         }
         if (!isPinnedDocumentAllowed(requestNode, context)) {
@@ -119,7 +121,10 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
                 && node.getProperties().containsKey("request");
     }
 
-    private boolean isOperationRequestForContract(SequentialWorkflowOperation contract, Node eventNode, Node requestNode) {
+    private boolean isOperationRequestForContract(SequentialWorkflowOperation contract,
+                                                  Node eventNode,
+                                                  Node requestNode,
+                                                  NodeProvider nodeProvider) {
         String operationKey = normalize(contract.getOperation());
         if (operationKey == null) {
             return false;
@@ -128,7 +133,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (!operationKey.equals(requestOperation)) {
             return false;
         }
-        return WorkflowContractSupport.matchesEventFilter(eventNode, contract.getEvent());
+        return WorkflowContractSupport.matchesEventFilter(eventNode, contract.getEvent(), nodeProvider);
     }
 
     private Node loadOperationNode(SequentialWorkflowOperation contract, ProcessorExecutionContext context) {
@@ -141,25 +146,25 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (operationNode == null) {
             return null;
         }
-        if (!isOperationNode(operationNode)) {
+        if (!isOperationNode(operationNode, context.nodeProvider())) {
             return null;
         }
         return operationNode;
     }
 
-    private boolean isOperationNode(Node node) {
+    private boolean isOperationNode(Node node, NodeProvider nodeProvider) {
         if (node == null) {
             return false;
         }
-        return matchesOperationType(node, "Conversation/Operation")
-                || matchesOperationType(node, "Operation")
-                || matchesOperationType(node, "Conversation/Change Operation")
-                || matchesOperationType(node, "ChangeOperation");
+        return matchesOperationType(node, "Conversation/Operation", nodeProvider)
+                || matchesOperationType(node, "Operation", nodeProvider)
+                || matchesOperationType(node, "Conversation/Change Operation", nodeProvider)
+                || matchesOperationType(node, "ChangeOperation", nodeProvider);
     }
 
-    private boolean matchesOperationType(Node node, String expectedBlueId) {
+    private boolean matchesOperationType(Node node, String expectedBlueId, NodeProvider nodeProvider) {
         Node requirement = new Node().type(new Node().blueId(expectedBlueId));
-        return WorkflowContractSupport.matchesTypeRequirement(node, requirement);
+        return WorkflowContractSupport.matchesTypeRequirement(node, requirement, nodeProvider);
     }
 
     private String extractOperationChannel(Node operationNode) {
@@ -172,7 +177,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
                 && !operationChannel.equals(handlerChannel));
     }
 
-    private boolean isRequestTypeCompatible(Node requestNode, Node operationNode) {
+    private boolean isRequestTypeCompatible(Node requestNode, Node operationNode, NodeProvider nodeProvider) {
         if (requestNode.getProperties() == null || operationNode.getProperties() == null) {
             return false;
         }
@@ -181,7 +186,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (requestPayload == null || requiredType == null) {
             return false;
         }
-        return WorkflowContractSupport.matchesTypeRequirement(requestPayload, requiredType);
+        return WorkflowContractSupport.matchesTypeRequirement(requestPayload, requiredType, nodeProvider);
     }
 
     private boolean isPinnedDocumentAllowed(Node requestNode, ProcessorExecutionContext context) {

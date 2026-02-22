@@ -58,6 +58,10 @@ public class ContractProcessorRegistry {
         return this;
     }
 
+    public NodeProvider nodeProvider() {
+        return nodeProvider;
+    }
+
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
         Set<String> blueIds = registerBlueIds(processor.contractType(), processor);

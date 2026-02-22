@@ -27,7 +27,7 @@ public class SequentialWorkflowHandlerProcessor implements HandlerProcessor<Sequ
 
     @Override
     public boolean matches(SequentialWorkflow contract, ProcessorExecutionContext context) {
-        return WorkflowContractSupport.matchesEventFilter(context.event(), contract.getEvent());
+        return WorkflowContractSupport.matchesEventFilter(context.event(), contract.getEvent(), context.nodeProvider());
     }
 
     @Override

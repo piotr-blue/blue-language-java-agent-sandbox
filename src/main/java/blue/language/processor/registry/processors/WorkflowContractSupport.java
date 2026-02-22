@@ -1,11 +1,14 @@
 package blue.language.processor.registry.processors;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.utils.Properties;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 final class WorkflowContractSupport {
@@ -14,20 +17,28 @@ final class WorkflowContractSupport {
     }
 
     static boolean matchesEventFilter(Node event, Node filter) {
+        return matchesEventFilter(event, filter, null);
+    }
+
+    static boolean matchesEventFilter(Node event, Node filter, NodeProvider nodeProvider) {
         if (filter == null) {
             return true;
         }
         if (event == null) {
             return false;
         }
-        return matchesNode(event, filter);
+        return matchesNode(event, filter, nodeProvider);
     }
 
     static boolean matchesTypeRequirement(Node candidate, Node requirement) {
+        return matchesTypeRequirement(candidate, requirement, null);
+    }
+
+    static boolean matchesTypeRequirement(Node candidate, Node requirement, NodeProvider nodeProvider) {
         if (candidate == null || requirement == null) {
             return false;
         }
-        if (!matchesType(candidate, requirement)) {
+        if (!matchesType(candidate, requirement, nodeProvider)) {
             return false;
         }
         if (requirement.getValue() != null) {
@@ -43,7 +54,7 @@ final class WorkflowContractSupport {
             }
             for (java.util.Map.Entry<String, Node> entry : entries.getProperties().entrySet()) {
                 Node candidateEntry = candidate.getProperties().get(entry.getKey());
-                if (!matchesTypeRequirement(candidateEntry, entry.getValue())) {
+                if (!matchesTypeRequirement(candidateEntry, entry.getValue(), nodeProvider)) {
                     return false;
                 }
             }
@@ -56,7 +67,7 @@ final class WorkflowContractSupport {
                 return false;
             }
             for (Node item : candidate.getItems()) {
-                if (!matchesTypeRequirement(item, itemType)) {
+                if (!matchesTypeRequirement(item, itemType, nodeProvider)) {
                     return false;
                 }
             }
@@ -66,7 +77,7 @@ final class WorkflowContractSupport {
         return true;
     }
 
-    private static boolean matchesNode(Node candidate, Node pattern) {
+    private static boolean matchesNode(Node candidate, Node pattern, NodeProvider nodeProvider) {
         if (pattern == null) {
             return true;
         }
@@ -74,7 +85,7 @@ final class WorkflowContractSupport {
             return false;
         }
 
-        if (!matchesType(candidate, pattern)) {
+        if (!matchesType(candidate, pattern, nodeProvider)) {
             return false;
         }
         if (pattern.getValue() != null) {
@@ -103,7 +114,7 @@ final class WorkflowContractSupport {
                 if (!candidate.getProperties().containsKey(entry.getKey())) {
                     return false;
                 }
-                if (!matchesNode(candidate.getProperties().get(entry.getKey()), entry.getValue())) {
+                if (!matchesNode(candidate.getProperties().get(entry.getKey()), entry.getValue(), nodeProvider)) {
                     return false;
                 }
             }
@@ -118,7 +129,7 @@ final class WorkflowContractSupport {
                 if (patternItem == null) {
                     continue;
                 }
-                if (!matchesNode(candidate.getItems().get(i), patternItem)) {
+                if (!matchesNode(candidate.getItems().get(i), patternItem, nodeProvider)) {
                     return false;
                 }
             }
@@ -155,7 +166,7 @@ final class WorkflowContractSupport {
         return false;
     }
 
-    private static boolean matchesType(Node candidate, Node pattern) {
+    private static boolean matchesType(Node candidate, Node pattern, NodeProvider nodeProvider) {
         Node expectedType = pattern.getType();
         if (expectedType == null) {
             return true;
@@ -170,7 +181,11 @@ final class WorkflowContractSupport {
             if (expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId)) {
                 return true;
             }
-            if (hasTypeInChain(candidate.getType(), expectedBlueId, new LinkedHashSet<String>())) {
+            if (hasTypeInChain(candidate.getType(),
+                    expectedBlueId,
+                    nodeProvider,
+                    new LinkedHashSet<String>(),
+                    new LinkedHashSet<String>())) {
                 return true;
             }
         }
@@ -182,21 +197,76 @@ final class WorkflowContractSupport {
         return expectedBlueId.equals(inferredCandidateType) || equivalentCoreType(expectedBlueId, inferredCandidateType);
     }
 
-    private static boolean hasTypeInChain(Node candidateType, String expectedBlueId, Set<String> visitedBlueIds) {
+    private static boolean hasTypeInChain(Node candidateType,
+                                          String expectedBlueId,
+                                          NodeProvider nodeProvider,
+                                          Set<String> visitedBlueIds,
+                                          Set<String> visitedProviderBlueIds) {
         if (candidateType == null || expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
             return false;
         }
-        String candidateBlueId = candidateType.getBlueId();
-        if (candidateBlueId != null && !candidateBlueId.trim().isEmpty()) {
-            String normalized = candidateBlueId.trim();
+        List<String> candidateBlueIds = extractBlueIds(candidateType);
+        for (String normalized : candidateBlueIds) {
             if (expectedBlueId.equals(normalized) || equivalentCoreType(expectedBlueId, normalized)) {
                 return true;
             }
             if (!visitedBlueIds.add(normalized)) {
-                return false;
+                continue;
+            }
+            if (nodeProvider != null && visitedProviderBlueIds.add(normalized)) {
+                Node fetchedTypeDefinition = fetchTypeDefinition(nodeProvider, normalized);
+                if (fetchedTypeDefinition != null
+                        && hasTypeInChain(fetchedTypeDefinition.getType(),
+                        expectedBlueId,
+                        nodeProvider,
+                        visitedBlueIds,
+                        visitedProviderBlueIds)) {
+                    return true;
+                }
             }
         }
-        return hasTypeInChain(candidateType.getType(), expectedBlueId, visitedBlueIds);
+        return hasTypeInChain(candidateType.getType(),
+                expectedBlueId,
+                nodeProvider,
+                visitedBlueIds,
+                visitedProviderBlueIds);
+    }
+
+    private static Node fetchTypeDefinition(NodeProvider nodeProvider, String blueId) {
+        if (nodeProvider == null || blueId == null || blueId.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return nodeProvider.fetchFirstByBlueId(blueId);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static List<String> extractBlueIds(Node node) {
+        List<String> blueIds = new ArrayList<>();
+        if (node == null) {
+            return blueIds;
+        }
+        addBlueId(blueIds, node.getBlueId());
+        if (node.getProperties() != null) {
+            Node blueIdNode = node.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+            }
+        }
+        return blueIds;
+    }
+
+    private static void addBlueId(List<String> blueIds, String candidate) {
+        if (candidate == null) {
+            return;
+        }
+        String normalized = candidate.trim();
+        if (normalized.isEmpty() || blueIds.contains(normalized)) {
+            return;
+        }
+        blueIds.add(normalized);
     }
 
     private static boolean equivalentCoreType(String left, String right) {

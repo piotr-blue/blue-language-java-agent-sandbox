@@ -310,6 +310,10 @@ final class ProcessorEngine {
             return runtime;
         }
 
+        DocumentProcessor owner() {
+            return owner;
+        }
+
         boolean isScopeInactive(String scopePath) {
             String normalized = PointerUtils.normalizeScope(scopePath);
             return cutOffScopes.contains(normalized)

@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.model.JsonPatch;
@@ -121,6 +122,14 @@ public final class ProcessorExecutionContext {
 
     public void terminateFatally(String reason) {
         execution.enterFatalTermination(scopePath, bundle, reason);
+    }
+
+    public NodeProvider nodeProvider() {
+        DocumentProcessor owner = execution.owner();
+        if (owner == null || owner.registry() == null) {
+            return null;
+        }
+        return owner.registry().nodeProvider();
     }
 
     private DocumentProcessingRuntime runtime() {
