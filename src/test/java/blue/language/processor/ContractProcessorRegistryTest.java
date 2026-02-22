@@ -2,12 +2,14 @@ package blue.language.processor;
 
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.MyOSTimelineChannel;
 import blue.language.processor.registry.processors.TimelineChannelProcessor;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -58,6 +60,18 @@ class ContractProcessorRegistryTest {
         MyOSTimelineChannel myosChannel = new MyOSTimelineChannel();
         assertSame(timelineProcessor, registry.lookupChannel(MyOSTimelineChannel.class).orElse(null));
         assertSame(timelineProcessor, registry.lookupChannel(myosChannel).orElse(null));
+    }
+
+    @Test
+    void registerRejectsHandlersWhoseContractTypeLacksTypeBlueId() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        assertThrows(IllegalArgumentException.class, () -> registry.registerHandler(new UnannotatedHandlerProcessor()));
+    }
+
+    @Test
+    void registerRejectsUnsupportedProcessorKinds() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        assertThrows(IllegalArgumentException.class, () -> registry.register(new PlainContractProcessor()));
     }
 
     @TypeBlueId({"BaseHandler", "Core/Base Handler"})
@@ -112,6 +126,32 @@ class ContractProcessorRegistryTest {
         @Override
         public Class<BaseMarker> contractType() {
             return BaseMarker.class;
+        }
+    }
+
+    static class UnannotatedHandler extends HandlerContract {
+    }
+
+    static final class UnannotatedHandlerProcessor implements HandlerProcessor<UnannotatedHandler> {
+        @Override
+        public Class<UnannotatedHandler> contractType() {
+            return UnannotatedHandler.class;
+        }
+
+        @Override
+        public void execute(UnannotatedHandler contract, ProcessorExecutionContext context) {
+            // no-op
+        }
+    }
+
+    @TypeBlueId("PlainContract")
+    static class PlainContract extends Contract {
+    }
+
+    static final class PlainContractProcessor implements ContractProcessor<PlainContract> {
+        @Override
+        public Class<PlainContract> contractType() {
+            return PlainContract.class;
         }
     }
 }
