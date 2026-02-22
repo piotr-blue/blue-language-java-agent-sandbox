@@ -100,4 +100,42 @@ class SequentialWorkflowProcessorTest {
 
         assertEquals(new BigInteger("1"), result.document().getProperties().get("operationRan").getValue());
     }
+
+    @Test
+    void javaScriptCodeStepCanApplyChangesetAndEmitEvents() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Step Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  triggered:\n" +
+                "    type:\n" +
+                "      blueId: TriggeredEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/jsValue', val: 9 }], emit: { kind: 'js' } })\"\n" +
+                "  observeJsEmission:\n" +
+                "    channel: triggered\n" +
+                "    type:\n" +
+                "      blueId: SetPropertyOnEvent\n" +
+                "    expectedKind: js\n" +
+                "    propertyKey: /jsObserved\n" +
+                "    propertyValue: 1\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-3").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("9"), result.document().getProperties().get("jsValue").getValue());
+        assertEquals(new BigInteger("1"), result.document().getProperties().get("jsObserved").getValue());
+    }
 }

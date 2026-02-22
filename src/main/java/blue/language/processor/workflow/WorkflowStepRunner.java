@@ -3,6 +3,7 @@ package blue.language.processor.workflow;
 import blue.language.model.Node;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.workflow.steps.JavaScriptCodeStepExecutor;
 import blue.language.processor.workflow.steps.TriggerEventStepExecutor;
 import blue.language.processor.workflow.steps.UpdateDocumentStepExecutor;
 
@@ -34,6 +35,7 @@ public final class WorkflowStepRunner {
     public static WorkflowStepRunner defaultRunner() {
         List<WorkflowStepExecutor> defaults = new ArrayList<>();
         defaults.add(new TriggerEventStepExecutor());
+        defaults.add(new JavaScriptCodeStepExecutor());
         defaults.add(new UpdateDocumentStepExecutor());
         return new WorkflowStepRunner(defaults);
     }

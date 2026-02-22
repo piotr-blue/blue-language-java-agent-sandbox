@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.model.JsonPatch;
 
+import java.math.BigInteger;
 import java.util.Objects;
 
 /**
@@ -85,6 +86,13 @@ public final class ProcessorExecutionContext {
             return;
         }
         runtime().chargeDocumentSnapshot(absolutePointer, snapshot);
+    }
+
+    public void chargeWasmGas(BigInteger wasmFuel) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeWasmGas(wasmFuel);
     }
 
     public void throwFatal(String reason) {
