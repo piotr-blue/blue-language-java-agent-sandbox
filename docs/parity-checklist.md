@@ -59,8 +59,8 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| ExpressionPreserver | `src/merge/processors/ExpressionPreserver.ts` | `merge/processor/ExpressionPreserver.java` | IN_PROGRESS |
-| Default merge pipeline ordering | `src/merge/utils/default.ts` | `Blue#createDefaultNodeProcessor` | IN_PROGRESS |
+| ExpressionPreserver | `src/merge/processors/ExpressionPreserver.ts` | `merge/processor/ExpressionPreserver.java` | DONE |
+| Default merge pipeline ordering | `src/merge/utils/default.ts` | `Blue#createDefaultNodeProcessor` | DONE |
 
 ## 6) Constants, pointers, error/result model
 
@@ -101,6 +101,7 @@ Status legend:
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
 Current in-flight work:
 - JS integration directory parity migration is complete with direct Java integration tests for every `src/__tests__/integration/**/*` scenario in the pinned target commit.
+- Merge parity baseline is complete: `ExpressionPreserver` is wired into the default merge pipeline before type assignment, and Java tests cover expression preservation plus regular-value passthrough behavior.
 - Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns (brace expansion, character classes, and extglob `@(...)`, `?(...)`, `+(...)`, `*(...)`, `!(...)` are supported, but advanced nested/edge picomatch semantics remain partial).
 - Registry/type-chain lookup now supports inline derived type-chain fallback and provider-backed repository type-chain fallback during node→class resolution (workflow, operation handler, and operation marker contracts), but broader semantic subtype matching outside class-resolution paths remains partial.
 - QuickJS sidecar failures now preserve structured error names/messages (and stack availability marker); evaluator now enforces supported binding-key validation and has dedicated migration coverage (`QuickJSEvaluatorTest` + `QuickJSEvaluatorGasTest`) including out-of-gas timeout classification for tiny wasm budgets. Sidecar now reports deterministic non-zero gas-used estimates with bounded remaining fuel, but exact QuickJS wasm-fuel accounting parity remains partial.
