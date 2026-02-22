@@ -331,6 +331,18 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationDefaultsAllowNewerVersionWhenFlagMissing() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        Node event = operationRequestEventWithOptionalAllowNewer(
+                blue, "increment", 5, null, "stale-document-id", "owner-42");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("5"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationFallsBackToComputedDocumentIdWhenMarkerIdMissing() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
@@ -1430,10 +1442,22 @@ class SequentialWorkflowProcessorTest {
                                        boolean allowNewerVersion,
                                        String documentBlueId,
                                        String timelineId) {
+        return operationRequestEventWithOptionalAllowNewer(
+                blue, operation, request, Boolean.valueOf(allowNewerVersion), documentBlueId, timelineId);
+    }
+
+    private Node operationRequestEventWithOptionalAllowNewer(Blue blue,
+                                                             String operation,
+                                                             Object request,
+                                                             Boolean allowNewerVersion,
+                                                             String documentBlueId,
+                                                             String timelineId) {
         Node message = new Node().type(new Node().blueId("Conversation/Operation Request"))
                 .properties("operation", new Node().value(operation))
-                .properties("request", requestNode(request))
-                .properties("allowNewerVersion", new Node().value(allowNewerVersion));
+                .properties("request", requestNode(request));
+        if (allowNewerVersion != null) {
+            message.properties("allowNewerVersion", new Node().value(allowNewerVersion.booleanValue()));
+        }
         if (documentBlueId != null) {
             message.properties("document", new Node().properties("blueId", new Node().value(documentBlueId)));
         }
