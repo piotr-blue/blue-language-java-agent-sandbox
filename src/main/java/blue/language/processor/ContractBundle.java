@@ -7,6 +7,7 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
+import blue.language.model.TypeBlueId;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -114,6 +115,24 @@ public final class ContractBundle {
         for (Map.Entry<String, ChannelContract> entry : channels.entrySet()) {
             ChannelContract contract = entry.getValue();
             if (type.isInstance(contract)) {
+                result.add(new ChannelBinding(entry.getKey(), contract));
+            }
+        }
+        result.sort(Comparator
+                .comparingInt(ChannelBinding::order)
+                .thenComparing(ChannelBinding::key));
+        return result;
+    }
+
+    public List<ChannelBinding> channelsOfType(String blueId) {
+        if (blueId == null || blueId.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        String normalized = blueId.trim();
+        List<ChannelBinding> result = new ArrayList<>();
+        for (Map.Entry<String, ChannelContract> entry : channels.entrySet()) {
+            ChannelContract contract = entry.getValue();
+            if (channelMatchesBlueId(contract, normalized)) {
                 result.add(new ChannelBinding(entry.getKey(), contract));
             }
         }
@@ -275,5 +294,25 @@ public final class ContractBundle {
             }
             return normalized;
         }
+    }
+
+    private static boolean channelMatchesBlueId(ChannelContract contract, String blueId) {
+        if (contract == null || blueId == null) {
+            return false;
+        }
+        TypeBlueId annotation = contract.getClass().getAnnotation(TypeBlueId.class);
+        if (annotation == null) {
+            return false;
+        }
+        String[] values = annotation.value();
+        if (values != null) {
+            for (String value : values) {
+                if (blueId.equals(value != null ? value.trim() : null)) {
+                    return true;
+                }
+            }
+        }
+        String defaultValue = annotation.defaultValue();
+        return blueId.equals(defaultValue != null ? defaultValue.trim() : null);
     }
 }
