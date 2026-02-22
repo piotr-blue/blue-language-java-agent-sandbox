@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -214,6 +215,72 @@ class QuickJSEvaluatorTest {
             Map<String, Object> emitted = (Map<String, Object>) emissions.get(0);
             assertEquals("debug", String.valueOf(emitted.get("level")));
             assertEquals("42", String.valueOf(emitted.get("value")));
+        }
+    }
+
+    @Test
+    void supportsFunctionDocumentBindingForPlainAndCanonicalReads() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("document", new QuickJSEvaluator.DocumentBinding() {
+                @Override
+                public Object get(String pointer) {
+                    if ("/unit".equals(pointer)) {
+                        return "points";
+                    }
+                    return null;
+                }
+
+                @Override
+                public Object getCanonical(String pointer) {
+                    if ("/unit".equals(pointer)) {
+                        return new LinkedHashMap<String, Object>() {{
+                            put("value", "points");
+                        }};
+                    }
+                    return null;
+                }
+            });
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ plain: document('/unit'), getAlias: document.get('/unit'), canonical: document.canonical('/unit').value, canonicalAlias: document.getCanonical('/unit').value })",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) result.value();
+            assertEquals("points", String.valueOf(payload.get("plain")));
+            assertEquals("points", String.valueOf(payload.get("getAlias")));
+            assertEquals("points", String.valueOf(payload.get("canonical")));
+            assertEquals("points", String.valueOf(payload.get("canonicalAlias")));
+        }
+    }
+
+    @Test
+    void supportsSimpleFunctionDocumentBindingForLiteralPointers() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("document", new Function<Object, Object>() {
+                @Override
+                public Object apply(Object pointer) {
+                    if ("/total".equals(String.valueOf(pointer))) {
+                        return 41;
+                    }
+                    return null;
+                }
+            });
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "document('/total') + 1",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertEquals("42", String.valueOf(result.value()));
         }
     }
 

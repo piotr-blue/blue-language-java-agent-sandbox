@@ -109,6 +109,14 @@ Emit callback behavior:
 - when no host emit callback is supplied, sidecar `emit(...)` values are returned via the existing `result.events[]` envelope used by workflow steps.
 - when a host emit callback is supplied to `QuickJSEvaluator` (direct evaluator usage), emitted values are forwarded to the callback and the evaluator returns the plain script result value (JS parity behavior).
 
+Document callback behavior (direct evaluator usage):
+
+- `QuickJSEvaluator` accepts:
+  - `document` as `Function<Object, Object>` (simple callback), or
+  - `QuickJSEvaluator.DocumentBinding` (simple + canonical callbacks).
+- for literal pointer calls in script code (`document('/...')`, `document.get('/...')`, `document.canonical('/...')`, `document.getCanonical('/...')`), evaluator materializes pointer snapshots from callback reads and feeds them into prelude document helpers.
+- existing workflow-step path (`QuickJSStepBindings` with `__documentDataSimple` / `__documentDataCanonical`) remains the default and is unchanged.
+
 Document snapshots are charged via `chargeDocumentSnapshot`.
 WASM usage is charged via `chargeWasmGas`.
 
