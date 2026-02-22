@@ -11,6 +11,7 @@ import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.StaleBlockingTestEventChannelProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.SetProperty;
 import java.math.BigInteger;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Verifies checkpoint behaviour for the {@link ChannelRunner} in isolation.
@@ -267,5 +269,62 @@ final class ChannelRunnerTest {
         Node counterNode = execution.runtime().document().getProperties().get("counter");
         assertNotNull(counterNode);
         assertEquals(BigInteger.ONE, counterNode.getValue());
+    }
+
+    @Test
+    void entersFatalTerminationWhenHandlerThrowsRuntimeException() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new ThrowingSetPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  badHandler:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /counter\n" +
+                "    propertyValue: 1\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        assertThrows(RunTerminationException.class,
+                () -> runner.runExternalChannel(
+                        "/",
+                        bundle,
+                        channelBinding,
+                        blue.objectToNode(new TestEvent().eventId("evt-fatal").kind("any"))));
+
+        Node terminated = execution.runtime().document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        assertNull(checkpoint.lastEvent(channelBinding.key()));
+    }
+
+    private static final class ThrowingSetPropertyContractProcessor implements HandlerProcessor<SetProperty> {
+
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public void execute(SetProperty contract, ProcessorExecutionContext context) {
+            throw new RuntimeException("boom from handler");
+        }
     }
 }
