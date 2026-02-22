@@ -43,6 +43,7 @@ class ParityFixturesTest {
         String eventYaml = stringValue(fixture.get("event"), null);
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
+        List<String> expectedPresentPaths = listOfStrings(expected.get("presentPaths"));
         List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
         List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
@@ -80,6 +81,10 @@ class ParityFixturesTest {
             assertEquals(String.valueOf(entry.getValue()),
                     String.valueOf(actualNode.getValue()),
                     fixtureName + " value mismatch at " + pointer);
+        }
+        for (String pointer : expectedPresentPaths) {
+            Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
+            assertNotNull(actualNode, fixtureName + " expected present node missing at " + pointer);
         }
         for (String pointer : expectedNotNullPaths) {
             Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
