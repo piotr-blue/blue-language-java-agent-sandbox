@@ -108,6 +108,10 @@ Current in-flight work:
 - QuickJS sidecar failures now preserve structured error names/messages (and stack availability marker); evaluator now enforces supported binding-key validation plus host-handler binding shape validation for `document`/`emit`, with dedicated migration coverage (`QuickJSEvaluatorTest` + `QuickJSEvaluatorGasTest`) including out-of-gas timeout classification for tiny wasm budgets. Sidecar now reports deterministic non-zero gas-used estimates with bounded remaining fuel, but exact QuickJS wasm-fuel accounting parity remains partial.
 - `QuickJSEvaluator` canonical helper parity now includes deep/shallow `canon.unwrap(...)` behavior for wrapped canonical objects/arrays (`value`/`items`) with direct migration assertions in `QuickJSEvaluatorTest#canonUnwrapSupportsDeepAndShallowModes`.
 - JavaScript step parity now also verifies deep/shallow `canon.unwrap(...)` usage through workflow execution bindings (`SequentialWorkflowProcessorTest#javaScriptCodeStepCanonUnwrapSupportsDeepAndShallowModes`).
+- JavaScript step parity coverage now also includes:
+  - special document segment reads for `name`/`description`/`value`/`blueId` via both plain and canonical document helpers
+  - previous-step result access from `steps.<name>.*`
+  (`SequentialWorkflowProcessorTest`).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - QuickJS fuel calibration migration now has dedicated deterministic baseline coverage (`QuickJsFuelCalibrationTest`) for representative script complexity trends and repeated-run stability.

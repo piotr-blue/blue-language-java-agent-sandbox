@@ -829,6 +829,78 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepSupportsSpecialDocumentSegments() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Special Document Segments Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/nameVal', val: document('/prop/name') }, { op: 'ADD', path: '/descriptionVal', val: document('/prop/description') }, { op: 'ADD', path: '/valueVal', val: document('/prop/value') }, { op: 'ADD', path: '/blueIdVal', val: document('/prop/blueId') }, { op: 'ADD', path: '/canonicalNameVal', val: document.canonical('/prop/name') }, { op: 'ADD', path: '/canonicalDescriptionVal', val: document.canonical('/prop/description') }, { op: 'ADD', path: '/canonicalValueVal', val: document.canonical('/prop/value') }, { op: 'ADD', path: '/canonicalBlueIdVal', val: document.canonical('/prop/blueId') }] })\"\n");
+        document.properties("prop", new Node()
+                .name("Prop A")
+                .description("Desc")
+                .type(new Node().name("TypeX"))
+                .value(7));
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-special-segments").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node resultDocument = result.document();
+        assertEquals("Prop A", resultDocument.getProperties().get("nameVal").getValue());
+        assertEquals("Desc", resultDocument.getProperties().get("descriptionVal").getValue());
+        assertEquals(new BigInteger("7"), resultDocument.getProperties().get("valueVal").getValue());
+        assertEquals("Prop A", resultDocument.getProperties().get("canonicalNameVal").getValue());
+        assertEquals("Desc", resultDocument.getProperties().get("canonicalDescriptionVal").getValue());
+        assertEquals(new BigInteger("7"), resultDocument.getProperties().get("canonicalValueVal").getValue());
+
+        Object blueId = resultDocument.getProperties().get("blueIdVal").getValue();
+        assertNotNull(blueId);
+        assertEquals(blueId, resultDocument.getProperties().get("canonicalBlueIdVal").getValue());
+    }
+
+    @Test
+    void javaScriptCodeStepCanReadPreviousStepResults() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Previous Step Results Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - name: Compute\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ value: 12 })\"\n" +
+                "      - name: Finalize\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/total', val: steps.Compute.value + 8 }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-steps").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("20"), result.document().getProperties().get("total").getValue());
+    }
+
+    @Test
     void updateDocumentStepResolvesExpressionValues() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());

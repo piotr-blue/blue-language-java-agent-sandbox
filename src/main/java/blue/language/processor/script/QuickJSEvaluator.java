@@ -129,6 +129,9 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("const segment = idx >= 0 ? pointer.substring(idx + 1) : pointer;");
         prelude.append("return RAW_VALUE_SEGMENTS.has(segment);");
         prelude.append("};");
+        prelude.append("const __isTypeMetadataPointer = function(pointer){");
+        prelude.append("return pointer === '/type' || pointer.indexOf('/type/') >= 0;");
+        prelude.append("};");
         prelude.append("const __readInternal = function(source, pointer, unwrapScalar){");
         prelude.append("if (source === undefined) return undefined;");
         prelude.append("const normalized = __normalize(pointer);");
@@ -147,6 +150,10 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("if (source === __simpleSource && __isRawValuePointer(normalized)) {");
         prelude.append("const canonicalValue = __readInternal(__canonicalSource, pointer, false);");
         prelude.append("if (canonicalValue !== undefined) return __unwrapPotentialNode(canonicalValue);");
+        prelude.append("}");
+        prelude.append("if (source === __simpleSource && __isTypeMetadataPointer(normalized)) {");
+        prelude.append("const canonicalTypeValue = __readInternal(__canonicalSource, pointer, false);");
+        prelude.append("if (canonicalTypeValue !== undefined) return __unwrapPotentialNode(canonicalTypeValue);");
         prelude.append("}");
         prelude.append("return undefined;");
         prelude.append("}");
