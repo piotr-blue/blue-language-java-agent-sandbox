@@ -46,14 +46,43 @@ final class QuickJSStepBindings {
             contractSnapshot = args.context().documentAt(contractPointer);
         }
         if (contractSnapshot != null) {
-            bindings.put("currentContract", NodeToMapListOrValue.get(contractSnapshot, Strategy.SIMPLE));
-            bindings.put("currentContractCanonical", NodeToMapListOrValue.get(contractSnapshot, Strategy.OFFICIAL));
+            Object currentContract = NodeToMapListOrValue.get(contractSnapshot, Strategy.SIMPLE);
+            Object currentContractCanonical = NodeToMapListOrValue.get(contractSnapshot, Strategy.OFFICIAL);
+            ensureDerivedChannelPresent(currentContract, currentContractCanonical, args.workflow());
+            bindings.put("currentContract", currentContract);
+            bindings.put("currentContractCanonical", currentContractCanonical);
         } else {
             Map<?, ?> currentContract = UncheckedObjectMapper.JSON_MAPPER.convertValue(args.workflow(), Map.class);
             bindings.put("currentContract", currentContract);
             bindings.put("currentContractCanonical", currentContract);
         }
         return bindings;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void ensureDerivedChannelPresent(Object currentContract,
+                                                    Object currentContractCanonical,
+                                                    blue.language.processor.model.HandlerContract workflow) {
+        if (workflow == null || workflow.getChannel() == null || workflow.getChannel().trim().isEmpty()) {
+            return;
+        }
+        String derivedChannel = workflow.getChannel().trim();
+        if (currentContract instanceof Map) {
+            Map<String, Object> simpleMap = (Map<String, Object>) currentContract;
+            Object currentValue = simpleMap.get("channel");
+            if (currentValue == null || String.valueOf(currentValue).trim().isEmpty()) {
+                simpleMap.put("channel", derivedChannel);
+            }
+        }
+        if (currentContractCanonical instanceof Map) {
+            Map<String, Object> canonicalMap = (Map<String, Object>) currentContractCanonical;
+            Object currentValue = canonicalMap.get("channel");
+            if (currentValue == null) {
+                Map<String, Object> wrapped = new LinkedHashMap<>();
+                wrapped.put("value", derivedChannel);
+                canonicalMap.put("channel", wrapped);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

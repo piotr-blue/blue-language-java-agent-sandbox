@@ -159,6 +159,26 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationExposesDerivedChannelInCurrentContractBindings() {
+        Blue blue = new Blue();
+        Node document = operationWorkflowDocumentAdvanced(
+                null,
+                "ownerChannel",
+                "Conversation/Sequential Workflow Operation",
+                "Conversation/Operation",
+                "type: Integer",
+                null,
+                "${currentContract.channel}");
+
+        Node initialized = blue.initializeDocument(document).document();
+        String documentBlueId = storedDocumentBlueId(initialized);
+        Node event = operationRequestEvent(blue, "increment", 1, false, documentBlueId, "owner-42");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("ownerChannel", String.valueOf(result.document().getProperties().get("counter").getValue()));
+    }
+
+    @Test
     void sequentialWorkflowOperationSupportsInlineDerivedHandlerTypeBlueId() {
         Blue blue = new Blue();
         Node document = blue.yamlToNode("name: Derived Operation Workflow Doc\n" +
