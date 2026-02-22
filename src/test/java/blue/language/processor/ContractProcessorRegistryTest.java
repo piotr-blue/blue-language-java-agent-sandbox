@@ -4,6 +4,8 @@ import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.model.MyOSTimelineChannel;
+import blue.language.processor.registry.processors.TimelineChannelProcessor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -45,6 +47,17 @@ class ContractProcessorRegistryTest {
         assertSame(markerProcessor, registry.lookupMarker(DerivedMarker.class).orElse(null));
         assertSame(markerProcessor, registry.lookupMarker("BaseMarker").orElse(null));
         assertTrue(registry.processors().containsKey("BaseChannel"));
+    }
+
+    @Test
+    void lookupChannelFallsBackToTimelineProcessorForMyOSTypeHierarchy() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        TimelineChannelProcessor timelineProcessor = new TimelineChannelProcessor();
+        registry.registerChannel(timelineProcessor);
+
+        MyOSTimelineChannel myosChannel = new MyOSTimelineChannel();
+        assertSame(timelineProcessor, registry.lookupChannel(MyOSTimelineChannel.class).orElse(null));
+        assertSame(timelineProcessor, registry.lookupChannel(myosChannel).orElse(null));
     }
 
     @TypeBlueId({"BaseHandler", "Core/Base Handler"})
