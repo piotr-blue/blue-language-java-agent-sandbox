@@ -65,7 +65,7 @@ public final class WorkflowStepRunner {
             String stepBlueId = primaryTypeBlueId(stepNode.getType());
             WorkflowStepExecutor executor = resolveExecutor(stepNode, context);
             if (executor == null) {
-                context.throwFatal("Unsupported workflow step type \"" + stepBlueId + "\"");
+                context.throwFatal("Unsupported workflow step type \"" + resolveUnsupportedStepTypeName(stepNode, stepBlueId) + "\"");
                 return results;
             }
             Object value = executor.execute(new StepExecutionArgs(
@@ -164,6 +164,16 @@ public final class WorkflowStepRunner {
             return "<unknown>";
         }
         return blueIds.get(0);
+    }
+
+    private String resolveUnsupportedStepTypeName(Node stepNode, String fallbackBlueId) {
+        if (stepNode != null && stepNode.getType() != null && stepNode.getType().getName() != null) {
+            String name = stepNode.getType().getName().trim();
+            if (!name.isEmpty()) {
+                return name;
+            }
+        }
+        return fallbackBlueId;
     }
 
     private String resolveResultKey(Node stepNode, int index) {

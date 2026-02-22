@@ -1170,6 +1170,38 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void unsupportedWorkflowStepTypeUsesTypeNameInFatalReason() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Unsupported Step Type Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Custom/Unknown Step\n" +
+                "          name: Friendly Unknown Step\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-unsupported-step-type").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue())
+                .contains("Friendly Unknown Step"));
+    }
+
+    @Test
     void triggerEventStepResolvesEventExpressions() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
