@@ -11,6 +11,42 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class GasMeterParityTest {
 
     @Test
+    void chargesInitializationAndScopeDepth() {
+        GasMeter meter = new GasMeter();
+
+        meter.chargeInitialization();
+        meter.chargeScopeEntry("/child/grandchild");
+        meter.chargeScopeEntry("nested/scope");
+
+        assertEquals(1_140L, meter.totalGas());
+    }
+
+    @Test
+    void chargesPatchAddOrReplaceProportionalToCanonicalSize() {
+        GasMeter meter = new GasMeter();
+        Node valueNode = new Node().properties("payload", new Node().properties("answer", new Node().value(42)));
+        long expectedSizeCharge = (NodeCanonicalizer.canonicalSize(valueNode) + 99L) / 100L;
+
+        meter.chargePatchAddOrReplace(valueNode);
+
+        assertEquals(20L + expectedSizeCharge, meter.totalGas());
+    }
+
+    @Test
+    void chargesEventEmissionAndCascadeRouting() {
+        GasMeter meter = new GasMeter();
+        Node event = new Node().properties("eventType", new Node().value("Lifecycle"))
+                .properties("data", new Node().properties("id", new Node().value("evt-1")));
+        long sizeCharge = (NodeCanonicalizer.canonicalSize(event) + 99L) / 100L;
+
+        meter.chargeEmitEvent(event);
+        meter.chargeCascadeRouting(3);
+        meter.chargeCascadeRouting(0);
+
+        assertEquals(20L + sizeCharge + 30L, meter.totalGas());
+    }
+
+    @Test
     void chargesTriggerEventBaseAndUpdateDocumentBase() {
         GasMeter meter = new GasMeter();
 
