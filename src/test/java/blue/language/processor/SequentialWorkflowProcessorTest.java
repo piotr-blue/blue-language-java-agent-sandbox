@@ -73,6 +73,37 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowSupportsInlineDerivedWorkflowTypeBlueId() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Derived Workflow Type Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Custom/Derived Sequential Workflow\n" +
+                "      type:\n" +
+                "        blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /count\n" +
+                "            val: 9\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-derived-workflow").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("9"), result.document().getProperties().get("count").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationDerivesChannelFromOperationMarker() {
         Blue blue = new Blue();
         Node document = operationWorkflowDocument(null, "ownerChannel");

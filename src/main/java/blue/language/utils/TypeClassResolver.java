@@ -12,6 +12,7 @@ import org.reflections.util.FilterBuilder;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,12 +75,19 @@ public class TypeClassResolver {
     }
 
     public Class<?> resolveClass(Node node) {
-        String blueId = getEffectiveBlueId(node);
-        if (blueId == null) {
+        if (node == null) {
             return null;
         }
+        String blueId = getEffectiveBlueId(node);
+        if (blueId == null) {
+            return resolveClassByTypeChain(node.getType(), new LinkedHashSet<String>());
+        }
 
-        return blueIdMap.get(blueId);
+        Class<?> exact = blueIdMap.get(blueId);
+        if (exact != null) {
+            return exact;
+        }
+        return resolveClassByTypeChain(node.getType(), new LinkedHashSet<String>());
     }
 
     private String getEffectiveBlueId(Node node) {
@@ -89,6 +97,25 @@ public class TypeClassResolver {
             return BlueIdCalculator.calculateSemanticBlueId(node.getType());
         }
         return null;
+    }
+
+    private Class<?> resolveClassByTypeChain(Node typeNode, Set<String> visitedBlueIds) {
+        if (typeNode == null) {
+            return null;
+        }
+
+        String currentBlueId = typeNode.getBlueId();
+        if (currentBlueId != null && !currentBlueId.trim().isEmpty()) {
+            String normalized = currentBlueId.trim();
+            Class<?> match = blueIdMap.get(normalized);
+            if (match != null) {
+                return match;
+            }
+            if (!visitedBlueIds.add(normalized)) {
+                return null;
+            }
+        }
+        return resolveClassByTypeChain(typeNode.getType(), visitedBlueIds);
     }
 
     public Map<String, Class<?>> getBlueIdMap() {

@@ -21,4 +21,16 @@ class TypeClassResolverAliasTest {
         assertEquals(AliasMappedType.class, resolver.getBlueIdMap().get("AliasMappedType/Primary"));
         assertEquals(AliasMappedType.class, resolver.getBlueIdMap().get("AliasMappedType/Secondary"));
     }
+
+    @Test
+    void resolvesClassFromInlineTypeChainWhenBlueIdIsDerived() {
+        TypeClassResolver resolver = new TypeClassResolver("blue.language.mapping.model");
+
+        Node derived = new Node().type(
+                new Node()
+                        .blueId("AliasMappedType/Derived")
+                        .type(new Node().blueId("AliasMappedType/Primary")));
+
+        assertSame(AliasMappedType.class, resolver.resolveClass(derived));
+    }
 }
