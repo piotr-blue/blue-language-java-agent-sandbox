@@ -1,11 +1,25 @@
 package blue.language.processor.script;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class QuickJSEvaluator implements AutoCloseable {
+
+    private static final Set<String> SUPPORTED_BINDINGS = Collections.unmodifiableSet(
+            new java.util.LinkedHashSet<String>(Arrays.asList(
+                    "event",
+                    "eventCanonical",
+                    "steps",
+                    "currentContract",
+                    "currentContractCanonical",
+                    "__documentData",
+                    "__documentDataSimple",
+                    "__documentDataCanonical",
+                    "__scopePath")));
 
     private final ScriptRuntime runtime;
 
@@ -21,6 +35,7 @@ public class QuickJSEvaluator implements AutoCloseable {
         Map<String, Object> safeBindings = bindings == null
                 ? Collections.<String, Object>emptyMap()
                 : new LinkedHashMap<>(bindings);
+        validateBindings(safeBindings);
         try {
             return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
         } catch (ScriptRuntimeException ex) {
@@ -126,5 +141,16 @@ public class QuickJSEvaluator implements AutoCloseable {
     @Override
     public void close() {
         runtime.close();
+    }
+
+    private void validateBindings(Map<String, Object> bindings) {
+        if (bindings == null || bindings.isEmpty()) {
+            return;
+        }
+        for (String key : bindings.keySet()) {
+            if (!SUPPORTED_BINDINGS.contains(key)) {
+                throw new IllegalArgumentException("Unsupported QuickJS binding: \"" + key + "\"");
+            }
+        }
     }
 }

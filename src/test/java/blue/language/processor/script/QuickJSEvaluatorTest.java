@@ -124,6 +124,23 @@ class QuickJSEvaluatorTest {
         }
     }
 
+    @Test
+    void rejectsUnsupportedBindingKeys() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            IllegalArgumentException thrown = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> evaluator.evaluate(
+                            "1",
+                            new LinkedHashMap<String, Object>() {{
+                                put("add", 1);
+                            }},
+                            BigInteger.valueOf(100L)));
+            assertTrue(thrown.getMessage().contains("Unsupported QuickJS binding"));
+        }
+    }
+
     private boolean nodeAvailable() throws IOException, InterruptedException {
         Process process = new ProcessBuilder("node", "--version").start();
         int exit = process.waitFor();
