@@ -59,8 +59,8 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| ExpressionPreserver | `src/merge/processors/ExpressionPreserver.ts` | _missing_ | TODO |
-| Default merge pipeline ordering | `src/merge/utils/default.ts` | `Blue#createDefaultNodeProcessor` | TODO |
+| ExpressionPreserver | `src/merge/processors/ExpressionPreserver.ts` | `merge/processor/ExpressionPreserver.java` | IN_PROGRESS |
+| Default merge pipeline ordering | `src/merge/utils/default.ts` | `Blue#createDefaultNodeProcessor` | IN_PROGRESS |
 
 ## 6) Constants, pointers, error/result model
 

@@ -333,6 +333,7 @@ public class Blue implements NodeResolver {
         return new SequentialMergingProcessor(
                 Arrays.asList(
                         new ValuePropagator(),
+                        new ExpressionPreserver(),
                         new TypeAssigner(),
                         new ListProcessor(),
                         new DictionaryProcessor(),
