@@ -11,6 +11,7 @@ public final class DocumentBuilder {
     private final Node root = new Node();
     private final Node document = new Node();
     private final Map<String, Node> contracts = new LinkedHashMap<String, Node>();
+    private final Map<String, Node> policies = new LinkedHashMap<String, Node>();
     private final Map<String, Node> channelBindings = new LinkedHashMap<String, Node>();
 
     private DocumentBuilder(String typeAlias) {
@@ -68,6 +69,12 @@ public final class DocumentBuilder {
         return this;
     }
 
+    public DocumentBuilder policies(Consumer<PoliciesBuilder> customizer) {
+        PoliciesBuilder policiesBuilder = new PoliciesBuilder(policies);
+        customizer.accept(policiesBuilder);
+        return this;
+    }
+
     public DocumentBuilder bindAccount(String channelKey, String accountId) {
         Node binding = channelBindings.get(channelKey);
         if (binding == null) {
@@ -91,6 +98,9 @@ public final class DocumentBuilder {
     public Node build() {
         if (!contracts.isEmpty()) {
             document.properties("contracts", new Node().properties(contracts));
+        }
+        if (!policies.isEmpty()) {
+            document.properties("policies", new Node().properties(policies));
         }
         root.properties("document", document);
         if (!channelBindings.isEmpty()) {

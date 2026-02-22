@@ -49,7 +49,7 @@ public final class TypeAliases {
     public static final String MYOS_SUBSCRIPTION_UPDATE = "MyOS/Subscription Update";
     public static final String MYOS_SESSION_EPOCH_ADVANCED = "MyOS/Session Epoch Advanced";
     public static final String MYOS_CALL_OPERATION_REQUESTED = "MyOS/Call Operation Requested";
-    public static final String PAYNOTE_DOCUMENT = "PayNote/PayNote";
+    public static final String PAYNOTE_DOCUMENT = PayNoteAliases.PAYNOTE;
 
     // Basic types
     public static final String TEXT = "Text";
@@ -91,13 +91,13 @@ public final class TypeAliases {
         aliases.put(MyOsTypes.CallOperationRequested.class, MYOS_CALL_OPERATION_REQUESTED);
 
         // PayNote
-        aliases.put(PayNoteTypes.ReserveFundsRequested.class, "PayNote/Reserve Funds Requested");
+        aliases.put(PayNoteTypes.ReserveFundsRequested.class, PayNoteAliases.RESERVE_FUNDS_REQUESTED);
         aliases.put(PayNoteTypes.ReserveFundsAndCaptureImmediatelyRequested.class,
-                "PayNote/Reserve Funds and Capture Immediately Requested");
-        aliases.put(PayNoteTypes.CaptureFundsRequested.class, "PayNote/Capture Funds Requested");
-        aliases.put(PayNoteTypes.ReservationReleaseRequested.class, "PayNote/Reservation Release Requested");
-        aliases.put(PayNoteTypes.IssueChildPayNoteRequested.class, "PayNote/Issue Child PayNote Requested");
-        aliases.put(PayNoteTypes.PayNoteCancellationRequested.class, "PayNote/PayNote Cancellation Requested");
+                PayNoteAliases.RESERVE_FUNDS_AND_CAPTURE_IMMEDIATELY_REQUESTED);
+        aliases.put(PayNoteTypes.CaptureFundsRequested.class, PayNoteAliases.CAPTURE_FUNDS_REQUESTED);
+        aliases.put(PayNoteTypes.ReservationReleaseRequested.class, PayNoteAliases.RESERVATION_RELEASE_REQUESTED);
+        aliases.put(PayNoteTypes.IssueChildPayNoteRequested.class, PayNoteAliases.ISSUE_CHILD_PAYNOTE_REQUESTED);
+        aliases.put(PayNoteTypes.PayNoteCancellationRequested.class, PayNoteAliases.PAYNOTE_CANCELLATION_REQUESTED);
         aliases.put(PayNoteV2Types.PayNoteDocument.class, PAYNOTE_DOCUMENT);
 
         CLASS_TO_ALIAS = Collections.unmodifiableMap(aliases);
