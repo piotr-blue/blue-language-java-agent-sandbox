@@ -22,10 +22,54 @@ public class QuickJSEvaluator implements AutoCloseable {
                 ? Collections.<String, Object>emptyMap()
                 : new LinkedHashMap<>(bindings);
         try {
-            return runtime.evaluate(new ScriptRuntimeRequest(code, safeBindings, wasmGasLimit));
+            return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
         } catch (ScriptRuntimeException ex) {
             throw new CodeBlockEvaluationError("QuickJS code block evaluation failed", ex);
         }
+    }
+
+    private String withRuntimePrelude(String code) {
+        StringBuilder prelude = new StringBuilder();
+        prelude.append("const document = (function(){");
+        prelude.append("const __source = (typeof __documentData !== 'undefined') ? __documentData : undefined;");
+        prelude.append("const __normalize = function(pointer){");
+        prelude.append("if (pointer === undefined || pointer === null || pointer === '') return '/';");
+        prelude.append("if (typeof pointer !== 'string') throw new TypeError('document() expects a string pointer');");
+        prelude.append("return pointer.startsWith('/') ? pointer : '/' + pointer;");
+        prelude.append("};");
+        prelude.append("const __segments = function(pointer){");
+        prelude.append("if (pointer === '/') return [];");
+        prelude.append("return pointer.substring(1).split('/').map(function(s){return s.replace(/~1/g,'/').replace(/~0/g,'~');});");
+        prelude.append("};");
+        prelude.append("const __read = function(pointer){");
+        prelude.append("if (__source === undefined) return undefined;");
+        prelude.append("const normalized = __normalize(pointer);");
+        prelude.append("let current = __source;");
+        prelude.append("for (const segment of __segments(normalized)) {");
+        prelude.append("if (current === undefined || current === null) return undefined;");
+        prelude.append("if (Array.isArray(current)) {");
+        prelude.append("if (!/^\\d+$/.test(segment)) return undefined;");
+        prelude.append("const idx = Number(segment);");
+        prelude.append("current = current[idx];");
+        prelude.append("continue;");
+        prelude.append("}");
+        prelude.append("current = current[segment];");
+        prelude.append("}");
+        prelude.append("if (current && typeof current === 'object' && !Array.isArray(current) && Object.prototype.hasOwnProperty.call(current,'value')) {");
+        prelude.append("const keys = Object.keys(current);");
+        prelude.append("if (keys.length <= 4 && keys.every(function(k){ return k === 'value' || k === 'type' || k === 'name' || k === 'description'; })) {");
+        prelude.append("return current.value;");
+        prelude.append("}");
+        prelude.append("}");
+        prelude.append("return current;");
+        prelude.append("};");
+        prelude.append("const fn = function(pointer){ return __read(pointer); };");
+        prelude.append("fn.canonical = function(pointer){ return __read(pointer); };");
+        prelude.append("return fn;");
+        prelude.append("})();");
+        prelude.append("\n");
+        prelude.append(code);
+        return prelude.toString();
     }
 
     @Override

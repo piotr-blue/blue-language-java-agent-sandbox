@@ -44,6 +44,9 @@ class QuickJsExpressionUtilsTest {
             steps.put("value", 6);
             steps.put("factor", 7);
             bindings.put("steps", steps);
+            Map<String, Object> document = new LinkedHashMap<>();
+            document.put("unit", "points");
+            bindings.put("__documentData", document);
 
             Object result = QuickJsExpressionUtils.evaluateQuickJsExpression(
                     evaluator,
@@ -54,10 +57,10 @@ class QuickJsExpressionUtilsTest {
 
             String rendered = QuickJsExpressionUtils.resolveTemplateString(
                     evaluator,
-                    "Hello ${steps.value}, total ${steps.value * steps.factor}",
+                    "Hello ${steps.value}, total ${steps.value * steps.factor} ${document('/unit')}",
                     bindings,
                     null);
-            assertEquals("Hello 6, total 42", rendered);
+            assertEquals("Hello 6, total 42 points", rendered);
         }
     }
 

@@ -18,7 +18,7 @@ final class QuickJSStepBindings {
         bindings.put("steps", args.stepResults());
         Node documentSnapshot = args.context().documentAt("/");
         args.context().chargeDocumentSnapshot("/", documentSnapshot);
-        bindings.put("document", documentSnapshot != null ? NodeToMapListOrValue.get(documentSnapshot) : null);
+        bindings.put("__documentData", documentSnapshot != null ? NodeToMapListOrValue.get(documentSnapshot) : null);
         return bindings;
     }
 }

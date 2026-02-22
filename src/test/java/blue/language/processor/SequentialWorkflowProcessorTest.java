@@ -170,6 +170,7 @@ class SequentialWorkflowProcessorTest {
         blue.registerContractProcessor(new TestEventChannelProcessor());
 
         Node document = blue.yamlToNode("name: Update Expression Doc\n" +
+                "base: 2\n" +
                 "contracts:\n" +
                 "  testChannel:\n" +
                 "    type:\n" +
@@ -184,7 +185,7 @@ class SequentialWorkflowProcessorTest {
                 "        changeset:\n" +
                 "          - op: ADD\n" +
                 "            path: /computed\n" +
-                "            val: \"${event.count.value + 2}\"\n");
+                "            val: \"${event.count.value + document('/base')}\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.yamlToNode("type:\n" +
