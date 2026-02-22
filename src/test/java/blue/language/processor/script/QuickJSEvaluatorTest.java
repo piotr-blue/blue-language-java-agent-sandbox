@@ -373,6 +373,44 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void resolvesRelativeDocumentPointersUsingScopePathBinding() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("__scopePath", "/contracts/workflow");
+            bindings.put("__documentDataSimple", new LinkedHashMap<String, Object>() {{
+                put("contracts", new LinkedHashMap<String, Object>() {{
+                    put("workflow", new LinkedHashMap<String, Object>() {{
+                        put("counter", 5);
+                    }});
+                }});
+            }});
+            bindings.put("__documentDataCanonical", new LinkedHashMap<String, Object>() {{
+                put("contracts", new LinkedHashMap<String, Object>() {{
+                    put("workflow", new LinkedHashMap<String, Object>() {{
+                        put("counter", new LinkedHashMap<String, Object>() {{
+                            put("value", 5);
+                        }});
+                    }});
+                }});
+            }});
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ relative: document('counter'), absolute: document('/contracts/workflow/counter'), canonical: document.canonical('counter').value })",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) result.value();
+            assertEquals("5", String.valueOf(payload.get("relative")));
+            assertEquals("5", String.valueOf(payload.get("absolute")));
+            assertEquals("5", String.valueOf(payload.get("canonical")));
+        }
+    }
+
+    @Test
     void providesDefaultBindingsWhenMissing() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 

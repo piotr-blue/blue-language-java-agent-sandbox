@@ -184,6 +184,7 @@ Current in-flight work:
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - `QuickJSEvaluator` now supports direct function-backed `document` bindings (simple and canonical pointer reads for literal pointer calls) via Java callbacks, with migration coverage in `QuickJSEvaluatorTest` (`supportsFunctionDocumentBindingForPlainAndCanonicalReads`, `supportsSimpleFunctionDocumentBindingForLiteralPointers`).
+- `QuickJSEvaluator` document helper parity now also includes relative-pointer resolution via `__scopePath` bindings (so `document('x')` resolves against the active workflow scope), covered by `QuickJSEvaluatorTest#resolvesRelativeDocumentPointersUsingScopePathBinding`.
 - `QuickJSEvaluator` direct parity coverage now also includes:
   - explicit `currentContract` / `currentContractCanonical` binding visibility assertions
   - deterministic masking of `Date` and `process` globals in evaluator-only execution paths
