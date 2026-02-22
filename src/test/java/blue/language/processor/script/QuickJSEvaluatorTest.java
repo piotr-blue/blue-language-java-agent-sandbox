@@ -1,0 +1,132 @@
+package blue.language.processor.script;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+class QuickJSEvaluatorTest {
+
+    @Test
+    void evaluatesSynchronousCodeAndExposesBindings() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            bindings.put("steps", 7);
+            bindings.put("event", new LinkedHashMap<String, Object>() {{
+                put("payload", new LinkedHashMap<String, Object>() {{
+                    put("value", 5);
+                }});
+            }});
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "steps + event.payload.value",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertEquals("12", String.valueOf(result.value()));
+            assertEquals(new BigInteger("1000"), result.wasmGasRemaining());
+        }
+    }
+
+    @Test
+    void supportsCanonHelpersAndDocumentBindings() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            Map<String, Object> canonicalEvent = new LinkedHashMap<>();
+            canonicalEvent.put("payload", new LinkedHashMap<String, Object>() {{
+                put("id", new LinkedHashMap<String, Object>() {{
+                    put("value", "evt-123");
+                }});
+            }});
+            bindings.put("eventCanonical", canonicalEvent);
+            bindings.put("__documentDataSimple", new LinkedHashMap<String, Object>() {{
+                put("unit", "points");
+            }});
+            bindings.put("__documentDataCanonical", new LinkedHashMap<String, Object>() {{
+                put("unit", new LinkedHashMap<String, Object>() {{
+                    put("value", "points");
+                }});
+            }});
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ id: canon.unwrap(canon.at(eventCanonical, '/payload/id')), unit: document('/unit'), canonicalUnit: document.canonical('/unit').value })",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertEquals("evt-123", String.valueOf(value.get("id")));
+            assertEquals("points", String.valueOf(value.get("unit")));
+            assertEquals("points", String.valueOf(value.get("canonicalUnit")));
+        }
+    }
+
+    @Test
+    void wrapsSyntaxErrorsInCodeBlockEvaluationError() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            CodeBlockEvaluationError error = assertThrows(
+                    CodeBlockEvaluationError.class,
+                    () -> evaluator.evaluate(
+                            "const data = await Promise.resolve(1); data;",
+                            new LinkedHashMap<String, Object>(),
+                            BigInteger.valueOf(1000L)));
+            assertTrue(error.getMessage().contains("Failed to evaluate code block"));
+            assertTrue(error.code().contains("await"));
+        }
+    }
+
+    @Test
+    void evaluatorCanBeReusedAcrossMultipleCalls() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult first = evaluator.evaluate("1", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
+            ScriptRuntimeResult second = evaluator.evaluate("2", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
+
+            assertEquals("1", String.valueOf(first.value()));
+            assertEquals("2", String.valueOf(second.value()));
+        }
+    }
+
+    @Test
+    void capturesEmitCallsInReturnedEnvelope() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "emit({ kind: 'debug', value: 42 }); 7",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) result.value();
+            assertEquals("7", String.valueOf(payload.get("__result")));
+            assertTrue(payload.get("events") instanceof List);
+            @SuppressWarnings("unchecked")
+            List<Object> events = (List<Object>) payload.get("events");
+            assertEquals(1, events.size());
+        }
+    }
+
+    private boolean nodeAvailable() throws IOException, InterruptedException {
+        Process process = new ProcessBuilder("node", "--version").start();
+        int exit = process.waitFor();
+        return exit == 0;
+    }
+}

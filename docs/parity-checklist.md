@@ -88,7 +88,7 @@ Status legend:
 | Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `EmissionRegistryTest.java` | IN_PROGRESS |
 | Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, etc. | IN_PROGRESS |
 | Registry/timeline/workflow | `src/registry/__tests__/*` | `ContractProcessorRegistryBuilderDefaultsTest`, `CompositeTimelineChannelProcessorTest`, `TimelineChannelProcessorTest`, `MyOSTimelineChannelProcessorTest`, `SequentialWorkflowProcessorTest`, `SharedTimelineCheckpointIntegrationTest`, `TriggerEventIntegrationTest`, `workflow/WorkflowStepRunnerTest` | IN_PROGRESS |
-| Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `QuickJsSidecarRuntimeTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
+| Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
 | Integration parity | `src/__tests__/integration/**/*` | partial processor integration tests | IN_PROGRESS |
 | Golden parity fixtures | fixture/golden strategy in plan | `parity-fixtures/*`, `ParityFixturesTest` | IN_PROGRESS |
 
