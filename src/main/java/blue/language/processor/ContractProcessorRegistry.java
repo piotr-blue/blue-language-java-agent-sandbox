@@ -120,7 +120,7 @@ public class ContractProcessorRegistry {
     }
 
     public Map<String, ContractProcessor<? extends Contract>> processors() {
-        return Collections.unmodifiableMap(processorsByBlueId);
+        return new LinkedHashMap<>(processorsByBlueId);
     }
 
     private <T extends Contract> Set<String> registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {

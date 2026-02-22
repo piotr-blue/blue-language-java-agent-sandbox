@@ -9,6 +9,8 @@ import blue.language.processor.model.MyOSTimelineChannel;
 import blue.language.processor.registry.processors.TimelineChannelProcessor;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,6 +74,35 @@ class ContractProcessorRegistryTest {
     void registerRejectsUnsupportedProcessorKinds() {
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         assertThrows(IllegalArgumentException.class, () -> registry.register(new PlainContractProcessor()));
+    }
+
+    @Test
+    void registerDispatchesHandlerChannelAndMarkerProcessors() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseChannelProcessor channelProcessor = new BaseChannelProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+
+        registry.register(handlerProcessor);
+        registry.register(channelProcessor);
+        registry.register(markerProcessor);
+
+        assertSame(handlerProcessor, registry.lookupHandler("BaseHandler").orElse(null));
+        assertSame(channelProcessor, registry.lookupChannel("BaseChannel").orElse(null));
+        assertSame(markerProcessor, registry.lookupMarker("BaseMarker").orElse(null));
+    }
+
+    @Test
+    void processorsReturnsMutableSnapshotWithoutAffectingRegistry() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.register(handlerProcessor);
+
+        Map<String, ContractProcessor<? extends Contract>> snapshot = registry.processors();
+        snapshot.put("BaseHandler", markerProcessor);
+
+        assertSame(handlerProcessor, registry.lookupHandler("BaseHandler").orElse(null));
     }
 
     @TypeBlueId({"BaseHandler", "Core/Base Handler"})
