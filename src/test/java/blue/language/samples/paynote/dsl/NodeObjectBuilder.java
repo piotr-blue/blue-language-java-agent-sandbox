@@ -18,6 +18,11 @@ public final class NodeObjectBuilder {
         return this;
     }
 
+    public NodeObjectBuilder type(Class<?> typeClass) {
+        node.type(TypeRef.of(typeClass).asTypeNode());
+        return this;
+    }
+
     public NodeObjectBuilder put(String key, Object value) {
         if (value instanceof Node) {
             node.properties(key, (Node) value);

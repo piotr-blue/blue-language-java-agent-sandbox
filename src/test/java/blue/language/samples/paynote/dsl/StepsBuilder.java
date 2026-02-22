@@ -1,6 +1,8 @@
 package blue.language.samples.paynote.dsl;
 
+import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.samples.paynote.types.common.CommonTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.function.Consumer;
 
 public final class StepsBuilder {
 
+    private static final Blue BLUE = new Blue();
     private final List<Node> steps = new ArrayList<Node>();
 
     public StepsBuilder js(String name, JsProgram program) {
@@ -51,6 +54,47 @@ public final class StepsBuilder {
         step.properties("event", event);
         steps.add(step);
         return this;
+    }
+
+    public StepsBuilder emit(String name, Object typedEvent) {
+        if (typedEvent == null) {
+            throw new IllegalArgumentException("typedEvent cannot be null");
+        }
+        return triggerEvent(name, BLUE.objectToNode(typedEvent));
+    }
+
+    public StepsBuilder emitType(String name, Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        Node event = new Node().type(TypeRef.of(eventTypeClass).asTypeNode());
+        if (payloadCustomizer != null) {
+            NodeObjectBuilder builder = NodeObjectBuilder.create();
+            payloadCustomizer.accept(builder);
+            Node payload = builder.build();
+            if (payload.getProperties() != null) {
+                for (String key : payload.getProperties().keySet()) {
+                    event.properties(key, payload.getProperties().get(key));
+                }
+            }
+        }
+        return triggerEvent(name, event);
+    }
+
+    public StepsBuilder emitAdHocEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        Node event = new Node().type(TypeRef.of(CommonTypes.NamedEvent.class).asTypeNode());
+        event.properties("name", new Node().value(eventName));
+        if (payloadCustomizer != null) {
+            NodeObjectBuilder payloadBuilder = NodeObjectBuilder.create();
+            payloadCustomizer.accept(payloadBuilder);
+            event.properties("payload", payloadBuilder.build());
+        }
+        return triggerEvent(name, event);
+    }
+
+    public StepsBuilder replaceValue(String name, String path, Object value) {
+        return updateDocument(name, changeset -> changeset.replaceValue(path, value));
+    }
+
+    public StepsBuilder replaceExpression(String name, String path, String expression) {
+        return updateDocument(name, changeset -> changeset.replaceExpression(path, expression));
     }
 
     public StepsBuilder raw(Node step) {

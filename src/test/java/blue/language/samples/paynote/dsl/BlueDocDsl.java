@@ -13,12 +13,24 @@ public final class BlueDocDsl {
         return DocumentBuilder.documentSessionBootstrap();
     }
 
+    public static BlueDocumentBuilder document(Class<?> documentTypeClass) {
+        return BlueDocumentBuilder.document(documentTypeClass);
+    }
+
+    public static BlueDocumentBuilder overlay(Class<?> documentTypeClass) {
+        return BlueDocumentBuilder.document(documentTypeClass);
+    }
+
     public static NodeObjectBuilder object() {
         return NodeObjectBuilder.create();
     }
 
     public static Node typed(String typeAlias) {
         return new Node().type(typeAlias);
+    }
+
+    public static Node typed(Class<?> typeClass) {
+        return new Node().type(TypeRef.of(typeClass).asTypeNode());
     }
 
     public static String expr(String expression) {

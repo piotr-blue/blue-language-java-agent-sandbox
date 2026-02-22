@@ -31,6 +31,11 @@ public final class DocumentBuilder {
         return this;
     }
 
+    public DocumentBuilder documentType(Class<?> typeClass) {
+        document.type(TypeRef.of(typeClass).asTypeNode());
+        return this;
+    }
+
     public DocumentBuilder documentDescription(String description) {
         document.description(description);
         return this;

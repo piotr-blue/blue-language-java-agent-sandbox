@@ -19,7 +19,35 @@ public final class ContractsBuilder {
     }
 
     public ContractsBuilder timelineChannel(String key) {
+        contracts.put(key, new Node().type(TypeAliases.CONVERSATION_TIMELINE_CHANNEL));
+        return this;
+    }
+
+    public ContractsBuilder myOsTimelineChannel(String key) {
         contracts.put(key, new Node().type(TypeAliases.MYOS_TIMELINE_CHANNEL));
+        return this;
+    }
+
+    public ContractsBuilder channel(String key, Class<?> channelTypeClass) {
+        contracts.put(key, new Node().type(TypeRef.of(channelTypeClass).asTypeNode()));
+        return this;
+    }
+
+    public ContractsBuilder channel(String key,
+                                    Class<?> channelTypeClass,
+                                    Consumer<NodeObjectBuilder> customizer) {
+        Node channel = new Node().type(TypeRef.of(channelTypeClass).asTypeNode());
+        if (customizer != null) {
+            NodeObjectBuilder channelBuilder = NodeObjectBuilder.create();
+            customizer.accept(channelBuilder);
+            Node configured = channelBuilder.build();
+            if (configured.getProperties() != null) {
+                for (Map.Entry<String, Node> entry : configured.getProperties().entrySet()) {
+                    channel.properties(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        contracts.put(key, channel);
         return this;
     }
 
@@ -32,6 +60,15 @@ public final class ContractsBuilder {
         Node channel = new Node().type(TypeAliases.CORE_LIFECYCLE_EVENT_CHANNEL);
         if (eventTypeAlias != null) {
             channel.properties("event", new Node().type(eventTypeAlias));
+        }
+        contracts.put(key, channel);
+        return this;
+    }
+
+    public ContractsBuilder lifecycleEventChannel(String key, Class<?> eventTypeClass) {
+        Node channel = new Node().type(TypeAliases.CORE_LIFECYCLE_EVENT_CHANNEL);
+        if (eventTypeClass != null) {
+            channel.properties("event", new Node().type(TypeRef.of(eventTypeClass).asTypeNode()));
         }
         contracts.put(key, channel);
         return this;
@@ -64,6 +101,13 @@ public final class ContractsBuilder {
 
     public ContractsBuilder operation(String key, String channel, String description) {
         return operation(key, channel, description, null);
+    }
+
+    public ContractsBuilder operation(String key,
+                                      String channel,
+                                      Class<?> requestTypeClass,
+                                      String description) {
+        return operation(key, channel, description, request -> request.type(requestTypeClass));
     }
 
     public ContractsBuilder withMyOsAdminDefaults() {
@@ -117,9 +161,32 @@ public final class ContractsBuilder {
         return sequentialWorkflow(key, "triggeredEventChannel", event, customizer);
     }
 
+    public ContractsBuilder onTriggered(String key,
+                                        Class<?> eventTypeClass,
+                                        Consumer<StepsBuilder> customizer) {
+        return sequentialWorkflow(key,
+                "triggeredEventChannel",
+                new Node().type(TypeRef.of(eventTypeClass).asTypeNode()),
+                customizer);
+    }
+
     public ContractsBuilder onLifecycle(String key,
                                         String lifecycleChannelKey,
                                         Consumer<StepsBuilder> customizer) {
         return sequentialWorkflow(key, lifecycleChannelKey, null, customizer);
+    }
+
+    public ContractsBuilder onEvent(String key,
+                                    String channel,
+                                    Class<?> eventTypeClass,
+                                    Consumer<StepsBuilder> customizer) {
+        return sequentialWorkflow(key, channel, new Node().type(TypeRef.of(eventTypeClass).asTypeNode()), customizer);
+    }
+
+    public ContractsBuilder documentUpdateChannel(String key, String path) {
+        contracts.put(key, new Node()
+                .type(TypeAliases.CORE_DOCUMENT_UPDATE_CHANNEL)
+                .properties("path", new Node().value(path)));
+        return this;
     }
 }

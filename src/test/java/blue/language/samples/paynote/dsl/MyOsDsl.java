@@ -1,5 +1,7 @@
 package blue.language.samples.paynote.dsl;
 
+import blue.language.model.Node;
+
 public final class MyOsDsl {
 
     private MyOsDsl() {
@@ -7,6 +9,10 @@ public final class MyOsDsl {
 
     public static DocumentBuilder bootstrap() {
         return BlueDocDsl.documentSessionBootstrap();
+    }
+
+    public static MyOsBootstrapBuilder bootstrap(Node document) {
+        return MyOs.bootstrap(document);
     }
 
     public static MyOsEvents.SinglePermissionGrantRequestedBuilder requestSingleDocumentPermission() {
