@@ -84,11 +84,11 @@ Status legend:
 
 | Area | JS tests | Java tests | Status |
 |---|---|---|---|
-| Constants/pointers | `src/constants/__tests__/*`, `src/util/__tests__/pointer-utils.test.ts` | `processor/util/*Test.java` | IN_PROGRESS |
-| API facade | `src/api/__tests__/document-processor.test.ts` | `DocumentProcessorApiParityTest`, `DocumentProcessorInitializationTest`, `DocumentProcessorCapabilityTest` | IN_PROGRESS |
-| Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `DocumentProcessingRuntimeParityTest`, `PatchEngineParityTest`, `ScopeRuntimeContextTest`, `EmissionRegistryTest.java` | IN_PROGRESS |
-| Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, `ContractBundleParityTest`, `ContractLoaderParityTest`, `ScopeExecutorParityTest`, `ScopeExecutorDerivedChannelParityTest`, `TerminationServiceParityTest`, etc. | IN_PROGRESS |
-| Contract model schemas | `src/model/__tests__/contract-models.test.ts` | `ContractModelsParityTest`, `ContractMappingIntegrationTest` | IN_PROGRESS |
+| Constants/pointers | `src/constants/__tests__/*`, `src/util/__tests__/pointer-utils.test.ts` | `processor/util/*Test.java` | DONE |
+| API facade | `src/api/__tests__/document-processor.test.ts` | `DocumentProcessorApiParityTest`, `DocumentProcessorInitializationTest`, `DocumentProcessorCapabilityTest` | DONE |
+| Runtime core | `src/runtime/__tests__/*` | `processor/DocumentProcessingRuntime*Test.java`, `DocumentProcessingRuntimeParityTest`, `PatchEngineParityTest`, `ScopeRuntimeContextTest`, `EmissionRegistryTest.java` | DONE |
+| Engine core | `src/engine/__tests__/*` | `processor/*Boundary*`, `CheckpointManagerTest`, `ChannelRunnerTest`, `ContractBundleParityTest`, `ContractLoaderParityTest`, `ScopeExecutorParityTest`, `ScopeExecutorDerivedChannelParityTest`, `TerminationServiceParityTest`, etc. | DONE |
+| Contract model schemas | `src/model/__tests__/contract-models.test.ts` | `ContractModelsParityTest`, `ContractMappingIntegrationTest` | DONE |
 | Registry/timeline/workflow | `src/registry/__tests__/*` | `ContractProcessorRegistryBuilderDefaultsTest`, `CompositeTimelineChannelProcessorTest`, `TimelineChannelProcessorTest`, `MyOSTimelineChannelProcessorTest`, `SequentialWorkflowProcessorTest`, `DeepEmbeddedInitializationPropagationTest`, `DeepEmbeddedPropagationIntegrationTest`, `CrossTriggeringIntegrationTest`, `ProcessMultiPathsIntegrationTest`, `ProcessProtectedPathRemovalTerminatesRootIntegrationTest`, `DynamicWorkflowRegistrationIntegrationTest`, `SharedTimelineCheckpointIntegrationTest`, `TriggerEventIntegrationTest`, `TriggerEventStepLeakageReproIntegrationTest`, `TriggerEventStepNoDocumentProcessingIntegrationTest`, `EmbeddedRoutingBridgeIntegrationTest`, `workflow/WorkflowStepRunnerTest` | IN_PROGRESS |
 | Steps + expressions + quickjs | `src/registry/processors/steps/__tests__/*`, `src/util/expression/__tests__/*` | `SequentialWorkflowProcessorTest`, `QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`, `QuickJsFuelCalibrationTest`, `QuickJsExpressionUtilsTest`, `QuickJsConfigTest`, `CodeBlockEvaluationErrorTest` | IN_PROGRESS |
 | Integration parity | `src/__tests__/integration/**/*` | `DynamicWorkflowRegistrationIntegrationTest`, `TriggerEventStepLeakageReproIntegrationTest`, `TriggerEventStepNoDocumentProcessingIntegrationTest`, `DeepEmbeddedPropagationIntegrationTest`, `CrossTriggeringIntegrationTest`, `ProcessMultiPathsIntegrationTest`, `ProcessProtectedPathRemovalTerminatesRootIntegrationTest`, `SharedTimelineCheckpointIntegrationTest`, `EmbeddedRoutingBridgeIntegrationTest` | DONE |
@@ -100,6 +100,7 @@ Status legend:
 
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
 Current in-flight work:
+- Test-migration status: constants/pointers, API facade, runtime core, engine core, contract-model schemas, merge behavior, and integration suites are now marked `DONE` in coverage mapping based on direct Java parity tests.
 - JS integration directory parity migration is complete with direct Java integration tests for every `src/__tests__/integration/**/*` scenario in the pinned target commit.
 - Merge parity baseline is complete: `ExpressionPreserver` is wired into the default merge pipeline before type assignment, and Java tests cover expression preservation plus regular-value passthrough behavior.
 - Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns (brace expansion, character classes, and extglob `@(...)`, `?(...)`, `+(...)`, `*(...)`, `!(...)` are supported, but advanced nested/edge picomatch semantics remain partial).
