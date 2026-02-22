@@ -671,10 +671,16 @@ public final class QuickJsExpressionUtils {
             builder.append('^');
             index = 1;
         }
+        boolean escaping = false;
         for (int i = index; i < classBody.length(); i++) {
             char ch = classBody.charAt(i);
+            if (escaping) {
+                appendEscapedCharacterClassLiteral(builder, ch);
+                escaping = false;
+                continue;
+            }
             if (ch == '\\') {
-                builder.append("\\\\");
+                escaping = true;
                 continue;
             }
             if (ch == '[' || ch == ']' || ch == '^') {
@@ -682,8 +688,18 @@ public final class QuickJsExpressionUtils {
             }
             builder.append(ch);
         }
+        if (escaping) {
+            builder.append("\\\\");
+        }
         builder.append(']');
         return builder.toString();
+    }
+
+    private static void appendEscapedCharacterClassLiteral(StringBuilder builder, char ch) {
+        if (ch == '\\' || ch == '[' || ch == ']' || ch == '^' || ch == '-') {
+            builder.append('\\');
+        }
+        builder.append(ch);
     }
 
     private static boolean characterClassExplicitlyMatchesDot(String classBody) {
