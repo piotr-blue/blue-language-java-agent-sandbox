@@ -121,6 +121,10 @@ Current in-flight work:
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - `QuickJSEvaluator` now supports direct function-backed `document` bindings (simple and canonical pointer reads for literal pointer calls) via Java callbacks, with migration coverage in `QuickJSEvaluatorTest` (`supportsFunctionDocumentBindingForPlainAndCanonicalReads`, `supportsSimpleFunctionDocumentBindingForLiteralPointers`).
+- `QuickJSEvaluator` direct parity coverage now also includes:
+  - explicit `currentContract` / `currentContractCanonical` binding visibility assertions
+  - deterministic masking of `Date` and `process` globals in evaluator-only execution paths
+  (`QuickJSEvaluatorTest`).
 - QuickJS fuel calibration migration now has dedicated deterministic baseline coverage (`QuickJsFuelCalibrationTest`) for representative script complexity trends and repeated-run stability.
 - Contract-model schema parity now includes MyOS marker contract mappings for `MyOS/Document Anchors`, `MyOS/Document Links`, `MyOS/MyOS Participants Orchestration`, `MyOS/MyOS Session Interaction`, and `MyOS/MyOS Worker Agency` (`ContractModelsParityTest`, `TypeClassResolverAliasTest`).
 - Contract-loader parity now includes unsupported-contract MustUnderstand behavior and built-in contract loading coverage (`ContractLoaderParityTest`) in addition to composite-cycle and MyOS-marker loader tests.

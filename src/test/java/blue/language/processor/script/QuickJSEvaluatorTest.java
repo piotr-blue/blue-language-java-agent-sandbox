@@ -45,6 +45,40 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void exposesCurrentContractBindings() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            bindings.put("currentContract", new LinkedHashMap<String, Object>() {{
+                put("foo", 1);
+            }});
+            bindings.put("currentContractCanonical", new LinkedHashMap<String, Object>() {{
+                put("foo", new LinkedHashMap<String, Object>() {{
+                    put("value", 1);
+                }});
+            }});
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ contract: currentContract, canonical: currentContractCanonical })",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertTrue(value.get("contract") instanceof Map);
+            assertTrue(value.get("canonical") instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> contract = (Map<String, Object>) value.get("contract");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> canonical = (Map<String, Object>) value.get("canonical");
+            assertEquals("1", String.valueOf(contract.get("foo")));
+            assertTrue(canonical.get("foo") instanceof Map);
+        }
+    }
+
+    @Test
     void supportsCanonHelpersAndDocumentBindings() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
@@ -152,6 +186,24 @@ class QuickJSEvaluatorTest {
                             BigInteger.valueOf(1000L)));
             assertTrue(error.getMessage().contains("Failed to evaluate code block"));
             assertTrue(error.code().contains("await"));
+        }
+    }
+
+    @Test
+    void doesNotExposeDateOrProcessGlobals() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "({ dateType: typeof Date, processType: typeof process })",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertEquals("undefined", String.valueOf(value.get("dateType")));
+            assertEquals("undefined", String.valueOf(value.get("processType")));
         }
     }
 
