@@ -1,6 +1,7 @@
 package blue.language.samples.paynote.dsl;
 
 import blue.language.model.Node;
+import blue.language.samples.paynote.types.core.CoreTypes;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
 import org.junit.jupiter.api.Test;
 
@@ -27,5 +28,14 @@ class DslTypeRefTest {
         assertNotNull(document.getType());
         assertEquals(TypeAliases.MYOS_AGENT, document.getAsText("/type/value"));
         assertEquals("8s2rAFDtiB6sCwqeURkT4Lq7fcc2FXBkmX9B9p7R4Boc", document.getAsText("/type/blueId"));
+    }
+
+    @Test
+    void resolvesCoreChannelAliasAndBlueId() {
+        TypeRef typeRef = TypeRef.of(CoreTypes.Channel.class);
+        Node typeNode = typeRef.asTypeNode();
+
+        assertEquals(TypeAliases.CORE_CHANNEL, typeNode.getValue());
+        assertEquals("DcoJyCh7XXxy1nR5xjy7qfkUgQ1GiZnKKSxh8DJusBSr", typeNode.getBlueId());
     }
 }

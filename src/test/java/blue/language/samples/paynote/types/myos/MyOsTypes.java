@@ -2,6 +2,7 @@ package blue.language.samples.paynote.types.myos;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.samples.paynote.types.conversation.ConversationTypes;
 
 import java.util.Map;
 
@@ -34,7 +35,7 @@ public final class MyOsTypes {
     }
 
     @TypeBlueId("HCF8mXnX3dFjQ8osjxb4Wzm2Nm1DoXnTYuA5sPnV7NTs")
-    public static class MyOsTimelineChannel {
+    public static class MyOsTimelineChannel extends ConversationTypes.TimelineChannel {
         public String accountId;
         public String email;
     }

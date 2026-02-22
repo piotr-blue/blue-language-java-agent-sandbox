@@ -2,6 +2,8 @@ package blue.language.samples.paynote.dsl;
 
 import blue.language.samples.paynote.types.conversation.ConversationTypes;
 import blue.language.samples.paynote.types.common.CommonTypes;
+import blue.language.samples.paynote.types.core.CoreTypes;
+import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
@@ -16,6 +18,7 @@ public final class TypeAliases {
     }
 
     // Core
+    public static final String CORE_CHANNEL = "Core/Channel";
     public static final String CORE_DOCUMENT_PROCESSING_INITIATED = "Core/Document Processing Initiated";
     public static final String CORE_DOCUMENT_UPDATE = "Core/Document Update";
     public static final String CORE_DOCUMENT_UPDATE_CHANNEL = "Core/Document Update Channel";
@@ -35,6 +38,8 @@ public final class TypeAliases {
     public static final String CONVERSATION_CHAT_MESSAGE = "Conversation/Chat Message";
     public static final String CONVERSATION_EVENT = "Conversation/Event";
     public static final String COMMON_NAMED_EVENT = "Common/Named Event";
+    public static final String SHIPPING_SHIPMENT_CONFIRMED = "Shipping/Shipment Confirmed";
+    public static final String SHIPPING_DELIVERY_REPORTED = "Shipping/Delivery Reported";
 
     // MyOS
     public static final String MYOS_DOCUMENT_SESSION_BOOTSTRAP = "MyOS/Document Session Bootstrap";
@@ -62,6 +67,7 @@ public final class TypeAliases {
         Map<Class<?>, String> aliases = new HashMap<Class<?>, String>();
 
         // Conversation
+        aliases.put(CoreTypes.Channel.class, CORE_CHANNEL);
         aliases.put(ConversationTypes.Operation.class, CONVERSATION_OPERATION);
         aliases.put(ConversationTypes.TimelineChannel.class, CONVERSATION_TIMELINE_CHANNEL);
         aliases.put(ConversationTypes.CompositeTimelineChannel.class, CONVERSATION_COMPOSITE_TIMELINE_CHANNEL);
@@ -74,6 +80,8 @@ public final class TypeAliases {
         aliases.put(ConversationTypes.Response.class, CONVERSATION_RESPONSE);
         aliases.put(ConversationTypes.Event.class, CONVERSATION_EVENT);
         aliases.put(CommonTypes.NamedEvent.class, COMMON_NAMED_EVENT);
+        aliases.put(ShippingEvents.ShipmentConfirmed.class, SHIPPING_SHIPMENT_CONFIRMED);
+        aliases.put(ShippingEvents.DeliveryReported.class, SHIPPING_DELIVERY_REPORTED);
 
         // MyOS
         aliases.put(MyOsTypes.DocumentSessionBootstrap.class, MYOS_DOCUMENT_SESSION_BOOTSTRAP);
@@ -100,6 +108,14 @@ public final class TypeAliases {
         aliases.put(PayNoteTypes.ReservationReleaseRequested.class, PayNoteAliases.RESERVATION_RELEASE_REQUESTED);
         aliases.put(PayNoteTypes.IssueChildPayNoteRequested.class, PayNoteAliases.ISSUE_CHILD_PAYNOTE_REQUESTED);
         aliases.put(PayNoteTypes.PayNoteCancellationRequested.class, PayNoteAliases.PAYNOTE_CANCELLATION_REQUESTED);
+        aliases.put(PayNoteTypes.CardTransactionCaptureLockRequested.class,
+                PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED);
+        aliases.put(PayNoteTypes.CardTransactionCaptureUnlockRequested.class,
+                PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED);
+        aliases.put(PayNoteTypes.CardTransactionCaptureLocked.class,
+                PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCKED);
+        aliases.put(PayNoteTypes.CardTransactionCaptureUnlocked.class,
+                PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCKED);
         aliases.put(PayNoteV2Types.PayNoteDocument.class, PAYNOTE_DOCUMENT);
 
         CLASS_TO_ALIAS = Collections.unmodifiableMap(aliases);

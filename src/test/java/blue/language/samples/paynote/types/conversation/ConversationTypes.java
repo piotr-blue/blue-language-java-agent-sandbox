@@ -2,6 +2,7 @@ package blue.language.samples.paynote.types.conversation;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.samples.paynote.types.core.CoreTypes;
 
 import java.util.List;
 
@@ -20,7 +21,7 @@ public final class ConversationTypes {
     }
 
     @TypeBlueId("HsNatiPt2YvmkWQoqtfrFCbdp75ZUBLBUkWeq84WTfnr")
-    public static class CompositeTimelineChannel {
+    public static class CompositeTimelineChannel extends TimelineChannel {
         public List<String> channels;
     }
 
@@ -120,7 +121,7 @@ public final class ConversationTypes {
     }
 
     @TypeBlueId("EvuCWsG1E6WJQg8QXmk6rwMANYTZjoLWVZ1vYQWUwdTH")
-    public static class TimelineChannel {
+    public static class TimelineChannel extends CoreTypes.Channel {
         public String timelineId;
     }
 

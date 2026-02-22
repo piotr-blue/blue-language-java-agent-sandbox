@@ -4,6 +4,7 @@ import blue.language.model.BlueDescription;
 import blue.language.model.BlueName;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.samples.paynote.dsl.TypeAlias;
 
 public final class PayNoteTypes {
 
@@ -120,5 +121,27 @@ public final class PayNoteTypes {
     @TypeBlueId("4pVAdZo93FHRRkAkshqCZW4pUvvV1ccczJZ2Lu4jkD1D")
     public static class SettlementAmountSpecified {
         public Integer finalAmount;
+    }
+
+    @TypeAlias("PayNote/Card Transaction Capture Lock Requested")
+    @TypeBlueId("PayNote-Card-Capture-Lock-Requested-Demo-BlueId")
+    public static class CardTransactionCaptureLockRequested {
+        public Node cardTransactionDetails;
+    }
+
+    @TypeAlias("PayNote/Card Transaction Capture Unlock Requested")
+    @TypeBlueId("PayNote-Card-Capture-Unlock-Requested-Demo-BlueId")
+    public static class CardTransactionCaptureUnlockRequested {
+        public Node cardTransactionDetails;
+    }
+
+    @TypeAlias("PayNote/Card Transaction Capture Locked")
+    @TypeBlueId("PayNote-Card-Capture-Locked-Demo-BlueId")
+    public static class CardTransactionCaptureLocked {
+    }
+
+    @TypeAlias("PayNote/Card Transaction Capture Unlocked")
+    @TypeBlueId("PayNote-Card-Capture-Unlocked-Demo-BlueId")
+    public static class CardTransactionCaptureUnlocked {
     }
 }
