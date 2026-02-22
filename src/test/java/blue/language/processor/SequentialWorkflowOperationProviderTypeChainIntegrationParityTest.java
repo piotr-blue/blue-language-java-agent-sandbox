@@ -73,4 +73,61 @@ class SequentialWorkflowOperationProviderTypeChainIntegrationParityTest {
 
         assertEquals(new BigInteger("12"), result.document().getProperties().get("counter").getValue());
     }
+
+    @Test
+    void operationDefinitionTypeMatchingSupportsProviderBackedTypeChains() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                if (!"Custom/Derived Operation".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node();
+                definition.type(new Node().blueId("Conversation/Operation"));
+                return Collections.singletonList(definition);
+            }
+        };
+
+        Blue blue = new Blue(provider);
+        Node document = blue.yamlToNode("name: Provider Operation Type Chain Operation Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  ownerChannel:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Timeline Channel\n" +
+                "    timelineId: owner-42\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Custom/Derived Operation\n" +
+                "    channel: ownerChannel\n" +
+                "    request:\n" +
+                "      type: Integer\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.message.request}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-provider-operation-type\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Conversation/Operation Request\n" +
+                "  operation: increment\n" +
+                "  request: 14\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("14"), result.document().getProperties().get("counter").getValue());
+    }
 }
