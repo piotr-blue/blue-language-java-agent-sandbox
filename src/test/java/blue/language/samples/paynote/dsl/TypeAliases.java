@@ -4,6 +4,7 @@ import blue.language.samples.paynote.types.conversation.ConversationTypes;
 import blue.language.samples.paynote.types.common.CommonTypes;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
+import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,6 +49,7 @@ public final class TypeAliases {
     public static final String MYOS_SUBSCRIPTION_UPDATE = "MyOS/Subscription Update";
     public static final String MYOS_SESSION_EPOCH_ADVANCED = "MyOS/Session Epoch Advanced";
     public static final String MYOS_CALL_OPERATION_REQUESTED = "MyOS/Call Operation Requested";
+    public static final String PAYNOTE_DOCUMENT = "PayNote/PayNote";
 
     // Basic types
     public static final String TEXT = "Text";
@@ -96,6 +98,7 @@ public final class TypeAliases {
         aliases.put(PayNoteTypes.ReservationReleaseRequested.class, "PayNote/Reservation Release Requested");
         aliases.put(PayNoteTypes.IssueChildPayNoteRequested.class, "PayNote/Issue Child PayNote Requested");
         aliases.put(PayNoteTypes.PayNoteCancellationRequested.class, "PayNote/PayNote Cancellation Requested");
+        aliases.put(PayNoteV2Types.PayNoteDocument.class, PAYNOTE_DOCUMENT);
 
         CLASS_TO_ALIAS = Collections.unmodifiableMap(aliases);
     }
