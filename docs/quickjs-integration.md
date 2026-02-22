@@ -64,8 +64,8 @@ Workflow expression/step evaluation charges gas through:
 - `event` (simple/plain JSON snapshot of current event)
 - `eventCanonical` (official/canonical JSON event snapshot)
 - `steps` (results from prior workflow steps)
-- `currentContract` (handler contract payload)
-- `currentContractCanonical` (canonical-form contract payload)
+- `currentContract` (simple contract snapshot read from `/contracts/<key>`)
+- `currentContractCanonical` (official contract snapshot read from `/contracts/<key>`)
 - internal document snapshots used by evaluator prelude:
   - `__documentDataSimple`
   - `__documentDataCanonical`
