@@ -97,4 +97,7 @@ Status legend:
 ## Next updates
 
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
-Current in-flight work: registry lookup and channel/handler API expansion are partially aligned (including handler derive-channel support), while default built-ins and full type-chain resolution remain.
+Current in-flight work:
+- Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns.
+- Registry/type-chain lookup remains class-hierarchy based; deeper semantic subtype matching parity is still pending.
+- Golden fixtures now cover sequential workflow happy path, operation mismatch, complex operation request typing, handler event filtering, derived change workflow, JS emit callback/document blueId, and expected initialization failures; broader integration fixture migration remains.
