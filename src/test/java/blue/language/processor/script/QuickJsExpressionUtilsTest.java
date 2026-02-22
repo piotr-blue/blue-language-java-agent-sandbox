@@ -267,6 +267,19 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsBraceOptionsContainingCharacterClassOpenParenAndComma() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{[(,],x}/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/(/value", null));
+        assertTrue(predicate.test("/items/,/value", null));
+        assertTrue(predicate.test("/items/x/value", null));
+        assertFalse(predicate.test("/items/y/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNumericBraceRanges() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/items/{1..3}"),
@@ -533,6 +546,31 @@ class QuickJsExpressionUtilsTest {
         assertTrue(predicate.test("/contracts/a)/value", null));
         assertTrue(predicate.test("/contracts/c/value", null));
         assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsExtglobCharacterClassOptionsContainingParentheses() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/@([()]|x)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/(/value", null));
+        assertTrue(predicate.test("/contracts/)/value", null));
+        assertTrue(predicate.test("/contracts/x/value", null));
+        assertFalse(predicate.test("/contracts/y/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsExtglobCharacterClassOptionsContainingClosingParen() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/@([)]|x)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/)/value", null));
+        assertTrue(predicate.test("/contracts/x/value", null));
+        assertFalse(predicate.test("/contracts/y/value", null));
     }
 
     @Test

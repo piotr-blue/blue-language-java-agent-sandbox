@@ -475,18 +475,18 @@ public final class QuickJsExpressionUtils {
                 current.setLength(0);
                 continue;
             }
-            if (ch == '{') {
-                braceDepth++;
-            } else if (ch == '}' && braceDepth > 0) {
-                braceDepth--;
-            } else if (ch == '(') {
-                parenDepth++;
-            } else if (ch == ')' && parenDepth > 0) {
-                parenDepth--;
-            } else if (ch == '[') {
+            if (ch == '[') {
                 bracketDepth++;
             } else if (ch == ']' && bracketDepth > 0) {
                 bracketDepth--;
+            } else if (bracketDepth == 0 && ch == '{') {
+                braceDepth++;
+            } else if (bracketDepth == 0 && ch == '}' && braceDepth > 0) {
+                braceDepth--;
+            } else if (bracketDepth == 0 && ch == '(') {
+                parenDepth++;
+            } else if (bracketDepth == 0 && ch == ')' && parenDepth > 0) {
+                parenDepth--;
             }
             current.append(ch);
         }
@@ -548,6 +548,7 @@ public final class QuickJsExpressionUtils {
 
     private static int findClosingParenthesis(String pattern, int openIndex) {
         int depth = 0;
+        int bracketDepth = 0;
         boolean escaping = false;
         for (int i = openIndex; i < pattern.length(); i++) {
             char ch = pattern.charAt(i);
@@ -557,6 +558,17 @@ public final class QuickJsExpressionUtils {
             }
             if (ch == '\\') {
                 escaping = true;
+                continue;
+            }
+            if (ch == '[') {
+                bracketDepth++;
+                continue;
+            }
+            if (ch == ']' && bracketDepth > 0) {
+                bracketDepth--;
+                continue;
+            }
+            if (bracketDepth > 0) {
                 continue;
             }
             if (ch == '(') {
@@ -597,18 +609,18 @@ public final class QuickJsExpressionUtils {
                 current.setLength(0);
                 continue;
             }
-            if (ch == '(') {
-                parenDepth++;
-            } else if (ch == ')' && parenDepth > 0) {
-                parenDepth--;
-            } else if (ch == '{') {
-                braceDepth++;
-            } else if (ch == '}' && braceDepth > 0) {
-                braceDepth--;
-            } else if (ch == '[') {
+            if (ch == '[') {
                 bracketDepth++;
             } else if (ch == ']' && bracketDepth > 0) {
                 bracketDepth--;
+            } else if (bracketDepth == 0 && ch == '(') {
+                parenDepth++;
+            } else if (bracketDepth == 0 && ch == ')' && parenDepth > 0) {
+                parenDepth--;
+            } else if (bracketDepth == 0 && ch == '{') {
+                braceDepth++;
+            } else if (bracketDepth == 0 && ch == '}' && braceDepth > 0) {
+                braceDepth--;
             }
             current.append(ch);
         }
