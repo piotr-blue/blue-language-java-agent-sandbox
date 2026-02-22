@@ -303,16 +303,7 @@ public final class QuickJsExpressionUtils {
 
     private static boolean matchesSinglePattern(String pointerToMatch, String normalizedPattern, boolean dot) {
         String regexPattern = buildPatternRegex(normalizedPattern, dot, true);
-        boolean matched = pointerToMatch.matches(regexPattern);
-        if (!matched) {
-            return false;
-        }
-        if (!dot
-                && pointerToMatch.matches(".*(^|/)\\.[^/]+(/|$).*")
-                && !normalizedPattern.contains("/.")) {
-            return false;
-        }
-        return true;
+        return pointerToMatch.matches(regexPattern);
     }
 
     private static String buildPatternRegex(String normalizedPattern, boolean dot, boolean anchored) {
@@ -338,7 +329,7 @@ public final class QuickJsExpressionUtils {
             if (ch == '*') {
                 boolean isDoubleStar = (i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '*');
                 if (isDoubleStar) {
-                    regex.append(".*");
+                    regex.append(dot ? ".*" : "(?:(?!\\.)[^/]+/)*(?:(?!\\.)[^/]*)?");
                     i++;
                     continue;
                 }
@@ -352,11 +343,11 @@ public final class QuickJsExpressionUtils {
             if (ch == '[') {
                 int closingBracket = findClosingBracket(normalizedPattern, i + 1);
                 if (closingBracket > i + 1) {
-                    if (segmentStart && !dot) {
+                    String classBody = normalizedPattern.substring(i + 1, closingBracket);
+                    if (segmentStart && !dot && !characterClassExplicitlyMatchesDot(classBody)) {
                         regex.append("(?!\\.)");
                     }
-                    regex.append(toCharacterClassRegex(
-                            normalizedPattern.substring(i + 1, closingBracket)));
+                    regex.append(toCharacterClassRegex(classBody));
                     i = closingBracket;
                     continue;
                 }
@@ -547,6 +538,35 @@ public final class QuickJsExpressionUtils {
         }
         builder.append(']');
         return builder.toString();
+    }
+
+    private static boolean characterClassExplicitlyMatchesDot(String classBody) {
+        if (classBody == null || classBody.isEmpty()) {
+            return false;
+        }
+        char first = classBody.charAt(0);
+        if (first == '!' || first == '^') {
+            return false;
+        }
+        boolean escaping = false;
+        for (int i = 0; i < classBody.length(); i++) {
+            char ch = classBody.charAt(i);
+            if (escaping) {
+                escaping = false;
+                if (ch == '.') {
+                    return true;
+                }
+                continue;
+            }
+            if (ch == '\\') {
+                escaping = true;
+                continue;
+            }
+            if (ch == '.') {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String normalizePointer(String pointer) {

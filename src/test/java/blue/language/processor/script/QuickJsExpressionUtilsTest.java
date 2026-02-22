@@ -189,6 +189,19 @@ class QuickJsExpressionUtilsTest {
                 new QuickJsExpressionUtils.PathMatchOptions(false, false, false));
         assertFalse(noDotPredicate.test("/.hidden", null));
         assertTrue(noDotPredicate.test("/visible", null));
+        assertFalse(noDotPredicate.test("/visible/.hidden", null));
+    }
+
+    @Test
+    void createPathPredicateDotOptionAllowsExplicitHiddenSegmentPatterns() {
+        QuickJsExpressionUtils.PointerPredicate noDotPredicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/[.]hidden", "/**/[.]hidden"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(false, false, false));
+
+        assertTrue(noDotPredicate.test("/.hidden", null));
+        assertTrue(noDotPredicate.test("/visible/.hidden", null));
+        assertFalse(noDotPredicate.test("/visible/.other", null));
     }
 
     @Test
