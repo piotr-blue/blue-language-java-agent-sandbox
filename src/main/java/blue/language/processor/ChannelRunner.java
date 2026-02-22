@@ -51,6 +51,13 @@ final class ChannelRunner {
         if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
             return;
         }
+        if (checkpoint != null
+                && checkpoint.lastEventNode != null
+                && match.processor != null
+                && match.context != null
+                && !match.processor.isNewerEvent(contract, match.context, checkpoint.lastEventNode.clone())) {
+            return;
+        }
         runHandlers(scopePath, bundle, channel.key(), eventForHandlers, false);
         if (execution.isScopeInactive(scopePath)) {
             return;

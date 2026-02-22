@@ -7,10 +7,13 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Maintains the mapping between contract BlueIds and their processors.
@@ -21,22 +24,34 @@ public class ContractProcessorRegistry {
     private final Map<Class<? extends HandlerContract>, HandlerProcessor<? extends HandlerContract>> handlerProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends ChannelContract>, ChannelProcessor<? extends ChannelContract>> channelProcessors = new LinkedHashMap<>();
     private final Map<Class<? extends MarkerContract>, ContractProcessor<? extends MarkerContract>> markerProcessors = new LinkedHashMap<>();
+    private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
+    private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
+    private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
 
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
+        Set<String> blueIds = registerBlueIds(processor.contractType(), processor);
+        for (String blueId : blueIds) {
+            handlerProcessorsByBlueId.put(blueId, processor);
+        }
         handlerProcessors.put(processor.contractType(), processor);
     }
 
     public <T extends ChannelContract> void registerChannel(ChannelProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
+        Set<String> blueIds = registerBlueIds(processor.contractType(), processor);
+        for (String blueId : blueIds) {
+            channelProcessorsByBlueId.put(blueId, processor);
+        }
         channelProcessors.put(processor.contractType(), processor);
     }
 
     public <T extends MarkerContract> void registerMarker(ContractProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
-        registerBlueIds(processor.contractType(), processor);
+        Set<String> blueIds = registerBlueIds(processor.contractType(), processor);
+        for (String blueId : blueIds) {
+            markerProcessorsByBlueId.put(blueId, processor);
+        }
         markerProcessors.put(processor.contractType(), processor);
     }
 
@@ -60,22 +75,55 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Class<? extends HandlerContract> type) {
-        return Optional.ofNullable(handlerProcessors.get(type));
+        return lookupProcessor(type, handlerProcessors, handlerProcessorsByBlueId);
+    }
+
+    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(HandlerContract contract) {
+        if (contract == null) {
+            return Optional.empty();
+        }
+        return lookupHandler(contract.getClass());
+    }
+
+    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
+        return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
-        return Optional.ofNullable(channelProcessors.get(type));
+        return lookupProcessor(type, channelProcessors, channelProcessorsByBlueId);
+    }
+
+    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(ChannelContract contract) {
+        if (contract == null) {
+            return Optional.empty();
+        }
+        return lookupChannel(contract.getClass());
+    }
+
+    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
+        return Optional.ofNullable(channelProcessorsByBlueId.get(blueId));
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
-        return Optional.ofNullable(markerProcessors.get(type));
+        return lookupProcessor(type, markerProcessors, markerProcessorsByBlueId);
+    }
+
+    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(MarkerContract contract) {
+        if (contract == null) {
+            return Optional.empty();
+        }
+        return lookupMarker(contract.getClass());
+    }
+
+    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
+        return Optional.ofNullable(markerProcessorsByBlueId.get(blueId));
     }
 
     public Map<String, ContractProcessor<? extends Contract>> processors() {
         return Collections.unmodifiableMap(processorsByBlueId);
     }
 
-    private <T extends Contract> void registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {
+    private <T extends Contract> Set<String> registerBlueIds(Class<T> contractType, ContractProcessor<T> processor) {
         Objects.requireNonNull(contractType, "contractType");
 
         TypeBlueId typeBlueId = contractType.getAnnotation(TypeBlueId.class);
@@ -91,8 +139,96 @@ public class ContractProcessorRegistry {
             throw new IllegalArgumentException("Contract type " + contractType.getName() + " does not declare any BlueId values");
         }
 
+        Set<String> registered = new LinkedHashSet<>();
         for (String blueId : declared) {
             processorsByBlueId.put(blueId, processor);
+            registered.add(blueId);
         }
+        return registered;
+    }
+
+    private static <T extends Contract, P extends ContractProcessor<? extends T>> Optional<P> lookupProcessor(
+            Class<? extends T> contractType,
+            Map<Class<? extends T>, P> byClass,
+            Map<String, P> byBlueId) {
+        if (contractType == null) {
+            return Optional.empty();
+        }
+        P direct = byClass.get(contractType);
+        if (direct != null) {
+            return Optional.of(direct);
+        }
+        for (String blueId : resolveBlueIds(contractType)) {
+            P byId = byBlueId.get(blueId);
+            if (byId != null) {
+                return Optional.of(byId);
+            }
+        }
+        Class<? extends T> bestType = null;
+        P bestProcessor = null;
+        int bestDistance = Integer.MAX_VALUE;
+        for (Map.Entry<Class<? extends T>, P> entry : byClass.entrySet()) {
+            Class<? extends T> candidateType = entry.getKey();
+            int distance = inheritanceDistance(contractType, candidateType);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestType = candidateType;
+                bestProcessor = entry.getValue();
+            }
+        }
+        if (bestType != null) {
+            return Optional.of(bestProcessor);
+        }
+        return Optional.empty();
+    }
+
+    private static List<String> resolveBlueIds(Class<?> contractType) {
+        TypeBlueId typeBlueId = contractType.getAnnotation(TypeBlueId.class);
+        if (typeBlueId == null) {
+            return Collections.emptyList();
+        }
+        String[] declared = typeBlueId.value();
+        if (declared.length == 0 && !typeBlueId.defaultValue().isEmpty()) {
+            declared = new String[]{typeBlueId.defaultValue()};
+        }
+        if (declared.length == 0) {
+            return Collections.emptyList();
+        }
+        return java.util.Arrays.asList(declared);
+    }
+
+    private static int inheritanceDistance(Class<?> concreteType, Class<?> targetSuperType) {
+        if (concreteType == null || targetSuperType == null || !targetSuperType.isAssignableFrom(concreteType)) {
+            return Integer.MAX_VALUE;
+        }
+        if (concreteType.equals(targetSuperType)) {
+            return 0;
+        }
+        Set<Class<?>> visited = new LinkedHashSet<>();
+        java.util.ArrayDeque<Class<?>> queue = new java.util.ArrayDeque<>();
+        java.util.ArrayDeque<Integer> depths = new java.util.ArrayDeque<>();
+        queue.add(concreteType);
+        depths.add(0);
+        while (!queue.isEmpty()) {
+            Class<?> next = queue.removeFirst();
+            int depth = depths.removeFirst();
+            if (!visited.add(next)) {
+                continue;
+            }
+            if (next.equals(targetSuperType)) {
+                return depth;
+            }
+            Class<?> superClass = next.getSuperclass();
+            if (superClass != null) {
+                queue.addLast(superClass);
+                depths.addLast(depth + 1);
+            }
+            Class<?>[] interfaces = next.getInterfaces();
+            for (Class<?> iface : interfaces) {
+                queue.addLast(iface);
+                depths.addLast(depth + 1);
+            }
+        }
+        return Integer.MAX_VALUE;
     }
 }

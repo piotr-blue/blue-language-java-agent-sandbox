@@ -27,7 +27,7 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Registry lookup by BlueId/type chain | `src/registry/contract-processor-registry.ts` | `processor/ContractProcessorRegistry.java` | TODO |
+| Registry lookup by BlueId/type chain | `src/registry/contract-processor-registry.ts` | `processor/ContractProcessorRegistry.java` | IN_PROGRESS |
 | Default processor registration | `src/registry/contract-processor-registry-builder.ts` | `processor/ContractProcessorRegistryBuilder.java` | TODO |
 | Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | _missing_ | TODO |
 | Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | _missing_ | TODO |
@@ -96,3 +96,4 @@ Status legend:
 ## Next updates
 
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
+Current in-flight work: registry lookup and channel/handler API expansion are partially aligned, while default built-ins and full type-chain resolution remain.

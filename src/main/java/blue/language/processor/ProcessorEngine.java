@@ -79,8 +79,7 @@ final class ProcessorEngine {
                                             ContractBundle bundle,
                                             String scopePath,
                                             Node event) {
-        ChannelProcessor<? extends ChannelContract> processor =
-                owner.registry().lookupChannel((Class<? extends ChannelContract>) contract.getClass()).orElse(null);
+        ChannelProcessor<? extends ChannelContract> processor = owner.registry().lookupChannel(contract).orElse(null);
         if (processor == null) {
             return ChannelMatch.noMatch();
         }
@@ -96,9 +95,12 @@ final class ProcessorEngine {
                 clonedEvent,
                 eventObject,
                 bundle.markers());
-        boolean matches = typed.matches(contract, context);
-        String eventId = matches ? typed.eventId(contract, context) : null;
-        return new ChannelMatch(matches, eventId, typed, matches ? context : null);
+        ChannelProcessorEvaluation evaluation = typed.evaluate(contract, context);
+        if (evaluation == null || !evaluation.matches()) {
+            return ChannelMatch.noMatch();
+        }
+        Node eventNode = evaluation.eventNode() != null ? evaluation.eventNode() : context.event();
+        return new ChannelMatch(true, evaluation.eventId(), typed, context, eventNode);
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
@@ -382,10 +384,13 @@ final class ProcessorEngine {
     @SuppressWarnings("unchecked")
     static void executeHandler(DocumentProcessor owner, HandlerContract contract, ProcessorExecutionContext context) {
         HandlerProcessor<? extends HandlerContract> processor = owner.registry()
-                .lookupHandler((Class<? extends HandlerContract>) contract.getClass())
+                .lookupHandler(contract)
                 .orElseThrow(() -> new IllegalStateException(
                         "No processor registered for contract type " + contract.getClass().getName()));
         HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
+        if (!typed.matches(contract, context)) {
+            return;
+        }
         typed.execute(contract, context);
     }
 
@@ -394,23 +399,26 @@ final class ProcessorEngine {
         final String eventId;
         final ChannelProcessor<ChannelContract> processor;
         final ChannelEvaluationContext context;
+        final Node eventNode;
 
         ChannelMatch(boolean matches,
                      String eventId,
                      ChannelProcessor<ChannelContract> processor,
-                     ChannelEvaluationContext context) {
+                     ChannelEvaluationContext context,
+                     Node eventNode) {
             this.matches = matches;
             this.eventId = eventId;
             this.processor = processor;
             this.context = context;
+            this.eventNode = eventNode;
         }
 
         Node eventNode() {
-            return context != null ? context.event() : null;
+            return eventNode;
         }
 
         static ChannelMatch noMatch() {
-            return new ChannelMatch(false, null, null, null);
+            return new ChannelMatch(false, null, null, null, null);
         }
     }
 

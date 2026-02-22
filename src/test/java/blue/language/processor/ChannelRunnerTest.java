@@ -9,6 +9,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
+import blue.language.processor.contracts.StaleBlockingTestEventChannelProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
 import java.math.BigInteger;
 import java.util.List;
@@ -196,5 +197,39 @@ final class ChannelRunnerTest {
         Node kindNode = storedEvent.getProperties().get("kind");
         assertNotNull(kindNode);
         assertEquals(NormalizingTestEventChannelProcessor.NORMALIZED_KIND, kindNode.getValue());
+    }
+
+    @Test
+    void skipsEventsWhenChannelProcessorMarksEventAsNotNewer() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new StaleBlockingTestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-1").kind("one")));
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-2").kind("two")));
+
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterNode);
+        assertEquals(BigInteger.ONE, counterNode.getValue());
     }
 }

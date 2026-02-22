@@ -7,5 +7,9 @@ import blue.language.processor.model.HandlerContract;
  */
 public interface HandlerProcessor<T extends HandlerContract> extends ContractProcessor<T> {
 
+    default boolean matches(T contract, ProcessorExecutionContext context) {
+        return true;
+    }
+
     void execute(T contract, ProcessorExecutionContext context);
 }

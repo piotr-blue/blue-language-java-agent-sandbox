@@ -57,14 +57,14 @@ final class ContractLoader {
             if (contract instanceof ChannelContract) {
                 ChannelContract channel = (ChannelContract) contract;
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
-                        && !registry.lookupChannel(channel.getClass()).isPresent()) {
+                        && !registry.lookupChannel(channel).isPresent()) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + channel.getClass().getName());
                 }
                 builder.addChannel(key, channel);
             } else if (contract instanceof HandlerContract) {
                 HandlerContract handler = (HandlerContract) contract;
-                if (!registry.lookupHandler(handler.getClass()).isPresent()) {
+                if (!registry.lookupHandler(handler).isPresent()) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + handler.getClass().getName());
                 }
