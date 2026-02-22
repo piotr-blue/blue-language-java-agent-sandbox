@@ -20,6 +20,11 @@ public final class ConversationTypes {
         public String message;
     }
 
+    @TypeBlueId("Conversation-Channel-Source-Binding-Demo-BlueId")
+    public static class ChannelSourceBinding {
+        public Node bindings;
+    }
+
     @TypeBlueId("HsNatiPt2YvmkWQoqtfrFCbdp75ZUBLBUkWeq84WTfnr")
     public static class CompositeTimelineChannel extends TimelineChannel {
         public List<String> channels;

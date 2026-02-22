@@ -64,4 +64,17 @@ class DslPrimitivesTest {
         assertEquals("Conversation/Update Document", step.getType().getValue());
         assertEquals("${steps.ApplyStatus.changeset}", step.getAsText("/changeset/value"));
     }
+
+    @Test
+    void supportsRoleBasedBindingInDocumentBuilder() {
+        Node bootstrap = MyOsDsl.bootstrap()
+                .documentName("Role Binding Doc")
+                .documentType(TypeAliases.MYOS_AGENT)
+                .bindRoleEmail("payer", "payer@demo.com")
+                .bindRoleAccount("payee", "ACC-123")
+                .build();
+
+        assertEquals("payer@demo.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
+        assertEquals("ACC-123", bootstrap.getAsText("/channelBindings/payeeChannel/accountId/value"));
+    }
 }

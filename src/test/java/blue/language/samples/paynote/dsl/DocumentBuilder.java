@@ -13,9 +13,15 @@ public final class DocumentBuilder {
     private final Map<String, Node> contracts = new LinkedHashMap<String, Node>();
     private final Map<String, Node> policies = new LinkedHashMap<String, Node>();
     private final Map<String, Node> channelBindings = new LinkedHashMap<String, Node>();
+    private final Map<String, String> roleAliases = new LinkedHashMap<String, String>();
 
     private DocumentBuilder(String typeAlias) {
         root.type(typeAlias);
+        roleAliases.put("payer", "payerChannel");
+        roleAliases.put("payee", "payeeChannel");
+        roleAliases.put("guarantor", "guarantorChannel");
+        roleAliases.put("shipper", "shipmentCompanyChannel");
+        roleAliases.put("shipmentCompany", "shipmentCompanyChannel");
     }
 
     public static DocumentBuilder documentSessionBootstrap() {
@@ -93,6 +99,27 @@ public final class DocumentBuilder {
         }
         binding.properties("email", new Node().value(email));
         return this;
+    }
+
+    public DocumentBuilder role(String role, String channelKey) {
+        roleAliases.put(role, channelKey);
+        return this;
+    }
+
+    public DocumentBuilder bindRoleAccount(String role, String accountId) {
+        String channelKey = roleAliases.get(role);
+        if (channelKey == null) {
+            channelKey = role != null && role.endsWith("Channel") ? role : role + "Channel";
+        }
+        return bindAccount(channelKey, accountId);
+    }
+
+    public DocumentBuilder bindRoleEmail(String role, String email) {
+        String channelKey = roleAliases.get(role);
+        if (channelKey == null) {
+            channelKey = role != null && role.endsWith("Channel") ? role : role + "Channel";
+        }
+        return bindEmail(channelKey, email);
     }
 
     public Node build() {

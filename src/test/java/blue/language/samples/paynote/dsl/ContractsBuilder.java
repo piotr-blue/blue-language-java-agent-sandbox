@@ -2,6 +2,8 @@ package blue.language.samples.paynote.dsl;
 
 import blue.language.model.Node;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -23,8 +25,48 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder timelineChannels(String... keys) {
+        if (keys == null) {
+            return this;
+        }
+        for (String key : keys) {
+            timelineChannel(key);
+        }
+        return this;
+    }
+
     public ContractsBuilder myOsTimelineChannel(String key) {
         contracts.put(key, new Node().type(TypeAliases.MYOS_TIMELINE_CHANNEL));
+        return this;
+    }
+
+    public ContractsBuilder myOsTimelineChannels(String... keys) {
+        if (keys == null) {
+            return this;
+        }
+        for (String key : keys) {
+            myOsTimelineChannel(key);
+        }
+        return this;
+    }
+
+    public ContractsBuilder compositeTimelineChannel(String key, String... channelKeys) {
+        Node composite = new Node().type(TypeAliases.CONVERSATION_COMPOSITE_TIMELINE_CHANNEL);
+        if (channelKeys != null) {
+            List<Node> items = new ArrayList<Node>();
+            for (String channelKey : channelKeys) {
+                items.add(new Node().value(channelKey));
+            }
+            composite.properties("channels", new Node().items(items));
+        }
+        contracts.put(key, composite);
+        return this;
+    }
+
+    public ContractsBuilder channelSourceBinding(String key, Consumer<ChannelSourceBindingBuilder> customizer) {
+        ChannelSourceBindingBuilder builder = new ChannelSourceBindingBuilder();
+        customizer.accept(builder);
+        contracts.put(key, builder.build());
         return this;
     }
 
