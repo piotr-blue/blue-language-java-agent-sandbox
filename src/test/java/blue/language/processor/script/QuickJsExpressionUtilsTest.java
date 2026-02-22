@@ -451,6 +451,30 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsEscapedWildcardLiterals() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/\\*/value", "/contracts/\\?/label"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/*/value", null));
+        assertTrue(predicate.test("/contracts/?/label", null));
+        assertFalse(predicate.test("/contracts/x/value", null));
+        assertFalse(predicate.test("/contracts/y/label", null));
+    }
+
+    @Test
+    void createPathPredicateTreatsEscapedExtglobMarkerAsLiteral() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/\\@(primary|secondary)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/@(primary|secondary)/value", null));
+        assertFalse(predicate.test("/contracts/primary/value", null));
+    }
+
+    @Test
     void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 

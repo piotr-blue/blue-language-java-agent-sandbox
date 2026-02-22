@@ -314,6 +314,12 @@ public final class QuickJsExpressionUtils {
         for (int i = 0; i < normalizedPattern.length(); i++) {
             char ch = normalizedPattern.charAt(i);
             boolean segmentStart = i == 0 || normalizedPattern.charAt(i - 1) == '/';
+            if (ch == '\\' && i + 1 < normalizedPattern.length()) {
+                char escaped = normalizedPattern.charAt(i + 1);
+                regex.append(Pattern.quote(String.valueOf(escaped)));
+                i++;
+                continue;
+            }
             if (isExtglobMarker(ch) && i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '(') {
                 int closingParenthesis = findClosingParenthesis(normalizedPattern, i + 1);
                 if (closingParenthesis > i + 1) {
