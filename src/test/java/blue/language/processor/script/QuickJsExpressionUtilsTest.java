@@ -230,6 +230,18 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateTreatsEscapedBracesAsLiterals() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/\\{a,b\\}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/{a,b}", null));
+        assertFalse(predicate.test("/items/a", null));
+        assertFalse(predicate.test("/items/b", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNumericBraceRanges() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/items/{1..3}"),

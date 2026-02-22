@@ -405,8 +405,17 @@ public final class QuickJsExpressionUtils {
         }
         int open = -1;
         int depth = 0;
+        boolean escaping = false;
         for (int i = 0; i < pattern.length(); i++) {
             char ch = pattern.charAt(i);
+            if (escaping) {
+                escaping = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaping = true;
+                continue;
+            }
             if (ch == '{') {
                 if (depth == 0) {
                     open = i;
@@ -446,8 +455,19 @@ public final class QuickJsExpressionUtils {
         }
         StringBuilder current = new StringBuilder();
         int depth = 0;
+        boolean escaping = false;
         for (int i = 0; i < body.length(); i++) {
             char ch = body.charAt(i);
+            if (escaping) {
+                current.append(ch);
+                escaping = false;
+                continue;
+            }
+            if (ch == '\\') {
+                current.append(ch);
+                escaping = true;
+                continue;
+            }
             if (ch == ',' && depth == 0) {
                 options.add(current.toString());
                 current.setLength(0);
