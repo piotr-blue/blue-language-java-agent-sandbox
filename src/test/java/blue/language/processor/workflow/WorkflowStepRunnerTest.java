@@ -78,4 +78,29 @@ class WorkflowStepRunnerTest {
         assertTrue(results.containsKey("Step1"));
         assertEquals("ok", results.get("Step1"));
     }
+
+    @Test
+    void runResolvesInlineDerivedStepTypeChains() {
+        WorkflowStepExecutor executor = new WorkflowStepExecutor() {
+            @Override
+            public Set<String> supportedBlueIds() {
+                return Collections.unmodifiableSet(new LinkedHashSet<String>(Collections.singletonList("Step/Only")));
+            }
+
+            @Override
+            public Object execute(StepExecutionArgs args) {
+                return "ok";
+            }
+        };
+
+        WorkflowStepRunner runner = new WorkflowStepRunner(Collections.singletonList(executor));
+        Node derived = new Node().type(new Node()
+                .blueId("Step/Derived")
+                .type(new Node().blueId("Step/Only")));
+
+        Map<String, Object> results = runner.run(new SequentialWorkflow(), Collections.singletonList(derived), new Node(), null);
+
+        assertEquals(1, results.size());
+        assertEquals("ok", results.get("Step1"));
+    }
 }
