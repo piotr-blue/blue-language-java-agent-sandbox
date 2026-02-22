@@ -111,6 +111,7 @@ Current in-flight work:
 - JavaScript step parity coverage now also includes:
   - special document segment reads for `name`/`description`/`value`/`blueId` via both plain and canonical document helpers
   - previous-step result access from `steps.<name>.*`
+  - deterministic rejection of async/await and runaway-loop fatal termination behavior in workflow processing
   (`SequentialWorkflowProcessorTest`).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).

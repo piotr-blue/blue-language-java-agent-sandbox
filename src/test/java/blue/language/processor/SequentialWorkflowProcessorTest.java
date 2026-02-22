@@ -605,6 +605,68 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepRejectsAsyncAwaitSyntax() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Async Await Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"const value = await Promise.resolve(11); ({ changeset: [{ op: 'ADD', path: '/value', val: value }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-await").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue()).contains("Failed to evaluate code block"));
+    }
+
+    @Test
+    void javaScriptCodeStepRunawayLoopBecomesFatalTermination() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Runaway Loop Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"while (true) {}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-loop").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue()).contains("Failed to evaluate code block"));
+    }
+
+    @Test
     void javaScriptCodeStepSupportsEmitCallbackStyle() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
