@@ -61,6 +61,13 @@ class QuickJsExpressionUtilsTest {
                     bindings,
                     null);
             assertEquals("Hello 6, total 42 points", rendered);
+
+            String missing = QuickJsExpressionUtils.resolveTemplateString(
+                    evaluator,
+                    "Hello ${steps.missing}",
+                    bindings,
+                    null);
+            assertEquals("Hello ", missing);
         }
     }
 

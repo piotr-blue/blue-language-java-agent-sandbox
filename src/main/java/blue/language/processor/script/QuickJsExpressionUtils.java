@@ -185,7 +185,8 @@ public final class QuickJsExpressionUtils {
         while (matcher.find()) {
             String expression = matcher.group(1);
             Object value = evaluateQuickJsExpression(evaluator, expression, bindings, wasmGasConsumer);
-            matcher.appendReplacement(buffer, Matcher.quoteReplacement(String.valueOf(value)));
+            String replacement = value == null ? "" : String.valueOf(value);
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(buffer);
         return buffer.toString();
