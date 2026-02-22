@@ -1,5 +1,6 @@
 package blue.language.samples.paynote.examples.vnext;
 
+import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
@@ -9,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VNextPayNoteExamplesTest {
+
+    private final Blue blue = new Blue();
 
     @Test
     void buildsIphoneEscrowAndTemplateChainWithTypedEvents() {
@@ -72,5 +75,30 @@ class VNextPayNoteExamplesTest {
                 voucher.getAsText("/document/contracts/onInitReserveAndCapture/steps/0/event/type/value"));
         assertTrue(voucher.getAsText("/document/contracts/directVoucherEditImpl/steps/0/code/value")
                 .contains("request.changeset ?? []"));
+    }
+
+    @Test
+    void vnextExamplesAvoidLegacyConversationEventKindPattern() {
+        Node iphone = VNextPayNoteExamples.iphoneShipmentEscrow();
+        Node subscription = VNextPayNoteExamples.subscriptionPayNote();
+        Node marketplace = VNextPayNoteExamples.marketplaceSplitPayNote();
+        Node agentBudget = VNextPayNoteExamples.agentBudgetPayNote();
+        Node milestone = VNextPayNoteExamples.milestoneContractorPayNote();
+        Node voucher = VNextPayNoteExamples.reversePaymentVoucherPayNote();
+        VNextPayNoteExamples.TemplateChain chain = VNextPayNoteExamples.shipmentEscrowTemplateChain("2026-02-22T18:00:00Z");
+
+        assertNoLegacyConversationEvent(iphone);
+        assertNoLegacyConversationEvent(subscription);
+        assertNoLegacyConversationEvent(marketplace);
+        assertNoLegacyConversationEvent(agentBudget);
+        assertNoLegacyConversationEvent(milestone);
+        assertNoLegacyConversationEvent(voucher);
+        assertNoLegacyConversationEvent(chain.instance);
+    }
+
+    private void assertNoLegacyConversationEvent(Node node) {
+        String yaml = blue.nodeToYaml(node);
+        assertTrue(!yaml.contains("Conversation/Event"));
+        assertTrue(!yaml.contains("kind: Shipment Confirmed"));
     }
 }

@@ -30,10 +30,12 @@ class VNextRecruitmentClassifierExampleTest {
         assertTrue(requestClassificationJs.contains("REQ_CV_CLASSIFY_"));
         assertTrue(requestClassificationJs.contains("Recruitment/CV Classification Requested"));
         assertTrue(requestClassificationJs.contains("provideInstructions"));
+        assertTrue(!requestClassificationJs.contains("Conversation/Event"));
 
         String providerResponseJs = bootstrap.getAsText("/document/contracts/onProviderResponse/steps/0/code/value");
         assertTrue(providerResponseJs.contains("Recruitment/Senior Candidate Detected"));
         assertTrue(providerResponseJs.contains("Number.isFinite"));
         assertTrue(providerResponseJs.contains("CV classified: "));
+        assertTrue(!providerResponseJs.contains("Conversation/Event"));
     }
 }
