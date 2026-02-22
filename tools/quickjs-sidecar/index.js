@@ -3,7 +3,46 @@
 const readline = require('readline');
 const vm = require('vm');
 
-function evaluateCode(code, bindings) {
+const DEFAULT_TIMEOUT_MS = 1000;
+const MIN_TIMEOUT_MS = 10;
+
+function timeoutFromWasmGasLimit(wasmGasLimit) {
+  if (wasmGasLimit === null || wasmGasLimit === undefined) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+  try {
+    const parsed = BigInt(String(wasmGasLimit));
+    if (parsed <= 0n) {
+      return 1;
+    }
+    const scaled = Number(parsed / 1_000_000n);
+    if (!Number.isFinite(scaled) || Number.isNaN(scaled)) {
+      return DEFAULT_TIMEOUT_MS;
+    }
+    return Math.max(MIN_TIMEOUT_MS, Math.min(DEFAULT_TIMEOUT_MS, scaled));
+  } catch (_error) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+}
+
+function isTimeoutError(error) {
+  if (!error) {
+    return false;
+  }
+  const message = String(error.message || error);
+  return message.includes('Script execution timed out');
+}
+
+function wrapOutOfGasError(error) {
+  const wrapped = new Error(
+    'OutOfGas: execution exceeded wasm gas limit',
+  );
+  wrapped.name = 'OutOfGasError';
+  wrapped.cause = error;
+  return wrapped;
+}
+
+function evaluateCode(code, bindings, wasmGasLimit) {
   const emittedEvents = [];
   const sandbox = Object.assign({}, bindings || {}, {
     emit: (event) => {
@@ -14,12 +53,23 @@ function evaluateCode(code, bindings) {
     process: undefined,
   });
   const context = vm.createContext(sandbox);
+  const timeout = timeoutFromWasmGasLimit(wasmGasLimit);
   let result;
   try {
-    result = vm.runInContext(code, context, { timeout: 1000 });
+    result = vm.runInContext(code, context, { timeout });
   } catch (firstError) {
+    if (isTimeoutError(firstError)) {
+      throw wrapOutOfGasError(firstError);
+    }
     const wrapped = `(function(){${code}\n})()`;
-    result = vm.runInContext(wrapped, context, { timeout: 1000 });
+    try {
+      result = vm.runInContext(wrapped, context, { timeout });
+    } catch (wrappedError) {
+      if (isTimeoutError(wrappedError)) {
+        throw wrapOutOfGasError(wrappedError);
+      }
+      throw wrappedError;
+    }
   }
 
   if (emittedEvents.length === 0) {
@@ -70,7 +120,7 @@ reader.on('line', (line) => {
   const wasmGasLimit = request.wasmGasLimit != null ? String(request.wasmGasLimit) : null;
 
   try {
-    const result = evaluateCode(code, bindings);
+    const result = evaluateCode(code, bindings, wasmGasLimit);
     respond({
       id,
       ok: true,

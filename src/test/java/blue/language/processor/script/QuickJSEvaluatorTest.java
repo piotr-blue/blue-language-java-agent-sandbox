@@ -31,10 +31,10 @@ class QuickJSEvaluatorTest {
             ScriptRuntimeResult result = evaluator.evaluate(
                     "steps + event.payload.value",
                     bindings,
-                    BigInteger.valueOf(1000L));
+                    new BigInteger("1000000000"));
 
             assertEquals("12", String.valueOf(result.value()));
-            assertEquals(new BigInteger("1000"), result.wasmGasRemaining());
+            assertEquals(new BigInteger("1000000000"), result.wasmGasRemaining());
         }
     }
 
