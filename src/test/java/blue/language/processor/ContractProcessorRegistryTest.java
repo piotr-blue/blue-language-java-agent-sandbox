@@ -71,6 +71,12 @@ class ContractProcessorRegistryTest {
     }
 
     @Test
+    void registerRejectsBlankBlueIdValues() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        assertThrows(IllegalArgumentException.class, () -> registry.registerHandler(new BlankBlueIdHandlerProcessor()));
+    }
+
+    @Test
     void registerRejectsUnsupportedProcessorKinds() {
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         assertThrows(IllegalArgumentException.class, () -> registry.register(new PlainContractProcessor()));
@@ -163,6 +169,10 @@ class ContractProcessorRegistryTest {
     static class UnannotatedHandler extends HandlerContract {
     }
 
+    @TypeBlueId("   ")
+    static class BlankBlueIdHandler extends HandlerContract {
+    }
+
     static final class UnannotatedHandlerProcessor implements HandlerProcessor<UnannotatedHandler> {
         @Override
         public Class<UnannotatedHandler> contractType() {
@@ -171,6 +181,18 @@ class ContractProcessorRegistryTest {
 
         @Override
         public void execute(UnannotatedHandler contract, ProcessorExecutionContext context) {
+            // no-op
+        }
+    }
+
+    static final class BlankBlueIdHandlerProcessor implements HandlerProcessor<BlankBlueIdHandler> {
+        @Override
+        public Class<BlankBlueIdHandler> contractType() {
+            return BlankBlueIdHandler.class;
+        }
+
+        @Override
+        public void execute(BlankBlueIdHandler contract, ProcessorExecutionContext context) {
             // no-op
         }
     }

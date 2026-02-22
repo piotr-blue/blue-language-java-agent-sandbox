@@ -141,8 +141,13 @@ public class ContractProcessorRegistry {
 
         Set<String> registered = new LinkedHashSet<>();
         for (String blueId : declared) {
-            processorsByBlueId.put(blueId, processor);
-            registered.add(blueId);
+            if (blueId == null || blueId.trim().isEmpty()) {
+                throw new IllegalArgumentException("Contract processor BlueIds must be non-empty strings for "
+                        + contractType.getName());
+            }
+            String normalized = blueId.trim();
+            processorsByBlueId.put(normalized, processor);
+            registered.add(normalized);
         }
         return registered;
     }
