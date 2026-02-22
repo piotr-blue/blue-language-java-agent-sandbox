@@ -118,9 +118,13 @@ class ContractProcessorRegistryTest {
 
         Node directBlueIdNode = new Node().properties("blueId", new Node().value("BaseHandler"));
         Node providerDerivedNode = new Node().properties("blueId", new Node().value("Derived/Handler"));
+        Node directBlueIdScalarNode = new Node().value("BaseHandler");
+        Node providerDerivedScalarNode = new Node().value("Derived/Handler");
 
         assertSame(handlerProcessor, registry.lookupHandler(directBlueIdNode).orElse(null));
         assertSame(handlerProcessor, registry.lookupHandler(providerDerivedNode).orElse(null));
+        assertSame(handlerProcessor, registry.lookupHandler(directBlueIdScalarNode).orElse(null));
+        assertSame(handlerProcessor, registry.lookupHandler(providerDerivedScalarNode).orElse(null));
     }
 
     @Test

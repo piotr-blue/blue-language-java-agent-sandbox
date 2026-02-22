@@ -373,6 +373,9 @@ public class ContractProcessorRegistry {
             return blueIds;
         }
         addBlueId(blueIds, node.getBlueId());
+        if (node.getValue() instanceof String) {
+            addBlueId(blueIds, String.valueOf(node.getValue()));
+        }
         if (node.getProperties() != null) {
             Node blueIdNode = node.getProperties().get("blueId");
             if (blueIdNode != null && blueIdNode.getValue() != null) {
