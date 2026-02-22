@@ -9,6 +9,7 @@ import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
 import blue.language.processor.model.MyOSTimelineChannel;
 import blue.language.processor.registry.processors.TimelineChannelProcessor;
+import blue.language.utils.TypeClassResolver;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -118,6 +119,38 @@ class ContractProcessorRegistryTest {
         Node derivedTimelineNode = new Node().type(new Node().blueId("MyOS/MyOS Timeline Channel"));
 
         assertSame(timelineProcessor, registry.lookupChannel(derivedTimelineNode).orElse(null));
+    }
+
+    @Test
+    void lookupByNodeFallsBackToResolvedClassHierarchyWhenTypeChainMissing() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry()
+                .typeClassResolver(new TypeClassResolver("blue.language.processor"));
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseChannelProcessor channelProcessor = new BaseChannelProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.registerHandler(handlerProcessor);
+        registry.registerChannel(channelProcessor);
+        registry.registerMarker(markerProcessor);
+
+        Node derivedHandlerNode = new Node().type(new Node().blueId("DerivedHandler"));
+        Node derivedChannelNode = new Node().type(new Node().blueId("DerivedChannel"));
+        Node derivedMarkerNode = new Node().type(new Node().blueId("DerivedMarker"));
+
+        assertSame(handlerProcessor, registry.lookupHandler(derivedHandlerNode).orElse(null));
+        assertSame(channelProcessor, registry.lookupChannel(derivedChannelNode).orElse(null));
+        assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
+    }
+
+    @Test
+    void lookupChannelByNodeUsesResolvedModelClassForTimelineSubtype() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry()
+                .typeClassResolver(new TypeClassResolver("blue.language.processor.model"));
+        TimelineChannelProcessor timelineProcessor = new TimelineChannelProcessor();
+        registry.registerChannel(timelineProcessor);
+
+        Node myosTimelineNode = new Node().type(new Node().blueId("MyOS/MyOS Timeline Channel"));
+
+        assertSame(timelineProcessor, registry.lookupChannel(myosTimelineNode).orElse(null));
     }
 
     @Test

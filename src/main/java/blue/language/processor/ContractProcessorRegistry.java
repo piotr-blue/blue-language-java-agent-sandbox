@@ -7,6 +7,7 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.MarkerContract;
+import blue.language.utils.TypeClassResolver;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -32,17 +33,28 @@ public class ContractProcessorRegistry {
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
     private NodeProvider nodeProvider;
+    private TypeClassResolver typeClassResolver;
 
     public ContractProcessorRegistry() {
-        this(null);
+        this(null, null);
     }
 
     public ContractProcessorRegistry(NodeProvider nodeProvider) {
+        this(nodeProvider, null);
+    }
+
+    public ContractProcessorRegistry(NodeProvider nodeProvider, TypeClassResolver typeClassResolver) {
         this.nodeProvider = nodeProvider;
+        this.typeClassResolver = typeClassResolver;
     }
 
     public ContractProcessorRegistry nodeProvider(NodeProvider nodeProvider) {
         this.nodeProvider = nodeProvider;
+        return this;
+    }
+
+    public ContractProcessorRegistry typeClassResolver(TypeClassResolver typeClassResolver) {
+        this.typeClassResolver = typeClassResolver;
         return this;
     }
 
@@ -104,7 +116,12 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Node contractNode) {
-        return lookupByTypeChain(contractNode, handlerProcessorsByBlueId, nodeProvider);
+        Optional<HandlerProcessor<? extends HandlerContract>> byTypeChain =
+                lookupByTypeChain(contractNode, handlerProcessorsByBlueId, nodeProvider);
+        if (byTypeChain.isPresent()) {
+            return byTypeChain;
+        }
+        return lookupByResolvedClass(contractNode, HandlerContract.class, handlerProcessors);
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
@@ -123,7 +140,12 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Node contractNode) {
-        return lookupByTypeChain(contractNode, channelProcessorsByBlueId, nodeProvider);
+        Optional<ChannelProcessor<? extends ChannelContract>> byTypeChain =
+                lookupByTypeChain(contractNode, channelProcessorsByBlueId, nodeProvider);
+        if (byTypeChain.isPresent()) {
+            return byTypeChain;
+        }
+        return lookupByResolvedClass(contractNode, ChannelContract.class, channelProcessors);
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
@@ -142,7 +164,12 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Node contractNode) {
-        return lookupByTypeChain(contractNode, markerProcessorsByBlueId, nodeProvider);
+        Optional<ContractProcessor<? extends MarkerContract>> byTypeChain =
+                lookupByTypeChain(contractNode, markerProcessorsByBlueId, nodeProvider);
+        if (byTypeChain.isPresent()) {
+            return byTypeChain;
+        }
+        return lookupByResolvedClass(contractNode, MarkerContract.class, markerProcessors);
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
@@ -359,5 +386,21 @@ public class ContractProcessorRegistry {
             return;
         }
         blueIds.add(normalized);
+    }
+
+    private <T extends Contract, P extends ContractProcessor<? extends T>> Optional<P> lookupByResolvedClass(
+            Node contractNode,
+            Class<T> expectedBaseType,
+            Map<Class<? extends T>, P> byClass) {
+        if (contractNode == null || expectedBaseType == null || typeClassResolver == null) {
+            return Optional.empty();
+        }
+        Class<?> resolvedClass = typeClassResolver.resolveClass(contractNode);
+        if (resolvedClass == null || !expectedBaseType.isAssignableFrom(resolvedClass)) {
+            return Optional.empty();
+        }
+        @SuppressWarnings("unchecked")
+        Class<? extends T> typedClass = (Class<? extends T>) resolvedClass;
+        return lookupProcessor(typedClass, byClass, Collections.<String, P>emptyMap());
     }
 }
