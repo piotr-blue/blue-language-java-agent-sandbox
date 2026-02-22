@@ -629,8 +629,18 @@ public final class QuickJsExpressionUtils {
     }
 
     private static int findClosingBracket(String pattern, int start) {
+        boolean escaping = false;
         for (int i = start; i < pattern.length(); i++) {
-            if (pattern.charAt(i) == ']') {
+            char ch = pattern.charAt(i);
+            if (escaping) {
+                escaping = false;
+                continue;
+            }
+            if (ch == '\\') {
+                escaping = true;
+                continue;
+            }
+            if (ch == ']') {
                 return i;
             }
         }
