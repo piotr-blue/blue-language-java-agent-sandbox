@@ -103,7 +103,7 @@ final class WorkflowContractSupport {
                     String expectedBlueId = entry.getValue() != null && entry.getValue().getValue() != null
                             ? String.valueOf(entry.getValue().getValue())
                             : null;
-                    if (!matchesExplicitBlueId(candidate, expectedBlueId)) {
+                    if (!matchesExplicitBlueId(candidate, expectedBlueId, nodeProvider)) {
                         return false;
                     }
                     continue;
@@ -138,7 +138,7 @@ final class WorkflowContractSupport {
         return true;
     }
 
-    private static boolean matchesExplicitBlueId(Node candidate, String expectedBlueId) {
+    private static boolean matchesExplicitBlueId(Node candidate, String expectedBlueId, NodeProvider nodeProvider) {
         if (candidate == null || expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
             return false;
         }
@@ -146,6 +146,9 @@ final class WorkflowContractSupport {
         if (candidate.getBlueId() != null && !candidate.getBlueId().trim().isEmpty()) {
             String candidateBlueId = candidate.getBlueId().trim();
             if (normalizedExpected.equals(candidateBlueId) || equivalentCoreType(normalizedExpected, candidateBlueId)) {
+                return true;
+            }
+            if (matchesBlueIdViaProviderChain(candidateBlueId, normalizedExpected, nodeProvider)) {
                 return true;
             }
         }
@@ -156,14 +159,45 @@ final class WorkflowContractSupport {
                     || equivalentCoreType(normalizedExpected, candidateTypeBlueId)) {
                 return true;
             }
+            if (matchesBlueIdViaProviderChain(candidateTypeBlueId, normalizedExpected, nodeProvider)) {
+                return true;
+            }
+        }
+        if (candidate.getProperties() != null) {
+            Node candidateBlueIdNode = candidate.getProperties().get("blueId");
+            if (candidateBlueIdNode != null && candidateBlueIdNode.getValue() instanceof String) {
+                String candidatePropertyBlueId = ((String) candidateBlueIdNode.getValue()).trim();
+                if (normalizedExpected.equals(candidatePropertyBlueId)
+                        || equivalentCoreType(normalizedExpected, candidatePropertyBlueId)
+                        || matchesBlueIdViaProviderChain(candidatePropertyBlueId, normalizedExpected, nodeProvider)) {
+                    return true;
+                }
+            }
         }
         if (candidate.getValue() instanceof String) {
             String candidateValue = ((String) candidate.getValue()).trim();
-            if (normalizedExpected.equals(candidateValue) || equivalentCoreType(normalizedExpected, candidateValue)) {
+            if (normalizedExpected.equals(candidateValue)
+                    || equivalentCoreType(normalizedExpected, candidateValue)
+                    || matchesBlueIdViaProviderChain(candidateValue, normalizedExpected, nodeProvider)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static boolean matchesBlueIdViaProviderChain(String candidateBlueId,
+                                                         String expectedBlueId,
+                                                         NodeProvider nodeProvider) {
+        if (candidateBlueId == null || candidateBlueId.trim().isEmpty() || nodeProvider == null) {
+            return false;
+        }
+        Node seedTypeNode = new Node().blueId(candidateBlueId.trim());
+        return hasTypeInChain(
+                seedTypeNode,
+                expectedBlueId,
+                nodeProvider,
+                new LinkedHashSet<String>(),
+                new LinkedHashSet<String>());
     }
 
     private static boolean matchesType(Node candidate, Node pattern, NodeProvider nodeProvider) {

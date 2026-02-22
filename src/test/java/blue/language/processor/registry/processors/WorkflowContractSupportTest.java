@@ -55,4 +55,45 @@ class WorkflowContractSupportTest {
         assertFalse(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
         assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement, provider));
     }
+
+    @Test
+    void matchesEventFilterResolvesProviderBackedBlueIdPropertyChains() {
+        Node event = new Node().properties("payload", new Node().blueId("Custom/Derived Payload"));
+        Node filter = new Node().properties("payload",
+                new Node().properties("blueId", new Node().value("Custom/Base Payload")));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node();
+            definition.type(new Node().blueId("Custom/Base Payload"));
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesEventFilter(event, filter));
+        assertTrue(WorkflowContractSupport.matchesEventFilter(event, filter, provider));
+    }
+
+    @Test
+    void matchesEventFilterSupportsCandidatePropertyBlueIdField() {
+        Node event = new Node().properties(
+                "payload",
+                new Node().properties("blueId", new Node().value("Custom/Derived Payload")));
+        Node filter = new Node().properties(
+                "payload",
+                new Node().properties("blueId", new Node().value("Custom/Base Payload")));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node();
+            definition.type(new Node().blueId("Custom/Base Payload"));
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesEventFilter(event, filter));
+        assertTrue(WorkflowContractSupport.matchesEventFilter(event, filter, provider));
+    }
 }
