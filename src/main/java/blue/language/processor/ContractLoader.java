@@ -31,6 +31,9 @@ import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -72,7 +75,7 @@ final class ContractLoader {
                 contract = converter.convertWithType(contractNode, Contract.class, false);
             } catch (RuntimeException ex) {
                 String blueId = contractBlueId(contractNode);
-                if (isUnsupportedContractBlueId(blueId)) {
+                if (isUnsupportedContractNode(contractNode)) {
                     throw new MustUnderstandFailureException("Unsupported contract type: " + blueId);
                 }
                 throw ex;
@@ -141,41 +144,29 @@ final class ContractLoader {
         return key.trim();
     }
 
-    private boolean isUnsupportedContractBlueId(String blueId) {
-        if (blueId == null) {
+    private boolean isUnsupportedContractNode(Node contractNode) {
+        if (contractNode == null || contractNode.getType() == null) {
             return false;
         }
-        String normalized = blueId.trim();
-        if (normalized.isEmpty()) {
+        if (registry.lookupHandler(contractNode).isPresent()
+                || registry.lookupChannel(contractNode).isPresent()
+                || registry.lookupMarker(contractNode).isPresent()) {
             return false;
         }
-        if (BUILTIN_CONTRACT_BLUE_IDS.contains(normalized)) {
-            return false;
-        }
-        if (registry.lookupHandler(normalized).isPresent()
-                || registry.lookupChannel(normalized).isPresent()
-                || registry.lookupMarker(normalized).isPresent()) {
-            return false;
+        for (String blueId : contractBlueIdChain(contractNode.getType())) {
+            if (BUILTIN_CONTRACT_BLUE_IDS.contains(blueId)) {
+                return false;
+            }
         }
         return true;
     }
 
     private String contractBlueId(Node contractNode) {
-        if (contractNode == null || contractNode.getType() == null) {
+        List<String> chain = contractBlueIdChain(contractNode != null ? contractNode.getType() : null);
+        if (chain.isEmpty()) {
             return null;
         }
-        String blueId = contractNode.getType().getBlueId();
-        if (blueId != null && !blueId.trim().isEmpty()) {
-            return blueId.trim();
-        }
-        if (contractNode.getType().getProperties() == null) {
-            return null;
-        }
-        Node blueIdNode = contractNode.getType().getProperties().get("blueId");
-        if (blueIdNode == null || blueIdNode.getValue() == null) {
-            return null;
-        }
-        return String.valueOf(blueIdNode.getValue()).trim();
+        return chain.get(0);
     }
 
     private void normalizePointerBackedContracts(Contract contract, String key, String scopePath) {
@@ -309,5 +300,36 @@ final class ContractLoader {
         if (defaultValue != null && !defaultValue.trim().isEmpty()) {
             ids.add(defaultValue.trim());
         }
+    }
+
+    private List<String> contractBlueIdChain(Node typeNode) {
+        List<String> blueIds = new ArrayList<>();
+        if (typeNode == null) {
+            return blueIds;
+        }
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        Node current = typeNode;
+        while (current != null && visited.add(current)) {
+            addBlueId(blueIds, current.getBlueId());
+            if (current.getProperties() != null) {
+                Node blueIdNode = current.getProperties().get("blueId");
+                if (blueIdNode != null && blueIdNode.getValue() != null) {
+                    addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+                }
+            }
+            current = current.getType();
+        }
+        return blueIds;
+    }
+
+    private void addBlueId(List<String> blueIds, String candidate) {
+        if (candidate == null) {
+            return;
+        }
+        String normalized = candidate.trim();
+        if (normalized.isEmpty() || blueIds.contains(normalized)) {
+            return;
+        }
+        blueIds.add(normalized);
     }
 }

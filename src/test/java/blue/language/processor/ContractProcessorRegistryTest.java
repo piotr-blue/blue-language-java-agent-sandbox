@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
@@ -51,6 +52,28 @@ class ContractProcessorRegistryTest {
         assertSame(markerProcessor, registry.lookupMarker(DerivedMarker.class).orElse(null));
         assertSame(markerProcessor, registry.lookupMarker("BaseMarker").orElse(null));
         assertTrue(registry.processors().containsKey("BaseChannel"));
+    }
+
+    @Test
+    void lookupByNodeTypeChainSupportsDerivedBlueIds() {
+        ContractProcessorRegistry registry = new ContractProcessorRegistry();
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseChannelProcessor channelProcessor = new BaseChannelProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.registerHandler(handlerProcessor);
+        registry.registerChannel(channelProcessor);
+        registry.registerMarker(markerProcessor);
+
+        Node derivedHandlerNode = new Node().type(
+                new Node().blueId("Derived/Handler").type(new Node().blueId("BaseHandler")));
+        Node derivedChannelNode = new Node().type(
+                new Node().blueId("Derived/Channel").type(new Node().blueId("BaseChannel")));
+        Node derivedMarkerNode = new Node().type(
+                new Node().blueId("Derived/Marker").type(new Node().blueId("BaseMarker")));
+
+        assertSame(handlerProcessor, registry.lookupHandler(derivedHandlerNode).orElse(null));
+        assertSame(channelProcessor, registry.lookupChannel(derivedChannelNode).orElse(null));
+        assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
     }
 
     @Test

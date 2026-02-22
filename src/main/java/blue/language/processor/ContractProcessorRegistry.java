@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
@@ -14,6 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 
 /**
  * Maintains the mapping between contract BlueIds and their processors.
@@ -85,6 +88,10 @@ public class ContractProcessorRegistry {
         return lookupHandler(contract.getClass());
     }
 
+    public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Node contractNode) {
+        return lookupByTypeChain(contractNode, handlerProcessorsByBlueId);
+    }
+
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
         return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
     }
@@ -100,6 +107,10 @@ public class ContractProcessorRegistry {
         return lookupChannel(contract.getClass());
     }
 
+    public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Node contractNode) {
+        return lookupByTypeChain(contractNode, channelProcessorsByBlueId);
+    }
+
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
         return Optional.ofNullable(channelProcessorsByBlueId.get(blueId));
     }
@@ -113,6 +124,10 @@ public class ContractProcessorRegistry {
             return Optional.empty();
         }
         return lookupMarker(contract.getClass());
+    }
+
+    public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Node contractNode) {
+        return lookupByTypeChain(contractNode, markerProcessorsByBlueId);
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
@@ -235,5 +250,49 @@ public class ContractProcessorRegistry {
             }
         }
         return Integer.MAX_VALUE;
+    }
+
+    private static <P> Optional<P> lookupByTypeChain(Node contractNode, Map<String, P> processorsByBlueId) {
+        if (contractNode == null || processorsByBlueId == null || processorsByBlueId.isEmpty()) {
+            return Optional.empty();
+        }
+        for (String blueId : resolveTypeChainBlueIds(contractNode.getType())) {
+            P processor = processorsByBlueId.get(blueId);
+            if (processor != null) {
+                return Optional.of(processor);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static List<String> resolveTypeChainBlueIds(Node typeNode) {
+        List<String> blueIds = new ArrayList<>();
+        if (typeNode == null) {
+            return blueIds;
+        }
+        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        Node current = typeNode;
+        while (current != null && visited.add(current)) {
+            addBlueId(blueIds, current.getBlueId());
+            if (current.getProperties() != null) {
+                Node blueIdNode = current.getProperties().get("blueId");
+                if (blueIdNode != null && blueIdNode.getValue() != null) {
+                    addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+                }
+            }
+            current = current.getType();
+        }
+        return blueIds;
+    }
+
+    private static void addBlueId(List<String> blueIds, String candidate) {
+        if (candidate == null) {
+            return;
+        }
+        String normalized = candidate.trim();
+        if (normalized.isEmpty() || blueIds.contains(normalized)) {
+            return;
+        }
+        blueIds.add(normalized);
     }
 }
