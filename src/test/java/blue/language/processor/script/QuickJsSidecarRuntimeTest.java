@@ -39,6 +39,12 @@ class QuickJsSidecarRuntimeTest {
             Map<String, Object> emittedPayload = (Map<String, Object>) withEmit.value();
             assertEquals("9", String.valueOf(emittedPayload.get("__result")));
             assertTrue(emittedPayload.get("events") instanceof List);
+
+            ScriptRuntimeResult withoutDate = runtime.evaluate(ScriptRuntimeRequest.of("typeof Date"));
+            assertEquals("undefined", String.valueOf(withoutDate.value()));
+
+            ScriptRuntimeResult withoutProcess = runtime.evaluate(ScriptRuntimeRequest.of("typeof process"));
+            assertEquals("undefined", String.valueOf(withoutProcess.value()));
         }
     }
 

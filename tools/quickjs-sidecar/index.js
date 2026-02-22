@@ -10,6 +10,8 @@ function evaluateCode(code, bindings) {
       emittedEvents.push(event);
       return event;
     },
+    Date: undefined,
+    process: undefined,
   });
   const context = vm.createContext(sandbox);
   let result;

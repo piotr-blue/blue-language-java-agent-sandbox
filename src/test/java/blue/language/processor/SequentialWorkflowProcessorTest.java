@@ -441,6 +441,33 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepDoesNotExposeDateGlobal() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Deterministic Globals Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/dateType', val: typeof Date }, { op: 'ADD', path: '/processType', val: typeof process }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-deterministic").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("undefined", result.document().getProperties().get("dateType").getValue());
+        assertEquals("undefined", result.document().getProperties().get("processType").getValue());
+    }
+
+    @Test
     void updateDocumentStepResolvesExpressionValues() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
