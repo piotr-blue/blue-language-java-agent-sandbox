@@ -91,6 +91,9 @@ Evaluator prelude host APIs:
 - `document.get(pointer?)` / `document.getCanonical(pointer?)`
   - alias helpers for parity with host-handler style API names used in JS workflows
 - `canon.at(value, pointer)` and `canon.unwrap(value)`
+  - `canon.unwrap(value, deep?)` now supports:
+    - deep unwrapping (default) across canonical wrappers (`{ value: ... }`, `{ items: [...] }`) and nested objects
+    - shallow mode (`deep=false`) that only unwraps the top-level wrapper
 
 Document snapshots are charged via `chargeDocumentSnapshot`.
 WASM usage is charged via `chargeWasmGas`.

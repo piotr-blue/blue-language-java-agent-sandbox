@@ -78,6 +78,65 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void canonUnwrapSupportsDeepAndShallowModes() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "const canonicalEvent = {\n" +
+                            "  payload: {\n" +
+                            "    id: { value: 'evt-123' },\n" +
+                            "    tags: { items: [{ value: 'a' }, { value: 'b' }] }\n" +
+                            "  },\n" +
+                            "  name: { value: 'example' }\n" +
+                            "};\n" +
+                            "const pointer = canon.at(canonicalEvent, '/payload/id');\n" +
+                            "return {\n" +
+                            "  pointerUnwrapped: canon.unwrap(pointer),\n" +
+                            "  eventPlain: canon.unwrap(canonicalEvent),\n" +
+                            "  eventShallow: canon.unwrap(canonicalEvent, false),\n" +
+                            "  arrayPlain: canon.unwrap({ items: [{ value: 1 }, { value: 2 }] })\n" +
+                            "};",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> value = (Map<String, Object>) result.value();
+            assertEquals("evt-123", String.valueOf(value.get("pointerUnwrapped")));
+
+            assertTrue(value.get("eventPlain") instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> eventPlain = (Map<String, Object>) value.get("eventPlain");
+            assertEquals("example", String.valueOf(eventPlain.get("name")));
+            assertTrue(eventPlain.get("payload") instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) eventPlain.get("payload");
+            assertEquals("evt-123", String.valueOf(payload.get("id")));
+            assertTrue(payload.get("tags") instanceof List);
+            @SuppressWarnings("unchecked")
+            List<Object> tags = (List<Object>) payload.get("tags");
+            assertEquals(2, tags.size());
+            assertEquals("a", String.valueOf(tags.get(0)));
+            assertEquals("b", String.valueOf(tags.get(1)));
+
+            assertTrue(value.get("eventShallow") instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> eventShallow = (Map<String, Object>) value.get("eventShallow");
+            assertTrue(eventShallow.get("payload") instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> shallowPayload = (Map<String, Object>) eventShallow.get("payload");
+            assertTrue(shallowPayload.get("id") instanceof Map);
+
+            assertTrue(value.get("arrayPlain") instanceof List);
+            @SuppressWarnings("unchecked")
+            List<Object> arrayPlain = (List<Object>) value.get("arrayPlain");
+            assertEquals("1", String.valueOf(arrayPlain.get(0)));
+            assertEquals("2", String.valueOf(arrayPlain.get(1)));
+        }
+    }
+
+    @Test
     void wrapsSyntaxErrorsInCodeBlockEvaluationError() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
