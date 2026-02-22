@@ -353,6 +353,48 @@ final class ChannelRunnerTest {
         assertNull(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT));
     }
 
+    @Test
+    void skipsHandlersWhoseMatchesPredicateReturnsFalse() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SelectiveSetPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  skipHandler:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /skip\n" +
+                "    propertyValue: 1\n" +
+                "  applyHandler:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /counter\n" +
+                "    propertyValue: 2\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-match").kind("any")));
+
+        Node skipNode = execution.runtime().document().getProperties().get("skip");
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertTrue(skipNode == null || skipNode.getValue() == null, "Skipped handler must not mutate document");
+        assertNotNull(counterNode);
+        assertEquals(new BigInteger("2"), counterNode.getValue());
+    }
+
     private static final class ThrowingSetPropertyContractProcessor implements HandlerProcessor<SetProperty> {
 
         @Override
@@ -363,6 +405,29 @@ final class ChannelRunnerTest {
         @Override
         public void execute(SetProperty contract, ProcessorExecutionContext context) {
             throw new RuntimeException("boom from handler");
+        }
+    }
+
+    private static final class SelectiveSetPropertyContractProcessor implements HandlerProcessor<SetProperty> {
+
+        @Override
+        public Class<SetProperty> contractType() {
+            return SetProperty.class;
+        }
+
+        @Override
+        public boolean matches(SetProperty contract, ProcessorExecutionContext context) {
+            return contract != null && !"/skip".equals(contract.getPropertyKey());
+        }
+
+        @Override
+        public void execute(SetProperty contract, ProcessorExecutionContext context) {
+            if (contract == null || contract.getPropertyKey() == null) {
+                return;
+            }
+            context.applyPatch(blue.language.processor.model.JsonPatch.add(
+                    contract.getPropertyKey(),
+                    new Node().value(contract.getPropertyValue())));
         }
     }
 }
