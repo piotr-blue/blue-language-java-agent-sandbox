@@ -56,7 +56,8 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("}");
         prelude.append("};");
         prelude.append("const document = (function(){");
-        prelude.append("const __source = (typeof __documentData !== 'undefined') ? __documentData : undefined;");
+        prelude.append("const __simpleSource = (typeof __documentDataSimple !== 'undefined') ? __documentDataSimple : ((typeof __documentData !== 'undefined') ? __documentData : undefined);");
+        prelude.append("const __canonicalSource = (typeof __documentDataCanonical !== 'undefined') ? __documentDataCanonical : __simpleSource;");
         prelude.append("const __scopePathValue = (typeof __scopePath !== 'undefined' && typeof __scopePath === 'string' && __scopePath.length > 0) ? __scopePath : '/';");
         prelude.append("const RAW_VALUE_SEGMENTS = new Set(['blueId','name','description','value']);");
         prelude.append("const __normalize = function(pointer){");
@@ -86,10 +87,10 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("const segment = idx >= 0 ? pointer.substring(idx + 1) : pointer;");
         prelude.append("return RAW_VALUE_SEGMENTS.has(segment);");
         prelude.append("};");
-        prelude.append("const __readInternal = function(pointer, unwrapScalar){");
-        prelude.append("if (__source === undefined) return undefined;");
+        prelude.append("const __readInternal = function(source, pointer, unwrapScalar){");
+        prelude.append("if (source === undefined) return undefined;");
         prelude.append("const normalized = __normalize(pointer);");
-        prelude.append("let current = __source;");
+        prelude.append("let current = source;");
         prelude.append("for (const segment of __segments(normalized)) {");
         prelude.append("if (current === undefined || current === null) return undefined;");
         prelude.append("if (Array.isArray(current)) {");
@@ -105,8 +106,8 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("if (unwrapScalar) return __unwrapPotentialNode(current);");
         prelude.append("return current;");
         prelude.append("};");
-        prelude.append("const fn = function(pointer){ return __readInternal(pointer, true); };");
-        prelude.append("fn.canonical = function(pointer){ return __readInternal(pointer, false); };");
+        prelude.append("const fn = function(pointer){ return __readInternal(__simpleSource, pointer, true); };");
+        prelude.append("fn.canonical = function(pointer){ return __readInternal(__canonicalSource, pointer, false); };");
         prelude.append("return fn;");
         prelude.append("})();");
         prelude.append("\n");

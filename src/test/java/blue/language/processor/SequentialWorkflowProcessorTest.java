@@ -330,7 +330,7 @@ class SequentialWorkflowProcessorTest {
                 "        changeset:\n" +
                 "          - op: ADD\n" +
                 "            path: /computed\n" +
-                "            val: \"${event.count.value + document('/base')}\"\n");
+                "            val: \"${event.count + document('/base')}\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.yamlToNode("type:\n" +
@@ -365,7 +365,7 @@ class SequentialWorkflowProcessorTest {
                 "      - type:\n" +
                 "          blueId: Conversation/Trigger Event\n" +
                 "        event:\n" +
-                "          kind: \"${event.kind.value}\"\n" +
+                "          kind: \"${event.kind}\"\n" +
                 "  observer:\n" +
                 "    channel: triggered\n" +
                 "    type:\n" +
@@ -428,7 +428,7 @@ class SequentialWorkflowProcessorTest {
                 "        changeset:\n" +
                 "          - op: REPLACE\n" +
                 "            path: /counter\n" +
-                "            val: \"${event.message.request.value}\"\n");
+                "            val: \"${event.message.request}\"\n");
     }
 
     private Node operationRequestEvent(Blue blue,
