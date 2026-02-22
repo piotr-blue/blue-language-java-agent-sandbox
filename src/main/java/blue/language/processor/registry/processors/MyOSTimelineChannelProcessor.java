@@ -14,6 +14,9 @@ public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimeli
 
     @Override
     public boolean matches(MyOSTimelineChannel contract, ChannelEvaluationContext context) {
+        if (!TimelineEventSupport.isConversationOrMyOSTimelineEntry(context.event())) {
+            return false;
+        }
         String expectedTimelineId = contract.getTimelineId();
         if (expectedTimelineId == null || expectedTimelineId.trim().isEmpty()) {
             return false;
@@ -28,7 +31,10 @@ public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimeli
     @Override
     public Node channelize(MyOSTimelineChannel contract, ChannelEvaluationContext context) {
         Node event = context.event();
-        return event != null ? event.clone() : null;
+        if (!TimelineEventSupport.isConversationOrMyOSTimelineEntry(event)) {
+            return null;
+        }
+        return event.clone();
     }
 
     @Override

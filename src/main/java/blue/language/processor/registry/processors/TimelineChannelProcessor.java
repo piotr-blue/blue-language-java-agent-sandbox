@@ -14,6 +14,9 @@ public class TimelineChannelProcessor implements ChannelProcessor<TimelineChanne
 
     @Override
     public boolean matches(TimelineChannel contract, ChannelEvaluationContext context) {
+        if (!TimelineEventSupport.isConversationTimelineEntry(context.event())) {
+            return false;
+        }
         String expectedTimelineId = contract.getTimelineId();
         if (expectedTimelineId == null || expectedTimelineId.trim().isEmpty()) {
             return false;
@@ -28,7 +31,10 @@ public class TimelineChannelProcessor implements ChannelProcessor<TimelineChanne
     @Override
     public Node channelize(TimelineChannel contract, ChannelEvaluationContext context) {
         Node event = context.event();
-        return event != null ? event.clone() : null;
+        if (!TimelineEventSupport.isConversationTimelineEntry(event)) {
+            return null;
+        }
+        return event.clone();
     }
 
     @Override

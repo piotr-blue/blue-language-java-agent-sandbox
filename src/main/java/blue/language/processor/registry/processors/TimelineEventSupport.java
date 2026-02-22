@@ -9,6 +9,11 @@ import java.util.List;
 
 final class TimelineEventSupport {
 
+    private static final String CONVERSATION_TIMELINE_ENTRY_BLUE_ID = "Conversation/Timeline Entry";
+    private static final String TIMELINE_ENTRY_BLUE_ID = "TimelineEntry";
+    private static final String MYOS_TIMELINE_ENTRY_BLUE_ID = "MyOS/MyOS Timeline Entry";
+    private static final String MYOS_TIMELINE_ENTRY_ALIAS = "MyOSTimelineEntry";
+
     private static final List<String[]> TIMELINE_ID_PATHS = Arrays.<String[]>asList(
             new String[]{"timeline", "timelineId"},
             new String[]{"timelineId"}
@@ -47,6 +52,22 @@ final class TimelineEventSupport {
             eventId = valueAtPath(event, "id");
         }
         return eventId != null ? String.valueOf(eventId) : null;
+    }
+
+    static boolean isConversationTimelineEntry(Node event) {
+        String typeBlueId = eventTypeBlueId(event);
+        return CONVERSATION_TIMELINE_ENTRY_BLUE_ID.equals(typeBlueId)
+                || TIMELINE_ENTRY_BLUE_ID.equals(typeBlueId);
+    }
+
+    static boolean isMyOSTimelineEntry(Node event) {
+        String typeBlueId = eventTypeBlueId(event);
+        return MYOS_TIMELINE_ENTRY_BLUE_ID.equals(typeBlueId)
+                || MYOS_TIMELINE_ENTRY_ALIAS.equals(typeBlueId);
+    }
+
+    static boolean isConversationOrMyOSTimelineEntry(Node event) {
+        return isConversationTimelineEntry(event) || isMyOSTimelineEntry(event);
     }
 
     static boolean isNewer(Node current, Node previous) {
@@ -93,5 +114,37 @@ final class TimelineEventSupport {
             current = current.getProperties().get(segment);
         }
         return current != null ? current.getValue() : null;
+    }
+
+    private static String eventTypeBlueId(Node event) {
+        if (event == null) {
+            return null;
+        }
+        if (event.getType() != null && event.getType().getBlueId() != null) {
+            String blueId = event.getType().getBlueId().trim();
+            return blueId.isEmpty() ? null : blueId;
+        }
+        if (event.getProperties() == null) {
+            return null;
+        }
+        Node typeNode = event.getProperties().get("type");
+        if (typeNode == null) {
+            return null;
+        }
+        if (typeNode.getBlueId() != null && !typeNode.getBlueId().trim().isEmpty()) {
+            return typeNode.getBlueId().trim();
+        }
+        if (typeNode.getProperties() != null && typeNode.getProperties().get("blueId") != null) {
+            Node blueIdNode = typeNode.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                String blueId = String.valueOf(blueIdNode.getValue()).trim();
+                return blueId.isEmpty() ? null : blueId;
+            }
+        }
+        if (typeNode.getValue() instanceof String) {
+            String blueId = ((String) typeNode.getValue()).trim();
+            return blueId.isEmpty() ? null : blueId;
+        }
+        return null;
     }
 }

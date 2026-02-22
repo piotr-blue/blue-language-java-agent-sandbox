@@ -168,7 +168,7 @@ Current in-flight work:
   (`CompositeTimelineChannelProcessorTest`, `CompositeTimelineChannelIntegrationParityTest`).
 - MyOS timeline channel parity coverage now explicitly verifies:
   - matching for both MyOS and conversation timeline-entry event shapes
-  - rejection of non-timeline or mismatched timeline-id events
+  - rejection of non-timeline or mismatched timeline-id events (including arbitrary event types carrying matching `timelineId`)
   - recency comparison behavior against prior checkpointed events
   - document-processing integration behavior for MyOS vs conversation timeline entries and mismatch guards
   (`MyOSTimelineChannelProcessorTest`, `MyOSTimelineChannelIntegrationParityTest`).
@@ -177,6 +177,7 @@ Current in-flight work:
   - handler delivery + checkpointed event metadata assertions
   - duplicate event-id checkpoint gating
   - channel-level event-filter matching semantics
+  - strict conversation timeline-entry type gating (arbitrary events with `timelineId` are ignored)
   (`TimelineChannelProcessorTest`, `TimelineChannelProcessorIntegrationParityTest`).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).

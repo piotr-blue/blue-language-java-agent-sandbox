@@ -9,6 +9,7 @@ import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MyOSTimelineChannelProcessorTest {
@@ -20,6 +21,7 @@ class MyOSTimelineChannelProcessorTest {
         contract.setTimelineId("owner-42");
 
         Node current = new Node()
+                .type(new Node().blueId("MyOS/MyOS Timeline Entry"))
                 .properties("eventId", new Node().value("evt-current"))
                 .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")))
                 .properties("revision", new Node().value(new BigInteger("9")));
@@ -75,5 +77,21 @@ class MyOSTimelineChannelProcessorTest {
 
         assertFalse(processor.matches(contract, randomContext));
         assertFalse(processor.matches(contract, mismatchContext));
+    }
+
+    @Test
+    void rejectsNonTimelineEventsEvenWhenTimelineIdMatches() {
+        MyOSTimelineChannelProcessor processor = new MyOSTimelineChannelProcessor();
+        MyOSTimelineChannel contract = new MyOSTimelineChannel();
+        contract.setTimelineId("owner-42");
+
+        Node randomEvent = new Node()
+                .type(new Node().blueId("RandomEvent"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")));
+        ChannelEvaluationContext context = new ChannelEvaluationContext(
+                "/", "myos", randomEvent, null, null, null, null);
+
+        assertFalse(processor.matches(contract, context));
+        assertNull(processor.channelize(contract, context));
     }
 }

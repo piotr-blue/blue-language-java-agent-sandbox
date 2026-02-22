@@ -53,8 +53,16 @@ class MyOSTimelineChannelIntegrationParityTest {
         assertNull(afterRandom.document().getProperties().get("price"));
         assertNull(afterRandom.document().getProperties().get("count"));
 
+        Node randomWithTimeline = blue.yamlToNode("type:\n" +
+                "  blueId: RandomEvent\n" +
+                "timeline:\n" +
+                "  timelineId: alice-timeline\n");
+        DocumentProcessingResult afterRandomWithTimeline = blue.processDocument(afterRandom.document().clone(), randomWithTimeline);
+        assertNull(afterRandomWithTimeline.document().getProperties().get("price"));
+        assertNull(afterRandomWithTimeline.document().getProperties().get("count"));
+
         Node mismatchedMyOS = timelineEntryEvent(blue, "MyOS/MyOS Timeline Entry", "evt-2", "bob-timeline");
-        DocumentProcessingResult afterMyOSMismatch = blue.processDocument(afterRandom.document().clone(), mismatchedMyOS);
+        DocumentProcessingResult afterMyOSMismatch = blue.processDocument(afterRandomWithTimeline.document().clone(), mismatchedMyOS);
         assertNull(afterMyOSMismatch.document().getProperties().get("price"));
         assertNull(afterMyOSMismatch.document().getProperties().get("count"));
 

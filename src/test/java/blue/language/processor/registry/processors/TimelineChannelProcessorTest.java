@@ -10,6 +10,7 @@ import java.math.BigInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TimelineChannelProcessorTest {
@@ -63,6 +64,22 @@ class TimelineChannelProcessorTest {
     }
 
     @Test
+    void rejectsNonTimelineEventsEvenWhenTimelineIdMatches() {
+        TimelineChannelProcessor processor = new TimelineChannelProcessor();
+        TimelineChannel contract = new TimelineChannel();
+        contract.setTimelineId("owner-42");
+
+        Node randomEvent = new Node()
+                .type(new Node().blueId("RandomEvent"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")));
+        ChannelEvaluationContext context = new ChannelEvaluationContext(
+                "/", "timeline", randomEvent, null, null, null, null);
+
+        assertFalse(processor.matches(contract, context));
+        assertNull(processor.channelize(contract, context));
+    }
+
+    @Test
     void respectsChannelLevelEventFilters() {
         TimelineChannelProcessor processor = new TimelineChannelProcessor();
         TimelineChannel contract = new TimelineChannel();
@@ -96,6 +113,7 @@ class TimelineChannelProcessorTest {
 
     private Node timelineEvent(String timelineId, String eventId, BigInteger sequence) {
         return new Node()
+                .type(new Node().blueId("Conversation/Timeline Entry"))
                 .properties("eventId", new Node().value(eventId))
                 .properties("timeline", new Node().properties("timelineId", new Node().value(timelineId)))
                 .properties("sequence", new Node().value(sequence));

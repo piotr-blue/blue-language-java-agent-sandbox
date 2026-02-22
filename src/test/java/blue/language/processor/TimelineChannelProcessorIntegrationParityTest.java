@@ -27,8 +27,16 @@ class TimelineChannelProcessorIntegrationParityTest {
         assertNull(afterRandom.document().getProperties().get("price"));
         assertNull(afterRandom.document().getProperties().get("count"));
 
+        Node randomWithTimeline = blue.yamlToNode("type:\n" +
+                "  blueId: RandomEvent\n" +
+                "timeline:\n" +
+                "  timelineId: alice-timeline\n");
+        DocumentProcessingResult afterRandomWithTimeline = blue.processDocument(afterRandom.document().clone(), randomWithTimeline);
+        assertNull(afterRandomWithTimeline.document().getProperties().get("price"));
+        assertNull(afterRandomWithTimeline.document().getProperties().get("count"));
+
         Node mismatched = timelineEntryEvent(blue, "evt-1", "bob-timeline", "set-price", 1500, 1700000000L);
-        DocumentProcessingResult afterMismatch = blue.processDocument(afterRandom.document().clone(), mismatched);
+        DocumentProcessingResult afterMismatch = blue.processDocument(afterRandomWithTimeline.document().clone(), mismatched);
         assertNull(afterMismatch.document().getProperties().get("price"));
         assertNull(afterMismatch.document().getProperties().get("count"));
     }
