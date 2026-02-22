@@ -34,7 +34,10 @@ class QuickJSEvaluatorTest {
                     new BigInteger("1000000000"));
 
             assertEquals("12", String.valueOf(result.value()));
-            assertEquals(new BigInteger("1000000000"), result.wasmGasRemaining());
+            assertTrue(result.wasmGasUsed() != null && result.wasmGasUsed().compareTo(BigInteger.ZERO) > 0);
+            assertTrue(result.wasmGasRemaining() != null
+                    && result.wasmGasRemaining().compareTo(new BigInteger("1000000000")) < 0
+                    && result.wasmGasRemaining().compareTo(BigInteger.ZERO) >= 0);
         }
     }
 

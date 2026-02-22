@@ -47,6 +47,7 @@ Timeout/error normalization parity:
   - `name: "OutOfGasError"`
   - `message: "OutOfGas: execution exceeded wasm gas limit"`
 - `QuickJSEvaluator`/`QuickJsSidecarRuntime` preserve this in surfaced exception text.
+- Successful sidecar evaluations now report deterministic non-zero `wasmGasUsed` estimates and bounded `wasmGasRemaining` values derived from code complexity and numeric literals (parity-friendly metering shape while full QuickJS fuel parity is still pending).
 
 ## Gas mapping
 
