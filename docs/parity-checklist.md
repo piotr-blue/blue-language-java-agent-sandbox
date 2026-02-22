@@ -100,4 +100,4 @@ This checklist is updated after each parity feature group lands, with status tra
 Current in-flight work:
 - Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns.
 - Registry/type-chain lookup remains class-hierarchy based; deeper semantic subtype matching parity is still pending.
-- Golden fixtures now cover sequential workflow happy path, operation mismatch, complex operation request typing, handler event filtering, derived change workflow, JS emit callback/document blueId, and expected initialization failures; broader integration fixture migration remains.
+- Golden fixtures now cover sequential workflow happy path, operation mismatch, direct/complex operation requests, handler event filtering, derived change workflow, JS emit callback/deterministic globals/document blueId, MyOS timeline, composite timeline, and expected initialization failures/cycle validation; broader integration fixture migration remains.
