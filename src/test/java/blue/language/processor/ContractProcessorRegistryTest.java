@@ -100,6 +100,27 @@ class ContractProcessorRegistryTest {
     }
 
     @Test
+    void lookupChannelByNodeSupportsProviderDerivedTimelineTypes() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"MyOS/MyOS Timeline Channel".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node().type(new Node().blueId("Conversation/Timeline Channel"));
+                return Collections.singletonList(definition);
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        TimelineChannelProcessor timelineProcessor = new TimelineChannelProcessor();
+        registry.registerChannel(timelineProcessor);
+
+        Node derivedTimelineNode = new Node().type(new Node().blueId("MyOS/MyOS Timeline Channel"));
+
+        assertSame(timelineProcessor, registry.lookupChannel(derivedTimelineNode).orElse(null));
+    }
+
+    @Test
     void lookupChannelFallsBackToTimelineProcessorForMyOSTypeHierarchy() {
         ContractProcessorRegistry registry = new ContractProcessorRegistry();
         TimelineChannelProcessor timelineProcessor = new TimelineChannelProcessor();
