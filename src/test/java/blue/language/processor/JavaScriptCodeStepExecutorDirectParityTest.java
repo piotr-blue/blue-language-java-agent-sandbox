@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
+import blue.language.processor.script.CodeBlockEvaluationError;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.processor.workflow.steps.JavaScriptCodeStepExecutor;
 import org.junit.jupiter.api.Test;
@@ -88,5 +89,69 @@ class JavaScriptCodeStepExecutorDirectParityTest {
 
         ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
         assertTrue(String.valueOf(fatal.getMessage()).contains("step payload is invalid"));
+    }
+
+    @Test
+    void throwsFatalWhenCodePayloadIsMissing() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("MissingCode")
+                .type(new Node().blueId("Conversation/JavaScript Code"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
+        assertTrue(String.valueOf(fatal.getMessage()).contains("requires non-empty code"));
+    }
+
+    @Test
+    void wrapsThrownScriptErrorsInCodeBlockEvaluationError() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("ThrowingStep")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value("throw new TypeError('bad input');"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        CodeBlockEvaluationError error = assertThrows(CodeBlockEvaluationError.class, () -> executor.execute(args));
+        assertEquals("TypeError", error.runtimeErrorName());
+        assertEquals("bad input", error.runtimeErrorMessage());
     }
 }

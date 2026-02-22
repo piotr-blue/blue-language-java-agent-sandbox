@@ -157,6 +157,8 @@ Current in-flight work:
 - JavaScript Code step direct parity now includes runtime-context execution coverage for:
   - direct executor invocation with real processor context
   - document/event binding evaluation (`document('/counter') + event.x`)
+  - fatal validation for missing `code` payload
+  - direct wrapped script-error metadata via `CodeBlockEvaluationError`
   - direct fatal error path for invalid step schema/type payloads
   - wasm gas charging side effect on processor runtime totals
   (`JavaScriptCodeStepExecutorDirectParityTest`).
