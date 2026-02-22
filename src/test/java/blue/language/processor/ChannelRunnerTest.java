@@ -232,4 +232,40 @@ final class ChannelRunnerTest {
         assertNotNull(counterNode);
         assertEquals(BigInteger.ONE, counterNode.getValue());
     }
+
+    @Test
+    void allowsHandlersToRunWhenScopeInactiveOnlyIfAllowTerminatedWorkIsTrue() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-allow-terminated").kind("any"));
+
+        execution.markCutOff("/");
+        runner.runHandlers("/", bundle, "testChannel", event, false);
+        assertNull(execution.runtime().document().getProperties().get("counter"));
+
+        runner.runHandlers("/", bundle, "testChannel", event, true);
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterNode);
+        assertEquals(BigInteger.ONE, counterNode.getValue());
+    }
 }
