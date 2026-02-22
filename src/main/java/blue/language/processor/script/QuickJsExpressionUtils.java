@@ -14,8 +14,9 @@ import java.util.function.Consumer;
 
 public final class QuickJsExpressionUtils {
 
-    private static final Pattern STANDALONE_EXPRESSION_PATTERN = Pattern.compile("^\\$\\{[^{}]+}$");
-    private static final Pattern TEMPLATE_EXPRESSION_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
+    private static final Pattern STANDALONE_EXPRESSION_PATTERN = Pattern.compile("^\\$\\{([\\s\\S]*)}$");
+    private static final Pattern SINGLE_EXPRESSION_PATTERN = Pattern.compile("\\$\\{([\\s\\S]+?)}");
+    private static final Pattern TEMPLATE_EXPRESSION_PATTERN = Pattern.compile("\\$\\{([\\s\\S]+?)}");
 
     public interface PointerPredicate {
         boolean test(String pointer, Node node);
@@ -56,15 +57,24 @@ public final class QuickJsExpressionUtils {
         if (!(value instanceof String)) {
             return false;
         }
-        String text = ((String) value).trim();
-        return STANDALONE_EXPRESSION_PATTERN.matcher(text).matches();
+        String text = (String) value;
+        if (!STANDALONE_EXPRESSION_PATTERN.matcher(text).matches()) {
+            return false;
+        }
+        int first = text.indexOf("${");
+        int last = text.lastIndexOf("${");
+        return first >= 0 && first == last;
     }
 
     public static boolean containsExpression(Object value) {
         if (!(value instanceof String)) {
             return false;
         }
-        return TEMPLATE_EXPRESSION_PATTERN.matcher((String) value).find();
+        String text = (String) value;
+        if (STANDALONE_EXPRESSION_PATTERN.matcher(text).matches()) {
+            return true;
+        }
+        return SINGLE_EXPRESSION_PATTERN.matcher(text).find();
     }
 
     public static String extractExpressionContent(String expression) {
@@ -147,6 +157,9 @@ public final class QuickJsExpressionUtils {
                                          PointerPredicate shouldDescend,
                                          Consumer<java.math.BigInteger> wasmGasConsumer) {
         Node cloned = node.clone();
+        if (shouldDescend != null && !shouldDescend.test(pointer, cloned)) {
+            return cloned;
+        }
         Object value = cloned.getValue();
         if (shouldResolve == null || shouldResolve.test(pointer, cloned)) {
             if (isExpression(value)) {

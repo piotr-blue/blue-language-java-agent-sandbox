@@ -22,11 +22,14 @@ class QuickJsExpressionUtilsTest {
     @Test
     void expressionHelpersDetectAndExtractExpressions() {
         assertTrue(QuickJsExpressionUtils.isExpression("${value}"));
+        assertTrue(QuickJsExpressionUtils.isExpression("${foo({a: 1})}"));
+        assertTrue(QuickJsExpressionUtils.isExpression("${line1 +\nline2}"));
         assertFalse(QuickJsExpressionUtils.isExpression("${foo} + ${bar}"));
         assertFalse(QuickJsExpressionUtils.isExpression("plain text"));
 
         assertTrue(QuickJsExpressionUtils.containsExpression("${value}"));
         assertTrue(QuickJsExpressionUtils.containsExpression("hello ${value} world"));
+        assertTrue(QuickJsExpressionUtils.containsExpression("hello ${line1 +\nline2} world"));
         assertFalse(QuickJsExpressionUtils.containsExpression("hello world"));
 
         assertEquals("steps.answer", QuickJsExpressionUtils.extractExpressionContent("${steps.answer}"));
@@ -316,6 +319,36 @@ class QuickJsExpressionUtilsTest {
 
             assertEquals(new BigInteger("42"), resolved.getProperties().get("resolve").getValue());
             assertEquals("${steps.answer}", resolved.getProperties().get("literal").getProperties().get("nested").getValue());
+        }
+    }
+
+    @Test
+    void resolveExpressionsSkipsCurrentNodeWhenShouldDescendRejectsPointer() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Node root = new Node().value("${steps.answer}");
+
+            Map<String, Object> bindings = new LinkedHashMap<>();
+            Map<String, Object> steps = new LinkedHashMap<>();
+            steps.put("answer", 42);
+            bindings.put("steps", steps);
+
+            Node resolved = QuickJsExpressionUtils.resolveExpressions(
+                    root,
+                    evaluator,
+                    bindings,
+                    null,
+                    QuickJsExpressionUtils.createPathPredicate(Arrays.asList("/**"), null),
+                    new QuickJsExpressionUtils.PointerPredicate() {
+                        @Override
+                        public boolean test(String pointer, Node node) {
+                            return false;
+                        }
+                    },
+                    null);
+
+            assertEquals("${steps.answer}", resolved.getValue());
         }
     }
 
