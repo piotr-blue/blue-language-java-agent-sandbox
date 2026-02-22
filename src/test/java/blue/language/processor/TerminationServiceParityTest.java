@@ -63,4 +63,34 @@ class TerminationServiceParityTest {
         assertEquals("fatal", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/cause").getValue()));
         assertEquals("bad", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/reason").getValue()));
     }
+
+    @Test
+    void throwsNonFatalRunTerminationOnRootGracefulAndEmitsLifecycle() {
+        DocumentProcessor processor = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(processor, new Node());
+        DocumentProcessingRuntime runtime = execution.runtime();
+        TerminationService service = new TerminationService(runtime);
+
+        RunTerminationException thrown = assertThrows(
+                RunTerminationException.class,
+                () -> service.terminateScope(
+                        execution,
+                        "/",
+                        null,
+                        ScopeRuntimeContext.TerminationKind.GRACEFUL,
+                        "done"));
+        assertFalse(thrown.fatal());
+
+        Node marker = ProcessorEngine.nodeAt(runtime.document(), "/contracts/terminated");
+        assertNotNull(marker);
+        assertEquals("graceful", String.valueOf(ProcessorEngine.nodeAt(runtime.document(), "/contracts/terminated/cause").getValue()));
+        assertEquals("done", String.valueOf(ProcessorEngine.nodeAt(runtime.document(), "/contracts/terminated/reason").getValue()));
+        assertTrue(runtime.isRunTerminated());
+
+        assertEquals(1, runtime.rootEmissions().size());
+        Node lifecycle = runtime.rootEmissions().get(0);
+        assertEquals("Core/Document Processing Terminated", lifecycle.getType().getBlueId());
+        assertEquals("graceful", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/cause").getValue()));
+        assertEquals("done", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/reason").getValue()));
+    }
 }
