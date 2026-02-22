@@ -178,7 +178,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (requestPayload == null || requiredType == null) {
             return false;
         }
-        return WorkflowContractSupport.matchesEventFilter(requestPayload, requiredType);
+        return WorkflowContractSupport.matchesTypeRequirement(requestPayload, requiredType);
     }
 
     private boolean isPinnedDocumentAllowed(Node requestNode, ProcessorExecutionContext context) {

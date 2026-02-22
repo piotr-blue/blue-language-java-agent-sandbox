@@ -154,6 +154,63 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationAppliesHandlerEventPattern() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
+                null,
+                "ownerChannel",
+                "Conversation/Sequential Workflow Operation",
+                "Conversation/Operation",
+                "type: Integer",
+                "message:\n  allowNewerVersion: false",
+                "${event.message.request + document('/counter')}")).document();
+
+        String storedBlueId = storedDocumentBlueId(initialized);
+        Node matchingEvent = operationRequestEvent(blue, "increment", 2, false, storedBlueId, "owner-42");
+        DocumentProcessingResult matched = blue.processDocument(initialized, matchingEvent);
+        assertEquals(new BigInteger("2"), matched.document().getProperties().get("counter").getValue());
+
+        Node nonMatchingEvent = operationRequestEvent(blue, "increment", 5, true, storedBlueId, "owner-42");
+        DocumentProcessingResult skipped = blue.processDocument(matched.document(), nonMatchingEvent);
+        assertEquals(new BigInteger("2"), skipped.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowOperationHandlesComplexRequestStructures() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
+                null,
+                "ownerChannel",
+                "Conversation/Sequential Workflow Operation",
+                "Conversation/Operation",
+                "type: Dictionary\nentries:\n  amount:\n    type: Integer\n  metadata:\n    type: Dictionary\n    entries:\n      note:\n        type: Text",
+                null,
+                "${event.message.request.amount + document('/counter')}")).document();
+
+        String storedBlueId = storedDocumentBlueId(initialized);
+        Node complexEvent = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-complex\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Conversation/Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request:\n" +
+                "    amount: 3\n" +
+                "    metadata:\n" +
+                "      note: boost\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, complexEvent);
+
+        assertEquals(new BigInteger("3"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void javaScriptCodeStepCanApplyChangesetAndEmitEvents() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -393,11 +450,31 @@ class SequentialWorkflowProcessorTest {
                                            String operationChannel,
                                            String handlerTypeBlueId,
                                            String operationTypeBlueId) {
+        return operationWorkflowDocumentAdvanced(
+                handlerChannel,
+                operationChannel,
+                handlerTypeBlueId,
+                operationTypeBlueId,
+                "type: Integer",
+                null,
+                "${event.message.request}");
+    }
+
+    private Node operationWorkflowDocumentAdvanced(String handlerChannel,
+                                                   String operationChannel,
+                                                   String handlerTypeBlueId,
+                                                   String operationTypeBlueId,
+                                                   String requestTypeYaml,
+                                                   String handlerEventYaml,
+                                                   String stepExpression) {
         String handlerChannelYaml = handlerChannel != null
                 ? "    channel: " + handlerChannel + "\n"
                 : "";
         String operationChannelYaml = operationChannel != null
                 ? "    channel: " + operationChannel + "\n"
+                : "";
+        String handlerEventSection = handlerEventYaml != null && !handlerEventYaml.trim().isEmpty()
+                ? "    event:\n" + indent(handlerEventYaml, 6) + "\n"
                 : "";
         Blue blue = new Blue();
         return blue.yamlToNode("name: Workflow Operation Doc\n" +
@@ -416,19 +493,20 @@ class SequentialWorkflowProcessorTest {
                 "      blueId: " + operationTypeBlueId + "\n" +
                 operationChannelYaml +
                 "    request:\n" +
-                "      type: Integer\n" +
+                indent(requestTypeYaml, 6) + "\n" +
                 "  operationWorkflow:\n" +
                 "    type:\n" +
                 "      blueId: " + handlerTypeBlueId + "\n" +
                 handlerChannelYaml +
                 "    operation: increment\n" +
+                handlerEventSection +
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/Update Document\n" +
                 "        changeset:\n" +
                 "          - op: REPLACE\n" +
                 "            path: /counter\n" +
-                "            val: \"${event.message.request}\"\n");
+                "            val: \"" + stepExpression + "\"\n");
     }
 
     private Node operationRequestEvent(Blue blue,
@@ -471,5 +549,18 @@ class SequentialWorkflowProcessorTest {
                 .getProperties()
                 .get("documentId")
                 .getValue());
+    }
+
+    private String indent(String block, int spaces) {
+        StringBuilder builder = new StringBuilder();
+        String prefix = new String(new char[spaces]).replace('\0', ' ');
+        String[] lines = block.split("\\r?\\n");
+        for (int i = 0; i < lines.length; i++) {
+            if (i > 0) {
+                builder.append('\n');
+            }
+            builder.append(prefix).append(lines[i]);
+        }
+        return builder.toString();
     }
 }
