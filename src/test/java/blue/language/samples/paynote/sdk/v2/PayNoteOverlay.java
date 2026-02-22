@@ -7,6 +7,7 @@ import blue.language.samples.paynote.dsl.ContractsBuilder;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsOutputBuilder;
 import blue.language.samples.paynote.dsl.JsPatchBuilder;
+import blue.language.samples.paynote.dsl.PayNoteEvents;
 import blue.language.samples.paynote.dsl.StepsBuilder;
 import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.types.conversation.ConversationTypes;
@@ -42,10 +43,41 @@ public final class PayNoteOverlay {
         return this;
     }
 
+    public PayNoteOverlay standardParticipantChannels() {
+        contracts().channel("payerChannel", ConversationTypes.TimelineChannel.class);
+        contracts().channel("payeeChannel", ConversationTypes.TimelineChannel.class);
+        contracts().channel("guarantorChannel", ConversationTypes.TimelineChannel.class);
+        contracts().channel("shipmentCompanyChannel", ConversationTypes.TimelineChannel.class);
+        contracts().putRaw("allParticipantsChannel", new Node()
+                .type(TypeAliases.CONVERSATION_COMPOSITE_TIMELINE_CHANNEL)
+                .properties("channels", new Node().items(
+                        new Node().value("payerChannel"),
+                        new Node().value("payeeChannel"),
+                        new Node().value("guarantorChannel"),
+                        new Node().value("shipmentCompanyChannel")
+                )));
+        return this;
+    }
+
+    public PayNoteOverlay reserveOnInit(int amount) {
+        contracts().lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
+        contracts().onLifecycle("onInitReserveFunds", "initLifecycleChannel", steps -> steps
+                .triggerEvent("ReserveFunds", PayNoteEvents.reserveFundsRequested(amount)));
+        return this;
+    }
+
+    public PayNoteOverlay confirmShipmentUnlocksCapture(int amount) {
+        contracts().operation("confirmShipment", "shipmentCompanyChannel", "Confirm delivery; trigger capture.");
+        contracts().implementOperation("confirmShipmentImpl", "confirmShipment", steps -> steps
+                .emitAdHocEvent("ShipmentConfirmed", "shipment-confirmed", payload -> payload.put("source", "shipmentCompany"))
+                .triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(amount)));
+        return this;
+    }
+
     public PayNoteOverlay reserve(int amount) {
         contracts().operation("reserve", "payerChannel", "Reserve funds for this PayNote");
         contracts().implementOperation("reserveImpl", "reserve", steps -> steps
-                .emitType("EmitReserveRequested", PayNoteTypes.ReserveFundsRequested.class, payload -> payload.put("amount", amount))
+                .triggerEvent("EmitReserveRequested", PayNoteEvents.reserveFundsRequested(amount))
                 .replaceValue("MarkReservationRequested", "/reservationRequested", true)
                 .replaceValue("SetStatusReserved", "/status", "reserved"));
         return this;
@@ -54,9 +86,8 @@ public final class PayNoteOverlay {
     public PayNoteOverlay reserveAndCaptureImmediately(int amount) {
         contracts().operation("reserveAndCaptureNow", "payerChannel", "Reserve and capture instantly");
         contracts().implementOperation("reserveAndCaptureNowImpl", "reserveAndCaptureNow", steps -> steps
-                .emitType("EmitReserveAndCaptureImmediately",
-                        PayNoteTypes.ReserveFundsAndCaptureImmediatelyRequested.class,
-                        payload -> payload.put("amount", amount))
+                .triggerEvent("EmitReserveAndCaptureImmediately",
+                        PayNoteEvents.reserveFundsAndCaptureImmediatelyRequested(amount))
                 .replaceValue("SetStatusCaptured", "/status", "captured"));
         return this;
     }
@@ -64,7 +95,7 @@ public final class PayNoteOverlay {
     public PayNoteOverlay captureOnEvent(String workflowKey, Class<?> triggerEventType, int amount) {
         ensureTriggeredChannel();
         contracts().onTriggered(workflowKey, triggerEventType, steps -> steps
-                .emitType("EmitCaptureRequested", PayNoteTypes.CaptureFundsRequested.class, payload -> payload.put("amount", amount))
+                .triggerEvent("EmitCaptureRequested", PayNoteEvents.captureFundsRequested(amount))
                 .replaceValue("SetCaptureRequested", "/captureRequested", true));
         return this;
     }
@@ -73,7 +104,7 @@ public final class PayNoteOverlay {
         String channelKey = "timerChannel";
         contracts().documentUpdateChannel(channelKey, timerPath);
         contracts().sequentialWorkflow("captureAfterTimer", channelKey, new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE), steps -> steps
-                .emitType("EmitCaptureFromTimer", PayNoteTypes.CaptureFundsRequested.class, payload -> payload.put("amount", amount))
+                .triggerEvent("EmitCaptureFromTimer", PayNoteEvents.captureFundsRequested(amount))
                 .replaceValue("SetCaptureRequested", "/captureRequested", true));
         return this;
     }
@@ -81,8 +112,8 @@ public final class PayNoteOverlay {
     public PayNoteOverlay refundFullOperation() {
         contracts().operation("refundFull", "payeeChannel", "Refund full amount");
         contracts().implementOperation("refundFullImpl", "refundFull", steps -> steps
-                .emitType("EmitRefundRequested", PayNoteTypes.ReservationReleaseRequested.class,
-                        payload -> payload.put("amount", BlueDocDsl.expr("document('/amount')")))
+                .triggerEvent("EmitRefundRequested",
+                        PayNoteEvents.reservationReleaseRequested(new Node().value(BlueDocDsl.expr("document('/amount')"))))
                 .replaceValue("SetStatusRefundRequested", "/status", "refund-requested"));
         return this;
     }
@@ -90,8 +121,22 @@ public final class PayNoteOverlay {
     public PayNoteOverlay issueChildOnEvent(String workflowKey, Class<?> triggerEventType, String childPointer) {
         ensureTriggeredChannel();
         contracts().onTriggered(workflowKey, triggerEventType, steps -> steps
-                .emitType("IssueChildPayNote", PayNoteTypes.IssueChildPayNoteRequested.class,
-                        payload -> payload.put("childPayNote", new Node().value(childPointer))));
+                .triggerEvent("IssueChildPayNote", PayNoteEvents.issueChildPayNoteRequested(childPointer)));
+        return this;
+    }
+
+    public PayNoteOverlay requestCancellationOperation() {
+        contracts().operation("requestCancellation", "payerChannel", "Payer requests cancellation");
+        contracts().implementOperation("requestCancellationImpl", "requestCancellation", steps -> steps
+                .replaceValue("MarkCancellationRequested", "/status", "cancellation-requested"));
+        return this;
+    }
+
+    public PayNoteOverlay releaseOnEvent(String workflowKey, Class<?> triggerEventType, int amount) {
+        ensureTriggeredChannel();
+        contracts().onTriggered(workflowKey, triggerEventType, steps -> steps
+                .triggerEvent("ReleaseReservation", PayNoteEvents.reservationReleaseRequested(amount))
+                .replaceValue("MarkReleased", "/status", "released"));
         return this;
     }
 

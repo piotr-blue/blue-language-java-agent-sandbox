@@ -4,6 +4,8 @@ import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.MyOs;
 import blue.language.samples.paynote.dsl.MyOsTimeline;
 import blue.language.samples.paynote.types.common.CommonTypes;
+import blue.language.samples.paynote.examples.CardTransactionPayNoteBootstrapExample;
+import blue.language.samples.paynote.examples.ShipmentCapturePayNoteTemplates;
 import blue.language.samples.paynote.examples.CandidateCvBootstrapExample;
 import blue.language.samples.paynote.examples.RecruitmentClassifierBootstrapExample;
 import blue.language.samples.paynote.sdk.v2.PayNoteOverlay;
@@ -37,6 +39,13 @@ public final class ComplexDocsShowcase {
         docs.put("reverseVoucherCreditLine", reverseVoucherCreditLine());
         docs.put("fraudHoldAndRelease", fraudHoldAndRelease());
         docs.put("dualApprovalEscrow", dualApprovalEscrow());
+        docs.put("escrowCancellationAndExpiry", escrowCancellationAndExpiry());
+        docs.put("partialShipmentCapture", partialShipmentCapture());
+        docs.put("settlementAdjustmentFlow", settlementAdjustmentFlow());
+        docs.put("disputeAdjudicationFlow", disputeAdjudicationFlow());
+        docs.put("fxQuoteLockFlow", fxQuoteLockFlow());
+        docs.put("cardRailVariant", cardRailVariant(timestamp));
+        docs.put("bankTransferRailVariant", bankTransferRailVariant(timestamp));
 
         return docs;
     }
@@ -165,6 +174,108 @@ public final class ComplexDocsShowcase {
                 .refundFullOperation()
                 .build();
         return bindDefaultParticipants(payNote);
+    }
+
+    private static Node escrowCancellationAndExpiry() {
+        PayNoteOverlay payNote = PayNoteOverlay.payNote("Escrow Cancellation + Expiry", 430, "EUR")
+                .abstractParticipants()
+                .reserve(430)
+                .withOperation("requestCancellation",
+                        "payerChannel",
+                        "Payer requests cancellation for protection flow",
+                        changeset -> changeset.replaceValue("/status", "cancellation-requested"))
+                .onEvent("releaseOnCancellationApproval", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("ReleaseReservationAfterCancellation",
+                                PayNoteTypes.ReservationReleaseRequested.class,
+                                payload -> payload.put("amount", 430))
+                        .replaceValue("MarkCancelled", "/status", "cancelled"))
+                .onChange("expiryTimeout", "/timeouts/expiryAt", steps -> steps
+                        .emitType("ReleaseOnExpiry", PayNoteTypes.ReservationReleaseRequested.class,
+                                payload -> payload.put("amount", 430))
+                        .replaceValue("MarkExpired", "/status", "expired"));
+        return bindDefaultParticipants(payNote.build());
+    }
+
+    private static Node partialShipmentCapture() {
+        PayNoteOverlay payNote = PayNoteOverlay.payNote("Partial Shipment Capture", 1200, "EUR")
+                .abstractParticipants()
+                .reserve(1200)
+                .onEvent("capturePartialOne", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("CapturePartOne", PayNoteTypes.CaptureFundsRequested.class,
+                                payload -> payload.put("amount", 500))
+                        .replaceValue("TrackPartialOne", "/partials/1/captured", true))
+                .onEvent("capturePartialTwo", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("CapturePartTwo", PayNoteTypes.CaptureFundsRequested.class,
+                                payload -> payload.put("amount", 700))
+                        .replaceValue("TrackPartialTwo", "/partials/2/captured", true));
+        return bindDefaultParticipants(payNote.build());
+    }
+
+    private static Node settlementAdjustmentFlow() {
+        PayNoteOverlay payNote = PayNoteOverlay.payNote("Settlement Adjustment", 990, "EUR")
+                .abstractParticipants()
+                .reserve(990)
+                .withOperation("specifySettlementAmount",
+                        "payeeChannel",
+                        "Payee specifies final settlement amount before capture",
+                        changeset -> changeset.replaceExpression("/settlement/finalAmount", "event.message.request.amount"))
+                .onEvent("captureAfterSettlementAccepted", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("CaptureFinalSettlement", PayNoteTypes.CaptureFundsRequested.class,
+                                payload -> payload.putExpression("amount", "document('/settlement/finalAmount')"))
+                        .replaceValue("MarkSettlementCaptured", "/status", "captured"));
+        return bindDefaultParticipants(payNote.build());
+    }
+
+    private static Node disputeAdjudicationFlow() {
+        PayNoteOverlay payNote = PayNoteOverlay.payNote("Dispute Adjudication", 840, "EUR")
+                .abstractParticipants()
+                .reserve(840)
+                .onEvent("markDisputed", CommonTypes.NamedEvent.class, steps -> steps
+                        .replaceValue("SetDisputed", "/status", "disputed"))
+                .onEvent("captureIfDisputeRejected", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("CaptureAfterDisputeReject", PayNoteTypes.CaptureFundsRequested.class,
+                                payload -> payload.put("amount", 840))
+                        .replaceValue("SetCaptured", "/status", "captured"))
+                .onEvent("releaseIfDisputeApproved", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("ReleaseAfterDisputeApprove", PayNoteTypes.ReservationReleaseRequested.class,
+                                payload -> payload.put("amount", 840))
+                        .replaceValue("SetRefunded", "/status", "refunded"));
+        return bindDefaultParticipants(payNote.build());
+    }
+
+    private static Node fxQuoteLockFlow() {
+        PayNoteOverlay payNote = PayNoteOverlay.payNote("FX Quote Lock Escrow", 500, "EUR")
+                .abstractParticipants()
+                .reserve(500)
+                .withOperation("lockFxQuote",
+                        "guarantorChannel",
+                        "Guarantor locks FX quote before reserve execution",
+                        changeset -> changeset
+                                .replaceValue("/funding/sourceCurrency", "CHF")
+                                .replaceValue("/funding/fxQuoteId", "FX-QUOTE-2026-001"))
+                .onEvent("captureWhenFxAndShipmentReady", CommonTypes.NamedEvent.class, steps -> steps
+                        .emitType("CaptureAfterFxLock", PayNoteTypes.CaptureFundsRequested.class,
+                                payload -> payload.put("amount", 500)));
+        return bindDefaultParticipants(payNote.build());
+    }
+
+    private static Node cardRailVariant(String timestamp) {
+        return CardTransactionPayNoteBootstrapExample.build(
+                timestamp,
+                "payer@card-rail",
+                "payee@merchant-card",
+                "guarantor@bank-card",
+                "shipment@dhl-card");
+    }
+
+    private static Node bankTransferRailVariant(String timestamp) {
+        Node template = ShipmentCapturePayNoteTemplates.captureOnShipmentTemplate(timestamp);
+        Node specialized = ShipmentCapturePayNoteTemplates.eur200FromChfWithDhl(template, "shipment@bank-transfer");
+        return ShipmentCapturePayNoteTemplates.instantiateForAliceBob(
+                specialized,
+                "payer@bank-transfer",
+                "payee@merchant-bank",
+                "guarantor@bank-transfer");
     }
 
     private static Node bindDefaultParticipants(Node document) {

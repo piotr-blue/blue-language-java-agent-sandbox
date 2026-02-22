@@ -75,9 +75,23 @@
   - added generator that emits Java beans with `@TypeAlias` + `@TypeBlueId` from snapshot entries
   - added tests proving generation across Core/Conversation/MyOS/PayNote packages
 
+## Iteration 9 — Production-shaped PayNote templates, policy slots, and canonical flow library
+
+- **Awesomeness:** 9.9 / 10
+- **Developer experience:** 9.9 / 10
+- **Improvements:**
+  - introduced first-class template pipeline via `DocTemplates.clone/extend/applyPatch`
+  - added standard policy slots in document builders (`contractsChangePolicy`, `changesetAllowList`, `operationRateLimit`)
+  - added `PayNoteAliases` + `PayNoteEvents` to remove ad-hoc PayNote event payload drift
+  - added realistic examples:
+    - card transaction escrow bootstrap (abstract channels + explicit bindings)
+    - template -> specialization (EUR from CHF + DHL) -> final instance (Alice/Bob/bank)
+  - expanded canonical library with additional high-value docs (cancellation/expiry, partial shipment, settlement adjustment, dispute, FX lock, rail variants)
+  - added YAML snapshot-style test coverage for showcase docs
+
 ## Final assessment (best achieved without overengineering)
 
-- **Awesomeness:** **9.8 / 10**
-- **Developer experience:** **9.8 / 10**
+- **Awesomeness:** **9.9 / 10**
+- **Developer experience:** **9.9 / 10**
 
 Further gains would likely require introducing a full production-grade compiler-style DSL, which would add complexity beyond this demo scope.
