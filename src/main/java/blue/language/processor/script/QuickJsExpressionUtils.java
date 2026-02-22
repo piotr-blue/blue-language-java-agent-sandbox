@@ -266,9 +266,7 @@ public final class QuickJsExpressionUtils {
             pointerToMatch = pointerToMatch.toLowerCase(java.util.Locale.ROOT);
         }
         List<String> expandedPatterns = new ArrayList<>();
-        for (String extglobExpanded : expandSimpleExtglobs(normalizedPattern)) {
-            expandedPatterns.addAll(expandBraces(extglobExpanded));
-        }
+        expandedPatterns.addAll(expandBraces(normalizedPattern));
 
         for (String expandedPattern : expandedPatterns) {
             String effectivePattern = options.noglobstar()
@@ -282,11 +280,39 @@ public final class QuickJsExpressionUtils {
     }
 
     private static boolean matchesSinglePattern(String pointerToMatch, String normalizedPattern, boolean dot) {
+        String regexPattern = buildPatternRegex(normalizedPattern, dot, true);
+        boolean matched = pointerToMatch.matches(regexPattern);
+        if (!matched) {
+            return false;
+        }
+        if (!dot
+                && pointerToMatch.matches(".*(^|/)\\.[^/]+(/|$).*")
+                && !normalizedPattern.contains("/.")) {
+            return false;
+        }
+        return true;
+    }
+
+    private static String buildPatternRegex(String normalizedPattern, boolean dot, boolean anchored) {
         StringBuilder regex = new StringBuilder();
-        regex.append("^");
+        if (anchored) {
+            regex.append("^");
+        }
         for (int i = 0; i < normalizedPattern.length(); i++) {
             char ch = normalizedPattern.charAt(i);
             boolean segmentStart = i == 0 || normalizedPattern.charAt(i - 1) == '/';
+            if (isExtglobMarker(ch) && i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '(') {
+                int closingParenthesis = findClosingParenthesis(normalizedPattern, i + 1);
+                if (closingParenthesis > i + 1) {
+                    String body = normalizedPattern.substring(i + 2, closingParenthesis);
+                    if (segmentStart && !dot) {
+                        regex.append("(?!\\.)");
+                    }
+                    regex.append(toExtglobRegex(ch, body, dot));
+                    i = closingParenthesis;
+                    continue;
+                }
+            }
             if (ch == '*') {
                 boolean isDoubleStar = (i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '*');
                 if (isDoubleStar) {
@@ -318,17 +344,40 @@ public final class QuickJsExpressionUtils {
             }
             regex.append(ch);
         }
-        regex.append("$");
-        boolean matched = pointerToMatch.matches(regex.toString());
-        if (!matched) {
-            return false;
+        if (anchored) {
+            regex.append("$");
         }
-        if (!dot
-                && pointerToMatch.matches(".*(^|/)\\.[^/]+(/|$).*")
-                && !normalizedPattern.contains("/.")) {
-            return false;
+        return regex.toString();
+    }
+
+    private static boolean isExtglobMarker(char ch) {
+        return ch == '@' || ch == '?' || ch == '+' || ch == '*' || ch == '!';
+    }
+
+    private static String toExtglobRegex(char marker, String body, boolean dot) {
+        List<String> options = splitPipeOptions(body);
+        List<String> optionRegexes = new ArrayList<>();
+        for (String option : options) {
+            optionRegexes.add(buildPatternRegex(option, dot, false));
         }
-        return true;
+        if (optionRegexes.isEmpty()) {
+            optionRegexes.add("");
+        }
+        String union = "(?:" + String.join("|", optionRegexes) + ")";
+        switch (marker) {
+            case '@':
+                return union;
+            case '?':
+                return "(?:" + union + ")?";
+            case '+':
+                return "(?:" + union + ")+";
+            case '*':
+                return "(?:" + union + ")*";
+            case '!':
+                return "(?:(?!" + union + "(?:/|$))[^/]+)";
+            default:
+                return Pattern.quote(String.valueOf(marker) + "(" + body + ")");
+        }
     }
 
     private static List<String> expandBraces(String pattern) {
@@ -390,46 +439,6 @@ public final class QuickJsExpressionUtils {
         }
         options.add(current.toString());
         return options;
-    }
-
-    private static List<String> expandSimpleExtglobs(String pattern) {
-        if (pattern == null) {
-            return Collections.singletonList(null);
-        }
-        int markerIndex = -1;
-        char marker = 0;
-        for (int i = 0; i < pattern.length() - 1; i++) {
-            char ch = pattern.charAt(i);
-            if ((ch == '@' || ch == '?') && pattern.charAt(i + 1) == '(') {
-                markerIndex = i;
-                marker = ch;
-                break;
-            }
-        }
-        if (markerIndex < 0) {
-            return Collections.singletonList(pattern);
-        }
-
-        int close = findClosingParenthesis(pattern, markerIndex + 1);
-        if (close < 0) {
-            return Collections.singletonList(pattern);
-        }
-
-        String prefix = pattern.substring(0, markerIndex);
-        String body = pattern.substring(markerIndex + 2, close);
-        String suffix = pattern.substring(close + 1);
-        List<String> options = splitPipeOptions(body);
-        if (marker == '?') {
-            options.add(0, "");
-        }
-
-        List<String> expanded = new ArrayList<>();
-        for (String option : options) {
-            for (String tail : expandSimpleExtglobs(option + suffix)) {
-                expanded.add(prefix + tail);
-            }
-        }
-        return expanded;
     }
 
     private static int findClosingParenthesis(String pattern, int openIndex) {

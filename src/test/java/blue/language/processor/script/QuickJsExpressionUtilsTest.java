@@ -250,6 +250,42 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsOneOrMoreExtglobPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contract+(s)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertFalse(predicate.test("/contract/value", null));
+        assertTrue(predicate.test("/contracts/value", null));
+        assertTrue(predicate.test("/contractss/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsZeroOrMoreExtglobPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contract*(s)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contract/value", null));
+        assertTrue(predicate.test("/contracts/value", null));
+        assertTrue(predicate.test("/contractss/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsNegatedExtglobPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/!(primary|secondary)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertFalse(predicate.test("/contracts/primary/value", null));
+        assertFalse(predicate.test("/contracts/secondary/value", null));
+        assertTrue(predicate.test("/contracts/tertiary/value", null));
+    }
+
+    @Test
     void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 
