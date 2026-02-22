@@ -1,8 +1,8 @@
 package blue.language.samples.paynote.examples;
 
 import blue.language.model.Node;
-import blue.language.processor.model.JsonPatch;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
+import blue.language.samples.paynote.dsl.DocTemplate;
 import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
@@ -11,8 +11,7 @@ import blue.language.samples.paynote.dsl.JsProgram;
 import blue.language.samples.paynote.dsl.MyOsDsl;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
-
-import java.util.Arrays;
+import blue.language.samples.paynote.types.domain.ShippingEvents;
 
 public final class ShipmentCapturePayNoteTemplates {
 
@@ -38,36 +37,45 @@ public final class ShipmentCapturePayNoteTemplates {
 
                     c.operation("confirmShipment", "shipmentCompanyChannel", "Confirm delivery; triggers capture.");
                     c.implementOperation("confirmShipmentImpl", "confirmShipment", steps -> steps
-                            .triggerEvent("ShipmentConfirmed", shipmentConfirmedEvent())
+                            .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                    payload -> payload.put("source", "shipmentCompanyChannel"))
                             .js("CaptureFunds", captureFundsProgram()));
                 })
                 .build();
     }
 
-    public static Node eur200FromChfWithDhl(Node baseTemplate, String dhlAccountId) {
-        Node specialized = DocTemplates.applyPatch(baseTemplate, Arrays.asList(
-                JsonPatch.replace("/document/currency", new Node().value("EUR")),
-                JsonPatch.replace("/document/amount/total", new Node().value(20000)),
-                JsonPatch.replace("/document/funding/sourceCurrency", new Node().value("CHF"))
-        ));
+    public static DocTemplate shipmentEscrowTemplate(String timestamp) {
+        return DocTemplates.template(captureOnShipmentTemplate(timestamp));
+    }
 
-        return DocTemplates.extend(specialized, mutator -> mutator.bindAccount("shipmentCompanyChannel", dhlAccountId));
+    public static DocTemplate eur200FromChfWithDhl(DocTemplate baseTemplate, String dhlAccountId) {
+        return baseTemplate.specialize(s -> s
+                .setCurrency("EUR")
+                .setAmountTotal(20000)
+                .set("/funding/sourceCurrency", "CHF")
+                .bindRole("shipmentCompany").accountId(dhlAccountId));
+    }
+
+    public static Node instantiateForAliceBob(DocTemplate specializedTemplate,
+                                              String aliceAccountId,
+                                              String bobAccountId,
+                                              String bankAccountId) {
+        return specializedTemplate.instantiate(i -> i
+                .bindRole("payer").accountId(aliceAccountId)
+                .bindRole("payee").accountId(bobAccountId)
+                .bindRole("guarantor").accountId(bankAccountId))
+                .build();
+    }
+
+    public static Node eur200FromChfWithDhl(Node baseTemplate, String dhlAccountId) {
+        return eur200FromChfWithDhl(DocTemplates.template(baseTemplate), dhlAccountId).build();
     }
 
     public static Node instantiateForAliceBob(Node specializedTemplate,
                                               String aliceAccountId,
                                               String bobAccountId,
                                               String bankAccountId) {
-        return DocTemplates.extend(specializedTemplate, mutator -> mutator
-                .bindAccount("payerChannel", aliceAccountId)
-                .bindAccount("payeeChannel", bobAccountId)
-                .bindAccount("guarantorChannel", bankAccountId));
-    }
-
-    private static Node shipmentConfirmedEvent() {
-        return new Node()
-                .type(TypeAliases.CONVERSATION_EVENT)
-                .properties("kind", new Node().value("Shipment Confirmed"));
+        return instantiateForAliceBob(DocTemplates.template(specializedTemplate), aliceAccountId, bobAccountId, bankAccountId);
     }
 
     private static JsProgram reserveFundsProgram() {

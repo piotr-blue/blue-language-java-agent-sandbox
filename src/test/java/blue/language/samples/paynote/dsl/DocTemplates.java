@@ -14,6 +14,10 @@ public final class DocTemplates {
     private DocTemplates() {
     }
 
+    public static DocTemplate template(Node bootstrap) {
+        return DocTemplate.of(bootstrap);
+    }
+
     public static Node clone(Node template) {
         if (template == null) {
             throw new IllegalArgumentException("template cannot be null");

@@ -50,4 +50,44 @@ class DocTemplatesTest {
         assertThrows(IllegalArgumentException.class,
                 () -> base.getAsText("/document/funding/sourceCurrency/value"));
     }
+
+    @Test
+    void supportsDocTemplateSpecializeAndInstantiateWithoutMutation() {
+        DocTemplate base = DocTemplates.template(MyOsDsl.bootstrap()
+                .documentName("Shipment Template")
+                .documentType(PayNoteAliases.SHIPMENT_CAPTURE_PAYNOTE)
+                .putDocumentValue("currency", "EUR")
+                .putDocumentObject("amount", amount -> amount.put("total", 0))
+                .build());
+
+        DocTemplate specialized = base.specialize(s -> s
+                .setName("EUR 200 Shipment Escrow")
+                .setCurrency("EUR")
+                .setAmountTotal(20000)
+                .set("/funding/sourceCurrency", "CHF")
+                .bindRole("shipmentCompany").accountId("acc_dhl_001"));
+
+        DocTemplate instance = specialized.instantiate(i -> i
+                .bindRole("payer").email("alice@gmail.com")
+                .bindRole("payee").accountId("acc_bob_1234")
+                .bindRole("guarantor").accountId("acc_bank_1"));
+
+        Node baseNode = base.build();
+        Node specializedNode = specialized.build();
+        Node instanceNode = instance.build();
+
+        assertEquals(0, baseNode.getAsInteger("/document/amount/total/value").intValue());
+        assertThrows(IllegalArgumentException.class,
+                () -> baseNode.getAsText("/channelBindings/shipmentCompanyChannel/accountId/value"));
+
+        assertEquals(20000, specializedNode.getAsInteger("/document/amount/total/value").intValue());
+        assertEquals("acc_dhl_001",
+                specializedNode.getAsText("/channelBindings/shipmentCompanyChannel/accountId/value"));
+        assertThrows(IllegalArgumentException.class,
+                () -> specializedNode.getAsText("/channelBindings/payerChannel/email/value"));
+
+        assertEquals("alice@gmail.com", instanceNode.getAsText("/channelBindings/payerChannel/email/value"));
+        assertEquals("acc_bob_1234", instanceNode.getAsText("/channelBindings/payeeChannel/accountId/value"));
+        assertEquals("acc_bank_1", instanceNode.getAsText("/channelBindings/guarantorChannel/accountId/value"));
+    }
 }
