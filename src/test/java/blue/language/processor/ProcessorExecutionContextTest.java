@@ -195,14 +195,14 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void documentHelpersRejectNonPointerPaths() {
+    void documentHelpersNormalizeNonPointerPaths() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
         execution.loadBundles("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
-        assertThrows(IllegalArgumentException.class, () -> context.documentAt("x"));
-        assertThrows(IllegalArgumentException.class, () -> context.documentContains("x"));
+        assertEquals("y", context.documentAt("x").getValue());
+        assertTrue(context.documentContains("x"));
     }
 
     @Test
@@ -217,13 +217,13 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void resolvePointerRejectsNonPointerInputs() {
+    void resolvePointerNormalizesNonPointerInputs() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
         execution.loadBundles("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
-        assertThrows(IllegalArgumentException.class, () -> context.resolvePointer("child"));
+        assertEquals("/child", context.resolvePointer("child"));
     }
 
     @Test

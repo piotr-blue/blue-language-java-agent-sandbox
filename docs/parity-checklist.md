@@ -66,11 +66,11 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Processor constants | `src/constants/processor-contract-constants.ts` | `processor/util/ProcessorContractConstants.java` | IN_PROGRESS |
-| Pointer constants | `src/constants/processor-pointer-constants.ts` | `processor/util/ProcessorPointerConstants.java` | IN_PROGRESS |
-| Pointer utils | `src/util/pointer-utils.ts` | `processor/util/PointerUtils.java` | IN_PROGRESS |
-| Processing result shape | `src/types/document-processing-result.ts` | `processor/DocumentProcessingResult.java` | IN_PROGRESS |
-| Processor error factory model | `src/types/errors.ts` | _missing_ | TODO |
+| Processor constants | `src/constants/processor-contract-constants.ts` | `processor/util/ProcessorContractConstants.java` | DONE |
+| Pointer constants | `src/constants/processor-pointer-constants.ts` | `processor/util/ProcessorPointerConstants.java` | DONE |
+| Pointer utils | `src/util/pointer-utils.ts` | `processor/util/PointerUtils.java` | DONE |
+| Processing result shape | `src/types/document-processing-result.ts` | `processor/DocumentProcessingResult.java` | DONE |
+| Processor error factory model | `src/types/errors.ts` | `processor/types/*` | DONE |
 
 ## 7) Gas accounting + canonicalization
 

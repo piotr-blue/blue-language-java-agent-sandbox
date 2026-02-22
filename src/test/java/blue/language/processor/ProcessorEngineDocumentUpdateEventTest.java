@@ -69,10 +69,8 @@ final class ProcessorEngineDocumentUpdateEventTest {
         assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/", "/scope/any/path"));
         assertFalse(ProcessorEngine.matchesDocumentUpdate("/scope", null, "/scope/any/path"));
         assertFalse(ProcessorEngine.matchesDocumentUpdate("/scope", "", "/scope/any/path"));
-        assertThrows(IllegalArgumentException.class,
-                () -> ProcessorEngine.matchesDocumentUpdate("/scope", "mixed/01", "/scope/mixed/01"));
-        assertThrows(IllegalArgumentException.class,
-                () -> ProcessorEngine.matchesDocumentUpdate("/scope", "/mixed/01", "scope/mixed/01"));
+        assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "mixed/01", "/scope/mixed/01"));
+        assertTrue(ProcessorEngine.matchesDocumentUpdate("/scope", "/mixed/01", "scope/mixed/01"));
     }
 
     @Test

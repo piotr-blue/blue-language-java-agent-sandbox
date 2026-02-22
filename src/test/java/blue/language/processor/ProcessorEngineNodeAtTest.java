@@ -122,12 +122,12 @@ final class ProcessorEngineNodeAtTest {
         Node root = new Node().properties("x", new Node().value("y"));
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "/x~"));
         assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "/x~2"));
-        assertThrows(IllegalArgumentException.class, () -> ProcessorEngine.nodeAt(root, "x"));
+        assertEquals("y", ProcessorEngine.nodeAt(root, "x").getValue());
     }
 
     @Test
-    void normalizePointerRejectsNonPointerPaths() {
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("x"));
+    void normalizePointerAcceptsNonPointerPathsByAddingLeadingSlash() {
+        assertEquals("/x", PointerUtils.normalizePointer("x"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("/x~2"));
     }
 
@@ -144,8 +144,8 @@ final class ProcessorEngineNodeAtTest {
     }
 
     @Test
-    void normalizeScopeRejectsInvalidInputs() {
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("scope"));
+    void normalizeScopeRejectsOnlyMalformedEscapes() {
+        assertEquals("/scope", PointerUtils.normalizeScope("scope"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("/scope~2"));
     }
 }

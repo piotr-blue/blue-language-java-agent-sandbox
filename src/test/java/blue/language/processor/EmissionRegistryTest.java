@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EmissionRegistryTest {
@@ -21,11 +20,13 @@ class EmissionRegistryTest {
     }
 
     @Test
-    void scopeRejectsNonPointerInputs() {
+    void scopeNormalizesNonPointerInputs() {
         EmissionRegistry registry = new EmissionRegistry();
-        assertThrows(IllegalArgumentException.class, () -> registry.scope("root"));
-        assertThrows(IllegalArgumentException.class, () -> registry.existingScope("root"));
-        assertThrows(IllegalArgumentException.class, () -> registry.clearScope("root"));
+        ScopeRuntimeContext normalized = registry.scope("root");
+        assertSame(normalized, registry.scope("/root"));
+        assertSame(normalized, registry.existingScope("root"));
+        registry.clearScope("root");
+        assertNull(registry.existingScope("/root"));
     }
 
     @Test
