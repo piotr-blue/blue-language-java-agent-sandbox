@@ -87,10 +87,19 @@ final class WorkflowContractSupport {
         }
 
         if (pattern.getProperties() != null && !pattern.getProperties().isEmpty()) {
-            if (candidate.getProperties() == null) {
-                return false;
-            }
             for (java.util.Map.Entry<String, Node> entry : pattern.getProperties().entrySet()) {
+                if ("blueId".equals(entry.getKey())) {
+                    String expectedBlueId = entry.getValue() != null && entry.getValue().getValue() != null
+                            ? String.valueOf(entry.getValue().getValue())
+                            : null;
+                    if (!matchesExplicitBlueId(candidate, expectedBlueId)) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (candidate.getProperties() == null) {
+                    return false;
+                }
                 if (!candidate.getProperties().containsKey(entry.getKey())) {
                     return false;
                 }
@@ -116,6 +125,34 @@ final class WorkflowContractSupport {
         }
 
         return true;
+    }
+
+    private static boolean matchesExplicitBlueId(Node candidate, String expectedBlueId) {
+        if (candidate == null || expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
+            return false;
+        }
+        String normalizedExpected = expectedBlueId.trim();
+        if (candidate.getBlueId() != null && !candidate.getBlueId().trim().isEmpty()) {
+            String candidateBlueId = candidate.getBlueId().trim();
+            if (normalizedExpected.equals(candidateBlueId) || equivalentCoreType(normalizedExpected, candidateBlueId)) {
+                return true;
+            }
+        }
+        if (candidate.getType() != null && candidate.getType().getBlueId() != null
+                && !candidate.getType().getBlueId().trim().isEmpty()) {
+            String candidateTypeBlueId = candidate.getType().getBlueId().trim();
+            if (normalizedExpected.equals(candidateTypeBlueId)
+                    || equivalentCoreType(normalizedExpected, candidateTypeBlueId)) {
+                return true;
+            }
+        }
+        if (candidate.getValue() instanceof String) {
+            String candidateValue = ((String) candidate.getValue()).trim();
+            if (normalizedExpected.equals(candidateValue) || equivalentCoreType(normalizedExpected, candidateValue)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean matchesType(Node candidate, Node pattern) {

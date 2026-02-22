@@ -108,7 +108,11 @@ final class ProcessorEngine {
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Initiated"));
+        Node event = new Node()
+                .type(new Node().blueId("Core/Document Processing Initiated"))
+                .properties("type", new Node()
+                .value("Document Processing Initiated")
+                .type(new Node().blueId("Core/Document Processing Initiated")));
         event.properties("documentId", new Node().value(documentId));
         return event;
     }
