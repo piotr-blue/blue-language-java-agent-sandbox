@@ -50,9 +50,9 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Step runner framework | `src/registry/processors/workflow/step-runner.ts` | _missing_ | TODO |
-| Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | _missing_ | TODO |
-| Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | _missing_ | TODO |
+| Step runner framework | `src/registry/processors/workflow/step-runner.ts` | `processor/workflow/WorkflowStepRunner.java` | IN_PROGRESS |
+| Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | `processor/workflow/steps/UpdateDocumentStepExecutor.java` | IN_PROGRESS |
+| Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | `processor/workflow/steps/TriggerEventStepExecutor.java` | IN_PROGRESS |
 | Operation matcher helpers | `src/registry/processors/workflow/operation-matcher.ts` | _missing_ | TODO |
 
 ## 5) Merge behavior

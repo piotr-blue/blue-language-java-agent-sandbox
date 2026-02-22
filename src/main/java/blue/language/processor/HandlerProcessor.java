@@ -11,6 +11,10 @@ public interface HandlerProcessor<T extends HandlerContract> extends ContractPro
         return null;
     }
 
+    default String deriveChannel(T contract, ContractBundle scopeContracts) {
+        return deriveChannel(contract);
+    }
+
     default boolean matches(T contract, ProcessorExecutionContext context) {
         return true;
     }

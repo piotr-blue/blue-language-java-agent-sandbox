@@ -4,10 +4,21 @@ import blue.language.model.Node;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
 import blue.language.processor.model.SequentialWorkflow;
+import blue.language.processor.workflow.WorkflowStepRunner;
 
 import java.util.List;
 
 public class SequentialWorkflowHandlerProcessor implements HandlerProcessor<SequentialWorkflow> {
+
+    private final WorkflowStepRunner stepRunner;
+
+    public SequentialWorkflowHandlerProcessor() {
+        this(WorkflowStepRunner.defaultRunner());
+    }
+
+    public SequentialWorkflowHandlerProcessor(WorkflowStepRunner stepRunner) {
+        this.stepRunner = stepRunner;
+    }
 
     @Override
     public Class<SequentialWorkflow> contractType() {
@@ -25,7 +36,6 @@ public class SequentialWorkflowHandlerProcessor implements HandlerProcessor<Sequ
         if (steps == null || steps.isEmpty()) {
             return;
         }
-        // Step execution is handled by dedicated runtime executors; this processor
-        // currently validates matching and wiring parity.
+        stepRunner.run(contract, steps, context.event(), context);
     }
 }

@@ -66,6 +66,27 @@ public final class ProcessorExecutionContext {
         runtime().addGas(units);
     }
 
+    public void chargeTriggerEventBase() {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeTriggerEventBase();
+    }
+
+    public void chargeUpdateDocumentBase(int changesetLength) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeUpdateDocumentBase(changesetLength);
+    }
+
+    public void chargeDocumentSnapshot(String absolutePointer, Node snapshot) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeDocumentSnapshot(absolutePointer, snapshot);
+    }
+
     public void throwFatal(String reason) {
         throw new ProcessorFatalException(reason);
     }

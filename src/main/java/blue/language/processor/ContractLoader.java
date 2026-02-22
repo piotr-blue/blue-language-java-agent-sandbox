@@ -45,6 +45,7 @@ final class ContractLoader {
         }
 
         Set<String> normalizedKeys = new LinkedHashSet<>();
+        Map<String, Contract> contractsByKey = new LinkedHashMap<>();
         for (Map.Entry<String, Node> entry : contractsNode.getProperties().entrySet()) {
             String key = normalizeContractKey(entry.getKey(), scopePath);
             if (!normalizedKeys.add(key)) {
@@ -57,6 +58,12 @@ final class ContractLoader {
             }
             contract.setKey(key);
             normalizePointerBackedContracts(contract, key, scopePath);
+            contractsByKey.put(key, contract);
+        }
+
+        for (Map.Entry<String, Contract> entry : contractsByKey.entrySet()) {
+            String key = entry.getKey();
+            Contract contract = entry.getValue();
             if (contract instanceof ChannelContract) {
                 ChannelContract channel = (ChannelContract) contract;
                 if (!ProcessorContractConstants.isProcessorManagedChannel(channel)
@@ -65,29 +72,37 @@ final class ContractLoader {
                             "Unsupported contract type: " + channel.getClass().getName());
                 }
                 builder.addChannel(key, channel);
-            } else if (contract instanceof HandlerContract) {
-                HandlerContract handler = (HandlerContract) contract;
-                @SuppressWarnings("unchecked")
-                HandlerProcessor<HandlerContract> handlerProcessor =
-                        (HandlerProcessor<HandlerContract>) registry.lookupHandler(handler).orElse(null);
-                if (handlerProcessor == null) {
-                    throw new MustUnderstandFailureException(
-                            "Unsupported contract type: " + handler.getClass().getName());
-                }
-                String channelKey = handler.getChannelKey();
-                if (channelKey == null || channelKey.trim().isEmpty()) {
-                    channelKey = handlerProcessor.deriveChannel(handler);
-                }
-                if (channelKey == null || channelKey.trim().isEmpty()) {
-                    throw new IllegalStateException("Handler " + key + " must declare channel (or derive one)");
-                }
-                handler.setChannelKey(channelKey.trim());
-                builder.addHandler(key, handler);
             } else if (contract instanceof ProcessEmbedded) {
                 builder.setEmbedded((ProcessEmbedded) contract);
             } else if (contract instanceof MarkerContract) {
                 builder.addMarker(key, (MarkerContract) contract);
             }
+        }
+
+        ContractBundle scopeContracts = builder.build();
+        for (Map.Entry<String, Contract> entry : contractsByKey.entrySet()) {
+            String key = entry.getKey();
+            Contract contract = entry.getValue();
+            if (!(contract instanceof HandlerContract)) {
+                continue;
+            }
+            HandlerContract handler = (HandlerContract) contract;
+            @SuppressWarnings("unchecked")
+            HandlerProcessor<HandlerContract> handlerProcessor =
+                    (HandlerProcessor<HandlerContract>) registry.lookupHandler(handler).orElse(null);
+            if (handlerProcessor == null) {
+                throw new MustUnderstandFailureException(
+                        "Unsupported contract type: " + handler.getClass().getName());
+            }
+            String channelKey = handler.getChannelKey();
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                channelKey = handlerProcessor.deriveChannel(handler, scopeContracts);
+            }
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                throw new IllegalStateException("Handler " + key + " must declare channel (or derive one)");
+            }
+            handler.setChannelKey(channelKey.trim());
+            builder.addHandler(key, handler);
         }
 
         ContractBundle bundle = builder.build();
