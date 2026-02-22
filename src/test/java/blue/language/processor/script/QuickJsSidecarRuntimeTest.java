@@ -76,6 +76,30 @@ class QuickJsSidecarRuntimeTest {
         }
     }
 
+    @Test
+    void exposesStructuredErrorDetailsForRuntimeFailures() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for sidecar tests");
+
+        try (QuickJsSidecarRuntime runtime = new QuickJsSidecarRuntime()) {
+            ScriptRuntimeException typeError = assertThrows(
+                    ScriptRuntimeException.class,
+                    () -> runtime.evaluate(ScriptRuntimeRequest.of("throw new TypeError('bad input')")));
+            assertEquals("TypeError", typeError.errorName());
+            assertEquals("bad input", typeError.runtimeMessage());
+            assertTrue(typeError.stackAvailable());
+            assertTrue(typeError.getMessage().contains("TypeError: bad input"));
+
+            ScriptRuntimeException outOfGas = assertThrows(
+                    ScriptRuntimeException.class,
+                    () -> runtime.evaluate(new ScriptRuntimeRequest(
+                            "while (true) {}",
+                            new LinkedHashMap<String, Object>(),
+                            BigInteger.ONE)));
+            assertEquals("OutOfGasError", outOfGas.errorName());
+            assertTrue(String.valueOf(outOfGas.runtimeMessage()).contains("OutOfGas"));
+        }
+    }
+
     private boolean nodeAvailable() throws IOException, InterruptedException {
         Process process = new ProcessBuilder("node", "--version").start();
         int exit = process.waitFor();

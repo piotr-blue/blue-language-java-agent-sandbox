@@ -68,7 +68,12 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
             Object ok = response.get("ok");
             if (!(ok instanceof Boolean) || !((Boolean) ok)) {
                 Object error = response.get("error");
-                throw new ScriptRuntimeException("QuickJS sidecar evaluation failed: " + describeError(error));
+                RuntimeErrorDetails details = describeError(error);
+                throw new ScriptRuntimeException(
+                        "QuickJS sidecar evaluation failed: " + details.formattedMessage(),
+                        details.name(),
+                        details.message(),
+                        details.stackAvailable());
             }
             Object result = response.get("result");
             BigInteger used = toBigInteger(response.get("wasmGasUsed"));
@@ -135,9 +140,10 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
         }
     }
 
-    private static String describeError(Object payload) {
+    private static RuntimeErrorDetails describeError(Object payload) {
         if (!(payload instanceof Map)) {
-            return String.valueOf(payload);
+            String fallback = String.valueOf(payload);
+            return new RuntimeErrorDetails(null, fallback, false, fallback);
         }
         @SuppressWarnings("unchecked")
         Map<Object, Object> map = (Map<Object, Object>) payload;
@@ -145,22 +151,57 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
         Object message = map.get("message");
         Object stack = map.get("stack");
         StringBuilder builder = new StringBuilder();
+        String normalizedName = null;
+        String normalizedMessage = null;
         if (name != null && String.valueOf(name).trim().length() > 0) {
-            builder.append(String.valueOf(name).trim());
+            normalizedName = String.valueOf(name).trim();
+            builder.append(normalizedName);
         }
         if (message != null && String.valueOf(message).trim().length() > 0) {
+            normalizedMessage = String.valueOf(message).trim();
             if (builder.length() > 0) {
                 builder.append(": ");
             }
-            builder.append(String.valueOf(message).trim());
+            builder.append(normalizedMessage);
         }
         if (builder.length() == 0) {
             builder.append(String.valueOf(payload));
         }
-        if (stack != null && String.valueOf(stack).trim().length() > 0) {
+        boolean stackAvailable = stack != null && String.valueOf(stack).trim().length() > 0;
+        if (stackAvailable) {
             builder.append(" [stack available]");
         }
-        return builder.toString();
+        return new RuntimeErrorDetails(normalizedName, normalizedMessage, stackAvailable, builder.toString());
+    }
+
+    private static final class RuntimeErrorDetails {
+        private final String name;
+        private final String message;
+        private final boolean stackAvailable;
+        private final String formattedMessage;
+
+        RuntimeErrorDetails(String name, String message, boolean stackAvailable, String formattedMessage) {
+            this.name = name;
+            this.message = message;
+            this.stackAvailable = stackAvailable;
+            this.formattedMessage = formattedMessage;
+        }
+
+        String name() {
+            return name;
+        }
+
+        String message() {
+            return message;
+        }
+
+        boolean stackAvailable() {
+            return stackAvailable;
+        }
+
+        String formattedMessage() {
+            return formattedMessage;
+        }
     }
 
     private static Path defaultSidecarScriptPath() {
