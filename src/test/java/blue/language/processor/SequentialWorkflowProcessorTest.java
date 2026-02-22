@@ -320,6 +320,49 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationDirectRequestDefaultsAllowNewerWhenFlagMissing() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Direct Operation Request AllowNewer Default Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Operation\n" +
+                "    channel: testChannel\n" +
+                "    request:\n" +
+                "      type: Integer\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.request}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-op-direct-allow-default\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "document:\n" +
+                "  blueId: stale-document-id\n" +
+                "request: 9\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("9"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationSkipsWhenPinnedDocumentDiffers() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
