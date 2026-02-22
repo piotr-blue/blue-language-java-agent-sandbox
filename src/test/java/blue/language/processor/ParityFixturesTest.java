@@ -43,6 +43,7 @@ class ParityFixturesTest {
         String eventYaml = stringValue(fixture.get("event"), null);
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
+        List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
         boolean expectedCapabilityFailure = boolValue(expected.get("capabilityFailure"), false);
         boolean expectedInitFailure = boolValue(expected.get("initFailure"), false);
@@ -78,6 +79,11 @@ class ParityFixturesTest {
             assertEquals(String.valueOf(entry.getValue()),
                     String.valueOf(actualNode.getValue()),
                     fixtureName + " value mismatch at " + pointer);
+        }
+        for (String pointer : expectedNotNullPaths) {
+            Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
+            assertNotNull(actualNode, fixtureName + " expected non-null node missing at " + pointer);
+            assertNotNull(actualNode.getValue(), fixtureName + " expected non-null value at " + pointer);
         }
         assertEquals(expectedTriggeredEvents,
                 result.triggeredEvents().size(),
@@ -115,6 +121,20 @@ class ParityFixturesTest {
             return new LinkedHashMap<>((Map<String, Object>) value);
         }
         return new LinkedHashMap<>();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> listOfStrings(Object value) {
+        if (!(value instanceof List)) {
+            return new ArrayList<>();
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : (List<Object>) value) {
+            if (item != null) {
+                result.add(String.valueOf(item));
+            }
+        }
+        return result;
     }
 
     private String stringValue(Object value, String fallback) {
