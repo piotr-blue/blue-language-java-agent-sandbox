@@ -2,6 +2,7 @@ package blue.language.processor.registry.processors;
 
 import blue.language.model.Node;
 import blue.language.NodeProvider;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.processor.ContractBundle;
 import blue.language.processor.HandlerProcessor;
 import blue.language.processor.ProcessorExecutionContext;
@@ -211,14 +212,18 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
             return false;
         }
         Node initialized = contracts.getProperties().get("initialized");
-        if (initialized == null || initialized.getProperties() == null) {
-            return false;
+        String storedBlueId = null;
+        if (initialized != null && initialized.getProperties() != null) {
+            Node documentId = initialized.getProperties().get("documentId");
+            if (documentId != null && documentId.getValue() instanceof String) {
+                String normalized = ((String) documentId.getValue()).trim();
+                if (!normalized.isEmpty()) {
+                    storedBlueId = normalized;
+                }
+            }
         }
-        Node documentId = initialized.getProperties().get("documentId");
-        if (documentId == null || !(documentId.getValue() instanceof String)) {
-            return false;
-        }
-        return pinnedBlueId.equals(documentId.getValue());
+        String expectedBlueId = storedBlueId != null ? storedBlueId : BlueIdCalculator.calculateSemanticBlueId(root);
+        return pinnedBlueId.equals(expectedBlueId);
     }
 
     private String resolvePinnedDocumentBlueId(Node documentNode) {
