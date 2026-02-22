@@ -101,7 +101,13 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("}");
         prelude.append("current = current[segment];");
         prelude.append("}");
-        prelude.append("if (current === undefined) return undefined;");
+        prelude.append("if (current === undefined) {");
+        prelude.append("if (source === __simpleSource && __isRawValuePointer(normalized)) {");
+        prelude.append("const canonicalValue = __readInternal(__canonicalSource, pointer, false);");
+        prelude.append("if (canonicalValue !== undefined) return __unwrapPotentialNode(canonicalValue);");
+        prelude.append("}");
+        prelude.append("return undefined;");
+        prelude.append("}");
         prelude.append("if (__isRawValuePointer(normalized)) return __unwrapPotentialNode(current);");
         prelude.append("if (unwrapScalar) return __unwrapPotentialNode(current);");
         prelude.append("return current;");

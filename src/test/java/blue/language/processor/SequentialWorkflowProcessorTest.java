@@ -468,6 +468,35 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepDocumentBlueIdPathReturnsComputedBlueId() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Document BlueId Doc\n" +
+                "prop:\n" +
+                "  value: 7\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/propBlueId', val: document('/prop/blueId') }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        String expectedBlueId = blue.calculateBlueId(initialized.getProperties().get("prop"));
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-prop-blueid").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(expectedBlueId, result.document().getProperties().get("propBlueId").getValue());
+    }
+
+    @Test
     void updateDocumentStepResolvesExpressionValues() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());

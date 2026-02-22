@@ -1,5 +1,6 @@
 package blue.language.processor.workflow.steps;
 
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.utils.NodeToMapListOrValue;
@@ -7,6 +8,7 @@ import blue.language.utils.NodeToMapListOrValue.Strategy;
 import blue.language.utils.UncheckedObjectMapper;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 final class QuickJSStepBindings {
@@ -23,16 +25,53 @@ final class QuickJSStepBindings {
         bindings.put("steps", args.stepResults());
         Node documentSnapshot = args.context().documentAt("/");
         args.context().chargeDocumentSnapshot("/", documentSnapshot);
-        bindings.put("__documentDataSimple", documentSnapshot != null
+        Object documentSimple = documentSnapshot != null
                 ? NodeToMapListOrValue.get(documentSnapshot, Strategy.SIMPLE)
-                : null);
-        bindings.put("__documentDataCanonical", documentSnapshot != null
+                : null;
+        Object documentCanonical = documentSnapshot != null
                 ? NodeToMapListOrValue.get(documentSnapshot, Strategy.OFFICIAL)
-                : null);
+                : null;
+        if (documentSnapshot != null) {
+            decorateComputedBlueIds(documentSnapshot, documentSimple);
+            decorateComputedBlueIds(documentSnapshot, documentCanonical);
+        }
+        bindings.put("__documentDataSimple", documentSimple);
+        bindings.put("__documentDataCanonical", documentCanonical);
         bindings.put("__scopePath", args.context().resolvePointer("/"));
         Map<?, ?> currentContract = UncheckedObjectMapper.JSON_MAPPER.convertValue(args.workflow(), Map.class);
         bindings.put("currentContract", currentContract);
         bindings.put("currentContractCanonical", currentContract);
         return bindings;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void decorateComputedBlueIds(Node node, Object mapped) {
+        if (node == null || mapped == null) {
+            return;
+        }
+        if (mapped instanceof Map) {
+            Map<String, Object> map = (Map<String, Object>) mapped;
+            if (!map.containsKey("blueId")) {
+                map.put("blueId", BlueIdCalculator.calculateSemanticBlueId(node));
+            }
+            if (node.getProperties() != null) {
+                for (Map.Entry<String, Node> entry : node.getProperties().entrySet()) {
+                    decorateComputedBlueIds(entry.getValue(), map.get(entry.getKey()));
+                }
+            }
+            if (node.getItems() != null && map.get("items") instanceof List) {
+                List<Object> items = (List<Object>) map.get("items");
+                for (int i = 0; i < node.getItems().size() && i < items.size(); i++) {
+                    decorateComputedBlueIds(node.getItems().get(i), items.get(i));
+                }
+            }
+            return;
+        }
+        if (mapped instanceof List && node.getItems() != null) {
+            List<Object> items = (List<Object>) mapped;
+            for (int i = 0; i < node.getItems().size() && i < items.size(); i++) {
+                decorateComputedBlueIds(node.getItems().get(i), items.get(i));
+            }
+        }
     }
 }
