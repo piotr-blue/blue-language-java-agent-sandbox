@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -13,7 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +58,7 @@ class ParityFixturesTest {
         boolean expectedInitFailure = boolValue(expected.get("initFailure"), false);
         String initFailureMessageContains = stringValue(expected.get("initFailureMessageContains"), null);
 
-        Blue blue = new Blue();
+        Blue blue = createBlue(fixture);
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
 
@@ -245,5 +248,66 @@ class ParityFixturesTest {
             return Boolean.parseBoolean((String) value);
         }
         return fallback;
+    }
+
+    private Blue createBlue(Map<String, Object> fixture) {
+        List<Node> providerNodes = listOfNodes(fixture.get("providerNodes"));
+        if (providerNodes.isEmpty()) {
+            return new Blue();
+        }
+        final Map<String, List<Node>> nodesByBlueId = new HashMap<>();
+        for (Node node : providerNodes) {
+            if (node == null) {
+                continue;
+            }
+            String blueId = node.getBlueId();
+            if (blueId == null || blueId.trim().isEmpty()) {
+                continue;
+            }
+            String normalizedBlueId = blueId.trim();
+            List<Node> variants = nodesByBlueId.get(normalizedBlueId);
+            if (variants == null) {
+                variants = new ArrayList<>();
+                nodesByBlueId.put(normalizedBlueId, variants);
+            }
+            variants.add(node.clone());
+        }
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public List<Node> fetchByBlueId(String blueId) {
+                if (blueId == null || blueId.trim().isEmpty()) {
+                    return Collections.emptyList();
+                }
+                List<Node> nodes = nodesByBlueId.get(blueId.trim());
+                if (nodes == null || nodes.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                List<Node> cloned = new ArrayList<>();
+                for (Node node : nodes) {
+                    cloned.add(node.clone());
+                }
+                return cloned;
+            }
+        };
+        return new Blue(provider);
+    }
+
+    private List<Node> listOfNodes(Object value) {
+        if (!(value instanceof List)) {
+            return new ArrayList<>();
+        }
+        List<Node> nodes = new ArrayList<>();
+        @SuppressWarnings("unchecked")
+        List<Object> raw = (List<Object>) value;
+        for (Object item : raw) {
+            if (item == null) {
+                continue;
+            }
+            Node node = UncheckedObjectMapper.JSON_MAPPER.convertValue(item, Node.class);
+            if (node != null) {
+                nodes.add(node);
+            }
+        }
+        return nodes;
     }
 }
