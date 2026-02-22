@@ -4,6 +4,7 @@ import blue.language.samples.paynote.types.conversation.ConversationTypes;
 import blue.language.samples.paynote.types.common.CommonTypes;
 import blue.language.samples.paynote.types.core.CoreTypes;
 import blue.language.samples.paynote.types.domain.PayNoteDemoEvents;
+import blue.language.samples.paynote.types.domain.RecruitmentEvents;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
@@ -48,6 +49,8 @@ public final class TypeAliases {
     public static final String PAYNOTE_DEMO_MILESTONE_APPROVED = "PayNote Demo/Milestone Approved";
     public static final String PAYNOTE_DEMO_VOUCHER_TRIGGERED = "PayNote Demo/Voucher Triggered";
     public static final String PAYNOTE_DEMO_CAPTURE_HOOK_RAN = "PayNote Demo/Capture Hook Ran";
+    public static final String RECRUITMENT_CV_CLASSIFICATION_REQUESTED = "Recruitment/CV Classification Requested";
+    public static final String RECRUITMENT_SENIOR_CANDIDATE_DETECTED = "Recruitment/Senior Candidate Detected";
 
     // MyOS
     public static final String MYOS_DOCUMENT_SESSION_BOOTSTRAP = "MyOS/Document Session Bootstrap";
@@ -97,6 +100,8 @@ public final class TypeAliases {
         aliases.put(PayNoteDemoEvents.MilestoneApproved.class, PAYNOTE_DEMO_MILESTONE_APPROVED);
         aliases.put(PayNoteDemoEvents.VoucherTriggered.class, PAYNOTE_DEMO_VOUCHER_TRIGGERED);
         aliases.put(PayNoteDemoEvents.CaptureHookRan.class, PAYNOTE_DEMO_CAPTURE_HOOK_RAN);
+        aliases.put(RecruitmentEvents.CvClassificationRequested.class, RECRUITMENT_CV_CLASSIFICATION_REQUESTED);
+        aliases.put(RecruitmentEvents.SeniorCandidateDetected.class, RECRUITMENT_SENIOR_CANDIDATE_DETECTED);
 
         // MyOS
         aliases.put(MyOsTypes.DocumentSessionBootstrap.class, MYOS_DOCUMENT_SESSION_BOOTSTRAP);
