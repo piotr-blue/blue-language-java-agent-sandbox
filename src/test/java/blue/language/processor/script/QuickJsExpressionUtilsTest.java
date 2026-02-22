@@ -59,6 +59,17 @@ class QuickJsExpressionUtilsTest {
                     null);
             assertEquals("42", String.valueOf(result));
 
+            Object objectResult = QuickJsExpressionUtils.evaluateQuickJsExpression(
+                    evaluator,
+                    "{ answer: steps.value, nested: { factor: steps.factor } }",
+                    bindings,
+                    null);
+            assertTrue(objectResult instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> objectMap = (Map<String, Object>) objectResult;
+            assertEquals("6", String.valueOf(objectMap.get("answer")));
+            assertTrue(objectMap.get("nested") instanceof Map);
+
             String rendered = QuickJsExpressionUtils.resolveTemplateString(
                     evaluator,
                     "Hello ${steps.value}, total ${steps.value * steps.factor} ${document('/unit')}",

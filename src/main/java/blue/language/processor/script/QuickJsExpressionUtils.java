@@ -210,9 +210,10 @@ public final class QuickJsExpressionUtils {
                                                    String code,
                                                    Map<String, Object> bindings,
                                                    Consumer<java.math.BigInteger> wasmGasConsumer) {
+        String wrappedCode = "return (" + code + ");";
         try {
             ScriptRuntimeResult runtimeResult = evaluator.evaluate(
-                    code,
+                    wrappedCode,
                     bindings,
                     ProcessorGasSchedule.DEFAULT_EXPRESSION_WASM_GAS_LIMIT);
             if (wasmGasConsumer != null && runtimeResult.wasmGasUsed() != null) {
