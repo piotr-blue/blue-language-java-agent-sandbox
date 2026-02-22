@@ -257,6 +257,35 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsDescendingNumericBraceRangesWithStep() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{7..1..3}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/7", null));
+        assertTrue(predicate.test("/items/4", null));
+        assertTrue(predicate.test("/items/1", null));
+        assertFalse(predicate.test("/items/6", null));
+        assertFalse(predicate.test("/items/2", null));
+    }
+
+    @Test
+    void createPathPredicateTreatsNegativeBraceRangeStepAsAbsoluteValue() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{1..7..-2}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/1", null));
+        assertTrue(predicate.test("/items/3", null));
+        assertTrue(predicate.test("/items/5", null));
+        assertTrue(predicate.test("/items/7", null));
+        assertFalse(predicate.test("/items/2", null));
+        assertFalse(predicate.test("/items/6", null));
+    }
+
+    @Test
     void createPathPredicateSupportsAlphabeticBraceRanges() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/items/{c..a}"),
@@ -267,6 +296,21 @@ class QuickJsExpressionUtilsTest {
         assertTrue(predicate.test("/items/b", null));
         assertTrue(predicate.test("/items/c", null));
         assertFalse(predicate.test("/items/d", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsDescendingAlphabeticBraceRangesWithStep() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{g..a..2}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/g", null));
+        assertTrue(predicate.test("/items/e", null));
+        assertTrue(predicate.test("/items/c", null));
+        assertTrue(predicate.test("/items/a", null));
+        assertFalse(predicate.test("/items/f", null));
+        assertFalse(predicate.test("/items/b", null));
     }
 
     @Test
