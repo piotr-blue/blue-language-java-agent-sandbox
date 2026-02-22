@@ -230,6 +230,44 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsNumericBraceRanges() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{1..3}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/1", null));
+        assertTrue(predicate.test("/items/2", null));
+        assertTrue(predicate.test("/items/3", null));
+        assertFalse(predicate.test("/items/4", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsAlphabeticBraceRanges() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{c..a}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/a", null));
+        assertTrue(predicate.test("/items/b", null));
+        assertTrue(predicate.test("/items/c", null));
+        assertFalse(predicate.test("/items/d", null));
+    }
+
+    @Test
+    void createPathPredicateDoesNotExpandZeroPaddedNumericRanges() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{01..03}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertFalse(predicate.test("/items/01", null));
+        assertFalse(predicate.test("/items/02", null));
+        assertFalse(predicate.test("/items/03", null));
+    }
+
+    @Test
     void createPathPredicateSupportsCharacterClassPatterns() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/contracts/[ab]/value"),

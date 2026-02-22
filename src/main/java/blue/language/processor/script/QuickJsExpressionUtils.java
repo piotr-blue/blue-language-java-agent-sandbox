@@ -434,6 +434,10 @@ public final class QuickJsExpressionUtils {
             options.add("");
             return options;
         }
+        List<String> rangeExpansion = expandBraceRange(body);
+        if (rangeExpansion != null) {
+            return rangeExpansion;
+        }
         StringBuilder current = new StringBuilder();
         int depth = 0;
         for (int i = 0; i < body.length(); i++) {
@@ -452,6 +456,37 @@ public final class QuickJsExpressionUtils {
         }
         options.add(current.toString());
         return options;
+    }
+
+    private static List<String> expandBraceRange(String body) {
+        if (body == null || body.indexOf(',') >= 0) {
+            return null;
+        }
+        Matcher numericMatcher = Pattern.compile("^(-?(?:0|[1-9][0-9]*))\\.\\.(-?(?:0|[1-9][0-9]*))$").matcher(body);
+        if (numericMatcher.matches()) {
+            int left = Integer.parseInt(numericMatcher.group(1));
+            int right = Integer.parseInt(numericMatcher.group(2));
+            int min = Math.min(left, right);
+            int max = Math.max(left, right);
+            List<String> expanded = new ArrayList<>();
+            for (int value = min; value <= max; value++) {
+                expanded.add(String.valueOf(value));
+            }
+            return expanded;
+        }
+        Matcher alphaMatcher = Pattern.compile("^([A-Za-z])\\.\\.([A-Za-z])$").matcher(body);
+        if (alphaMatcher.matches()) {
+            char left = alphaMatcher.group(1).charAt(0);
+            char right = alphaMatcher.group(2).charAt(0);
+            char min = (char) Math.min(left, right);
+            char max = (char) Math.max(left, right);
+            List<String> expanded = new ArrayList<>();
+            for (char value = min; value <= max; value++) {
+                expanded.add(String.valueOf(value));
+            }
+            return expanded;
+        }
+        return null;
     }
 
     private static int findClosingParenthesis(String pattern, int openIndex) {
