@@ -15,6 +15,17 @@ This document summarizes the Java document-processing lifecycle and key parity b
 5. Initialization marker/checkpoint setup
 6. Root lifecycle emissions recorded in runtime
 
+Lifecycle event shape notes:
+
+- Initialization lifecycle event now carries both:
+  - legacy `type` property value: `"Document Processing Initiated"`
+  - semantic root node type metadata: `type.blueId = "Core/Document Processing Initiated"`
+- Termination lifecycle event now carries both:
+  - legacy `type` property value: `"Document Processing Terminated"`
+  - semantic root node type metadata: `type.blueId = "Core/Document Processing Terminated"`
+
+This preserves existing value-based checks while enabling semantic event filters (`event.type.blueId`) during initialization/termination workflows.
+
 ## External event flow
 
 1. `DocumentProcessor#processDocument(document, event)`

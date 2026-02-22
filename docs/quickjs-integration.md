@@ -41,6 +41,13 @@ Message format:
 
 `QuickJsSidecarRuntime` validates `id` correspondence and surfaces protocol/runtime errors as `ScriptRuntimeException`.
 
+Timeout/error normalization parity:
+
+- Sidecar classifies VM timeout failures under tiny `wasmGasLimit` budgets as:
+  - `name: "OutOfGasError"`
+  - `message: "OutOfGas: execution exceeded wasm gas limit"`
+- `QuickJSEvaluator`/`QuickJsSidecarRuntime` preserve this in surfaced exception text.
+
 ## Gas mapping
 
 QuickJS gas constants are exported via `QuickJsConfig` and backed by `ProcessorGasSchedule`.
@@ -94,6 +101,7 @@ WASM usage is charged via `chargeWasmGas`.
 - Evaluator wraps script failures => `CodeBlockEvaluationError` with:
   - original source code available via `code()`
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
+- Evaluator validates binding keys against supported runtime bindings and rejects unsupported keys up-front (`Unsupported QuickJS binding: "<key>"`).
 - Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
 - Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
 - Sidecar masks non-deterministic globals (`Date`, `process`) to align workflow execution with deterministic runtime expectations.
