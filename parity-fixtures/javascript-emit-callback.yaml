@@ -33,4 +33,6 @@ expected:
     /callbackCount: 1
     /observed: 1
   triggeredEventsCount: 1
+  triggeredKinds:
+    - fixture-js-callback
   capabilityFailure: false

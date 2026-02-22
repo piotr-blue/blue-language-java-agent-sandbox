@@ -44,6 +44,7 @@ class ParityFixturesTest {
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
         List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
+        List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
         boolean expectedCapabilityFailure = boolValue(expected.get("capabilityFailure"), false);
         boolean expectedInitFailure = boolValue(expected.get("initFailure"), false);
@@ -88,6 +89,23 @@ class ParityFixturesTest {
         assertEquals(expectedTriggeredEvents,
                 result.triggeredEvents().size(),
                 fixtureName + " unexpected triggered events count");
+        for (String expectedKind : expectedTriggeredKinds) {
+            boolean present = false;
+            for (Node emitted : result.triggeredEvents()) {
+                if (emitted == null || emitted.getProperties() == null) {
+                    continue;
+                }
+                Node kindNode = emitted.getProperties().get("kind");
+                if (kindNode == null || kindNode.getValue() == null) {
+                    continue;
+                }
+                if (expectedKind.equals(String.valueOf(kindNode.getValue()))) {
+                    present = true;
+                    break;
+                }
+            }
+            assertTrue(present, fixtureName + " expected triggered kind not found: " + expectedKind);
+        }
         assertEquals(expectedCapabilityFailure,
                 result.capabilityFailure(),
                 fixtureName + " unexpected capabilityFailure flag");
