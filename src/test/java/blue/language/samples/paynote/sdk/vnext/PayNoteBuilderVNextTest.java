@@ -9,6 +9,7 @@ import blue.language.samples.paynote.types.domain.ShippingEvents;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PayNoteBuilderVNextTest {
@@ -115,5 +116,46 @@ class PayNoteBuilderVNextTest {
                 bootstrap.getAsText("/document/contracts/allParticipants/type/value"));
         assertEquals("payer@demo.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
         assertEquals("acc_shipper_demo", bootstrap.getAsText("/channelBindings/shipmentCompanyChannel/accountId/value"));
+    }
+
+    @Test
+    void supportsFlattenedOperationBuilderFlow() {
+        Node bootstrap = PayNotes.cardTransaction("Operation Builder Flow")
+                .currency("USD")
+                .amountTotal(900)
+                .participants(p -> p.add(PayNoteRole.SHIPPER))
+                .operation("confirmShipment")
+                    .channel(PayNoteRole.SHIPPER)
+                    .description("Confirm shipment via flattened builder.")
+                    .steps(steps -> steps
+                            .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                    payload -> payload.put("source", "shipmentCompanyChannel")))
+                    .done()
+                .build();
+
+        assertEquals(TypeAliases.CONVERSATION_OPERATION,
+                bootstrap.getAsText("/document/contracts/confirmShipment/type/value"));
+        assertEquals("shipmentCompanyChannel",
+                bootstrap.getAsText("/document/contracts/confirmShipment/channel/value"));
+        assertEquals(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED,
+                bootstrap.getAsText("/document/contracts/confirmShipmentImpl/steps/0/event/type/value"));
+    }
+
+    @Test
+    void flattenedOperationBuilderFailsFastOnMissingConfiguration() {
+        IllegalStateException missingChannel = assertThrows(IllegalStateException.class, () ->
+                PayNotes.payNote("Missing Channel")
+                        .operation("confirm")
+                        .description("Missing channel")
+                        .steps(steps -> steps.replaceValue("noop", "/x", 1))
+                        .done());
+        assertTrue(missingChannel.getMessage().contains("Operation channel must be configured"));
+
+        IllegalStateException missingSteps = assertThrows(IllegalStateException.class, () ->
+                PayNotes.payNote("Missing Steps")
+                        .operation("confirm")
+                        .channel(PayNoteRole.GUARANTOR)
+                        .done());
+        assertTrue(missingSteps.getMessage().contains("Operation steps must be configured"));
     }
 }

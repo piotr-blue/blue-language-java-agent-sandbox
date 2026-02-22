@@ -161,6 +161,10 @@ public final class PayNoteBuilderVNext {
         return this;
     }
 
+    public OperationBuilder operation(String key) {
+        return new OperationBuilder(this, key);
+    }
+
     public PayNoteBuilderVNext directChangeWithAllowList(String operationName,
                                                           String channelKey,
                                                           String description,
@@ -392,6 +396,54 @@ public final class PayNoteBuilderVNext {
             parent.bootstrap.role("shipper", normalizedChannel);
             parent.bootstrap.contracts(c -> c.timelineChannel(normalizedChannel));
             return this;
+        }
+    }
+
+    public static final class OperationBuilder {
+        private final PayNoteBuilderVNext parent;
+        private final String key;
+        private String channelKey;
+        private String description;
+        private Consumer<StepsBuilder> implementation;
+
+        private OperationBuilder(PayNoteBuilderVNext parent, String key) {
+            this.parent = parent;
+            this.key = key;
+        }
+
+        public OperationBuilder channel(String channelKey) {
+            this.channelKey = channelKey;
+            return this;
+        }
+
+        public OperationBuilder channel(ChannelKey channelKey) {
+            this.channelKey = channelKey.value();
+            return this;
+        }
+
+        public OperationBuilder channel(PayNoteRole role) {
+            this.channelKey = role.channelKey().value();
+            return this;
+        }
+
+        public OperationBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public OperationBuilder steps(Consumer<StepsBuilder> implementation) {
+            this.implementation = implementation;
+            return this;
+        }
+
+        public PayNoteBuilderVNext done() {
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                throw new IllegalStateException("Operation channel must be configured for: " + key);
+            }
+            if (implementation == null) {
+                throw new IllegalStateException("Operation steps must be configured for: " + key);
+            }
+            return parent.operation(key, channelKey, description, implementation);
         }
     }
 }
