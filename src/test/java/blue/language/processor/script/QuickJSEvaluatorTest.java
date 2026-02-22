@@ -35,7 +35,7 @@ class QuickJSEvaluatorTest {
             }});
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "steps + event.payload.value",
+                    "return steps + event.payload.value;",
                     bindings,
                     new BigInteger("1000000000"));
 
@@ -63,7 +63,7 @@ class QuickJSEvaluatorTest {
             }});
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ contract: currentContract, canonical: currentContractCanonical })",
+                    "return ({ contract: currentContract, canonical: currentContractCanonical });",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -104,7 +104,7 @@ class QuickJSEvaluatorTest {
             }});
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ id: canon.unwrap(canon.at(eventCanonical, '/payload/id')), unit: document('/unit'), canonicalUnit: document.canonical('/unit').value })",
+                    "return ({ id: canon.unwrap(canon.at(eventCanonical, '/payload/id')), unit: document('/unit'), canonicalUnit: document.canonical('/unit').value });",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -233,7 +233,7 @@ class QuickJSEvaluatorTest {
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ dateType: typeof Date, processType: typeof process })",
+                    "return ({ dateType: typeof Date, processType: typeof process });",
                     new LinkedHashMap<String, Object>(),
                     BigInteger.valueOf(1000L));
 
@@ -250,8 +250,8 @@ class QuickJSEvaluatorTest {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
-            ScriptRuntimeResult first = evaluator.evaluate("1", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
-            ScriptRuntimeResult second = evaluator.evaluate("2", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
+            ScriptRuntimeResult first = evaluator.evaluate("return 1;", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
+            ScriptRuntimeResult second = evaluator.evaluate("return 2;", new LinkedHashMap<String, Object>(), BigInteger.valueOf(500L));
 
             assertEquals("1", String.valueOf(first.value()));
             assertEquals("2", String.valueOf(second.value()));
@@ -264,7 +264,7 @@ class QuickJSEvaluatorTest {
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "emit({ kind: 'debug', value: 42 }); 7",
+                    "emit({ kind: 'debug', value: 42 }); return 7;",
                     new LinkedHashMap<String, Object>(),
                     BigInteger.valueOf(1000L));
 
@@ -294,7 +294,7 @@ class QuickJSEvaluatorTest {
             });
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "emit({ level: 'debug', message: 'hello', value: 42 }); 7",
+                    "emit({ level: 'debug', message: 'hello', value: 42 }); return 7;",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -324,7 +324,7 @@ class QuickJSEvaluatorTest {
             });
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "(() => { emit({ level: 'debug', message: 'only-event' }); })();",
+                    "emit({ level: 'debug', message: 'only-event' });",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -341,7 +341,7 @@ class QuickJSEvaluatorTest {
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
             ScriptRuntimeResult explicitNull = evaluator.evaluate(
-                    "null",
+                    "return null;",
                     new LinkedHashMap<String, Object>(),
                     BigInteger.valueOf(1000L));
             ScriptRuntimeResult undefined = evaluator.evaluate(
@@ -383,7 +383,7 @@ class QuickJSEvaluatorTest {
             });
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ plain: document('/unit'), getAlias: document.get('/unit'), canonical: document.canonical('/unit').value, canonicalAlias: document.getCanonical('/unit').value })",
+                    "return ({ plain: document('/unit'), getAlias: document.get('/unit'), canonical: document.canonical('/unit').value, canonicalAlias: document.getCanonical('/unit').value });",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -414,7 +414,7 @@ class QuickJSEvaluatorTest {
             });
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "document('/total') + 1",
+                    "return document('/total') + 1;",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -447,7 +447,7 @@ class QuickJSEvaluatorTest {
             }});
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ relative: document('counter'), absolute: document('/contracts/workflow/counter'), canonical: document.canonical('counter').value })",
+                    "return ({ relative: document('counter'), absolute: document('/contracts/workflow/counter'), canonical: document.canonical('counter').value });",
                     bindings,
                     BigInteger.valueOf(1000L));
 
@@ -466,10 +466,10 @@ class QuickJSEvaluatorTest {
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ eventIsNull: event === null, eventCanonicalIsNull: eventCanonical === null, " +
+                    "return ({ eventIsNull: event === null, eventCanonicalIsNull: eventCanonical === null, " +
                             "stepsIsArray: Array.isArray(steps), stepsLength: steps.length, " +
                             "currentContractIsNull: currentContract === null, " +
-                            "currentContractCanonicalIsNull: currentContractCanonical === null })",
+                            "currentContractCanonicalIsNull: currentContractCanonical === null });",
                     new LinkedHashMap<String, Object>(),
                     BigInteger.valueOf(1000L));
 
@@ -501,7 +501,7 @@ class QuickJSEvaluatorTest {
             }});
 
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "({ eventId: eventCanonical.payload.id, contractChannel: currentContractCanonical.channel })",
+                    "return ({ eventId: eventCanonical.payload.id, contractChannel: currentContractCanonical.channel });",
                     bindings,
                     BigInteger.valueOf(1000L));
 

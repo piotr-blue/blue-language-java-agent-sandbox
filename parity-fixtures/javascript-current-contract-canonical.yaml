@@ -12,7 +12,7 @@ document: |
       steps:
         - type:
             blueId: Conversation/JavaScript Code
-          code: "({ changeset: [{ op: 'ADD', path: '/contractSimple', val: currentContract.channel }, { op: 'ADD', path: '/contractCanonical', val: currentContractCanonical.channel.value }] })"
+          code: "return ({ changeset: [{ op: 'ADD', path: '/contractSimple', val: currentContract.channel }, { op: 'ADD', path: '/contractCanonical', val: currentContractCanonical.channel.value }] });"
 event: |
   type:
     blueId: TestEvent

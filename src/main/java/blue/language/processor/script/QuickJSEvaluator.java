@@ -54,7 +54,7 @@ public class QuickJSEvaluator implements AutoCloseable {
         validateBindings(safeBindings);
         try {
             ScriptRuntimeResult runtimeResult = runtime.evaluate(
-                    new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
+                    new ScriptRuntimeRequest(withRuntimePrelude(wrapCode(code)), safeBindings, wasmGasLimit));
             return applyEmitCallback(runtimeResult, emitCallback);
         } catch (ScriptRuntimeException ex) {
             throw new CodeBlockEvaluationError(code, ex);
@@ -183,6 +183,19 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("\n");
         prelude.append(code);
         return prelude.toString();
+    }
+
+    private String wrapCode(String code) {
+        StringBuilder wrapped = new StringBuilder();
+        wrapped.append("(() => {\n");
+        wrapped.append("return (() => {\n");
+        if (code != null) {
+            wrapped.append(code);
+        }
+        wrapped.append("\n");
+        wrapped.append("})()\n");
+        wrapped.append("})()");
+        return wrapped.toString();
     }
 
     @Override

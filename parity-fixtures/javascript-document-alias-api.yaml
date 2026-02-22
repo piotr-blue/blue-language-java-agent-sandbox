@@ -13,7 +13,7 @@ document: |
       steps:
         - type:
             blueId: Conversation/JavaScript Code
-          code: "({ changeset: [{ op: 'ADD', path: '/plainAlias', val: document.get('/base') }, { op: 'ADD', path: '/canonicalAlias', val: document.getCanonical('/base').type.blueId }] })"
+          code: "return ({ changeset: [{ op: 'ADD', path: '/plainAlias', val: document.get('/base') }, { op: 'ADD', path: '/canonicalAlias', val: document.getCanonical('/base').type.blueId }] });"
 event: |
   type:
     blueId: TestEvent

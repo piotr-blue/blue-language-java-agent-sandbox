@@ -14,7 +14,7 @@ document: |
       steps:
         - type:
             blueId: Conversation/JavaScript Code
-          code: "({ changeset: [{ op: 'ADD', path: '/propBlueId', val: document('/prop/blueId') }] })"
+          code: "return ({ changeset: [{ op: 'ADD', path: '/propBlueId', val: document('/prop/blueId') }] });"
 event: |
   type:
     blueId: TestEvent

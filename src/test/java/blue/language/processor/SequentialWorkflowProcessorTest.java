@@ -504,7 +504,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/jsValue', val: 9 }], events: [{ kind: 'js' }] })\"\n" +
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/jsValue', val: 9 }], events: [{ kind: 'js' }] });\"\n" +
                 "  observeJsEmission:\n" +
                 "    channel: triggered\n" +
                 "    type:\n" +
@@ -538,7 +538,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/contractChannel', val: currentContract.channel }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/contractChannel', val: currentContract.channel }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-bind").kind("TestEvent"));
@@ -564,7 +564,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/contractSimple', val: currentContract.channel }, { op: 'ADD', path: '/contractCanonical', val: currentContractCanonical.channel.value }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/contractSimple', val: currentContract.channel }, { op: 'ADD', path: '/contractCanonical', val: currentContractCanonical.channel.value }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-bind-canonical").kind("TestEvent"));
@@ -687,7 +687,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"emit({ kind: 'js-callback' }); ({ changeset: [{ op: 'ADD', path: '/callbackHit', val: 11 }] })\"\n");
+                "        code: \"emit({ kind: 'js-callback' }); return ({ changeset: [{ op: 'ADD', path: '/callbackHit', val: 11 }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-callback").kind("TestEvent"));
@@ -719,7 +719,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/canonicalType', val: document.canonical('/base').type.blueId }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/canonicalType', val: document.canonical('/base').type.blueId }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-canon").kind("TestEvent"));
@@ -746,7 +746,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/plainAlias', val: document.get('/base') }, { op: 'ADD', path: '/canonicalAlias', val: document.getCanonical('/base').type.blueId }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/plainAlias', val: document.get('/base') }, { op: 'ADD', path: '/canonicalAlias', val: document.getCanonical('/base').type.blueId }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-document-alias").kind("TestEvent"));
@@ -774,10 +774,10 @@ class SequentialWorkflowProcessorTest {
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
                 "        code: |\n" +
-                "          ({ changeset: [\n" +
+                "          return ({ changeset: [\n" +
                 "            { op: 'ADD', path: '/eventPlain', val: event.payload.id },\n" +
                 "            { op: 'ADD', path: '/eventCanonical', val: canon.unwrap(canon.at(eventCanonical, '/payload/id')) }\n" +
-                "          ] })\n");
+                "          ] });\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.yamlToNode("type:\n" +
@@ -810,12 +810,12 @@ class SequentialWorkflowProcessorTest {
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
                 "        code: |\n" +
-                "          ({ changeset: [\n" +
+                "          return ({ changeset: [\n" +
                 "            { op: 'ADD', path: '/eventIdDeep', val: canon.unwrap(eventCanonical).payload.id },\n" +
                 "            { op: 'ADD', path: '/eventIdShallow', val: canon.unwrap(eventCanonical, false).payload.id.value },\n" +
                 "            { op: 'ADD', path: '/eventTagDeep', val: canon.unwrap(eventCanonical).payload.tags[0] },\n" +
                 "            { op: 'ADD', path: '/eventTagShallow', val: canon.unwrap(eventCanonical, false).payload.tags.items[0].value }\n" +
-                "          ] })\n");
+                "          ] });\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.yamlToNode("type:\n" +
@@ -852,7 +852,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/dateType', val: typeof Date }, { op: 'ADD', path: '/processType', val: typeof process }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/dateType', val: typeof Date }, { op: 'ADD', path: '/processType', val: typeof process }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-deterministic").kind("TestEvent"));
@@ -881,7 +881,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/propBlueId', val: document('/prop/blueId') }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/propBlueId', val: document('/prop/blueId') }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         String expectedBlueId = blue.calculateBlueId(initialized.getProperties().get("prop"));
@@ -908,7 +908,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/nameVal', val: document('/prop/name') }, { op: 'ADD', path: '/descriptionVal', val: document('/prop/description') }, { op: 'ADD', path: '/valueVal', val: document('/prop/value') }, { op: 'ADD', path: '/blueIdVal', val: document('/prop/blueId') }, { op: 'ADD', path: '/canonicalNameVal', val: document.canonical('/prop/name') }, { op: 'ADD', path: '/canonicalDescriptionVal', val: document.canonical('/prop/description') }, { op: 'ADD', path: '/canonicalValueVal', val: document.canonical('/prop/value') }, { op: 'ADD', path: '/canonicalBlueIdVal', val: document.canonical('/prop/blueId') }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/nameVal', val: document('/prop/name') }, { op: 'ADD', path: '/descriptionVal', val: document('/prop/description') }, { op: 'ADD', path: '/valueVal', val: document('/prop/value') }, { op: 'ADD', path: '/blueIdVal', val: document('/prop/blueId') }, { op: 'ADD', path: '/canonicalNameVal', val: document.canonical('/prop/name') }, { op: 'ADD', path: '/canonicalDescriptionVal', val: document.canonical('/prop/description') }, { op: 'ADD', path: '/canonicalValueVal', val: document.canonical('/prop/value') }, { op: 'ADD', path: '/canonicalBlueIdVal', val: document.canonical('/prop/blueId') }] });\"\n");
         document.properties("prop", new Node()
                 .name("Prop A")
                 .description("Desc")
@@ -950,11 +950,11 @@ class SequentialWorkflowProcessorTest {
                 "      - name: Compute\n" +
                 "        type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ value: 12 })\"\n" +
+                "        code: \"return ({ value: 12 });\"\n" +
                 "      - name: Finalize\n" +
                 "        type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/total', val: steps.Compute.value + 8 }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/total', val: steps.Compute.value + 8 }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-steps").kind("TestEvent"));
@@ -985,7 +985,7 @@ class SequentialWorkflowProcessorTest {
                 "      - name: Finalize\n" +
                 "        type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/nullSeen', val: steps.Nuller === null }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/nullSeen', val: steps.Nuller === null }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-null-step").kind("TestEvent"));
@@ -1016,7 +1016,7 @@ class SequentialWorkflowProcessorTest {
                 "      - name: Finalize\n" +
                 "        type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/undefinedSeen', val: typeof steps.Maybe === 'undefined' }] })\"\n");
+                "        code: \"return ({ changeset: [{ op: 'ADD', path: '/undefinedSeen', val: typeof steps.Maybe === 'undefined' }] });\"\n");
 
         Node initialized = blue.initializeDocument(document).document();
         Node event = blue.objectToNode(new TestEvent().eventId("evt-undefined-step").kind("TestEvent"));

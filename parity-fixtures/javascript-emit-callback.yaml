@@ -15,7 +15,7 @@ document: |
       steps:
         - type:
             blueId: Conversation/JavaScript Code
-          code: "emit({ kind: 'fixture-js-callback' }); ({ changeset: [{ op: 'ADD', path: '/callbackCount', val: 1 }] })"
+          code: "emit({ kind: 'fixture-js-callback' }); return ({ changeset: [{ op: 'ADD', path: '/callbackCount', val: 1 }] });"
     observer:
       channel: triggered
       type:

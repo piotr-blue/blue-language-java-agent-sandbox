@@ -12,7 +12,7 @@ document: |
       steps:
         - type:
             blueId: Conversation/JavaScript Code
-          code: "({ changeset: [{ op: 'ADD', path: '/dateType', val: typeof Date }, { op: 'ADD', path: '/processType', val: typeof process }] })"
+          code: "return ({ changeset: [{ op: 'ADD', path: '/dateType', val: typeof Date }, { op: 'ADD', path: '/processType', val: typeof process }] });"
 event: |
   type:
     blueId: TestEvent

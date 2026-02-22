@@ -7,12 +7,13 @@ This document describes the Java QuickJS integration architecture used by the do
 - `ScriptRuntime` (`blue.language.processor.script.ScriptRuntime`)
   - Runtime SPI for script evaluation.
   - Accepts a `ScriptRuntimeRequest` (`code`, `bindings`, `wasmGasLimit`).
-  - Returns `ScriptRuntimeResult` (`value`, `wasmGasUsed`, `wasmGasRemaining`).
+  - Returns `ScriptRuntimeResult` (`value`, `valueDefined`, `wasmGasUsed`, `wasmGasRemaining`).
 - `QuickJsSidecarRuntime`
   - Default SPI implementation backed by a managed Node sidecar process.
   - Uses line-delimited JSON request/response messages over stdio.
 - `QuickJSEvaluator`
   - Java-facing evaluator wrapper that maps sidecar failures to `CodeBlockEvaluationError`.
+  - Wraps workflow/evaluator code as a function body (JS parity), so scripts must `return ...` to produce a defined result.
 - `QuickJsExpressionUtils`
   - Expression helpers and traversal utilities used by workflow step executors.
   - Supports:
@@ -80,8 +81,8 @@ Workflow expression/step evaluation charges gas through:
 - `event` (simple/plain JSON snapshot of current event)
 - `eventCanonical` (official/canonical JSON event snapshot)
 - `steps` (results from prior workflow steps)
-- `currentContract` (simple contract snapshot read from `/contracts/<key>`)
-- `currentContractCanonical` (official contract snapshot read from `/contracts/<key>`)
+- `currentContract` (simple contract snapshot from bound workflow contract-node metadata when available; otherwise `/contracts/<key>`)
+- `currentContractCanonical` (official contract snapshot from bound workflow contract-node metadata when available; otherwise `/contracts/<key>`)
 - internal document snapshots used by evaluator prelude:
   - `__documentDataSimple`
   - `__documentDataCanonical`

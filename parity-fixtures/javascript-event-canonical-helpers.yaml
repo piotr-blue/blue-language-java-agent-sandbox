@@ -13,10 +13,10 @@ document: |
         - type:
             blueId: Conversation/JavaScript Code
           code: |
-            ({ changeset: [
+            return ({ changeset: [
               { op: 'ADD', path: '/eventPlain', val: event.payload.id },
               { op: 'ADD', path: '/eventCanonical', val: canon.unwrap(canon.at(eventCanonical, '/payload/id')) }
-            ] })
+            ] });
 event: |
   type:
     blueId: TestEvent

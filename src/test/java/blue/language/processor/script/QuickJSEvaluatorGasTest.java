@@ -36,7 +36,7 @@ class QuickJSEvaluatorGasTest {
 
         try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
             ScriptRuntimeResult result = evaluator.evaluate(
-                    "let total = 0; for (let i = 0; i < 1000; i += 1) { total += i; } total;",
+                    "let total = 0; for (let i = 0; i < 1000; i += 1) { total += i; } return total;",
                     new LinkedHashMap<String, Object>(),
                     new BigInteger("1000000000"));
             assertEquals("499500", String.valueOf(result.value()));
