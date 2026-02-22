@@ -131,6 +131,7 @@ Current in-flight work:
   - static ADD/REMOVE patch operation execution paths
   - expression-returned `changeset` array execution
   - path-expression evaluation failure surfacing as `CodeBlockEvaluationError`
+  - fatal validation for non-string/empty patch paths
   - base gas charging side-effect assertions
   - direct fatal error path for unsupported patch operations
   - direct fatal error path for invalid step schema/type payloads

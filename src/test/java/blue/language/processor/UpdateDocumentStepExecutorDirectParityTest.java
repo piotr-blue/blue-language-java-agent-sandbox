@@ -214,6 +214,42 @@ class UpdateDocumentStepExecutorDirectParityTest {
     }
 
     @Test
+    void throwsFatalWhenPathIsNotString() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Conversation/Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("REPLACE"))
+                                .properties("path", new Node().value(7))
+                                .properties("val", new Node().value("hi"))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
+        assertTrue(String.valueOf(fatal.getMessage()).contains("requires a non-empty path"));
+    }
+
+    @Test
     void throwsFatalWhenStepSchemaIsInvalid() {
         UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
 

@@ -80,7 +80,7 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
             op = "REPLACE";
         }
         String normalizedOp = op.trim().toUpperCase(Locale.ROOT);
-        String path = readString(change, "path");
+        String path = readPath(change);
         if (path == null || path.trim().isEmpty()) {
             args.context().throwFatal("Update Document changeset requires a non-empty path");
             return;
@@ -106,6 +106,21 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
             return;
         }
         args.context().throwFatal("Unsupported Update Document operation \"" + op + "\"");
+    }
+
+    private String readPath(Node node) {
+        if (node == null || node.getProperties() == null) {
+            return null;
+        }
+        Node pathNode = node.getProperties().get("path");
+        if (pathNode == null || pathNode.getValue() == null) {
+            return null;
+        }
+        Object value = pathNode.getValue();
+        if (!(value instanceof String)) {
+            return null;
+        }
+        return (String) value;
     }
 
     private String readString(Node node, String key) {
