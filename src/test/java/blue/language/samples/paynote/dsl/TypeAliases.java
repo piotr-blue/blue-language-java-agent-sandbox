@@ -25,6 +25,7 @@ public final class TypeAliases {
     // Conversation
     public static final String CONVERSATION_OPERATION = "Conversation/Operation";
     public static final String CONVERSATION_TIMELINE_CHANNEL = "Conversation/Timeline Channel";
+    public static final String CONVERSATION_COMPOSITE_TIMELINE_CHANNEL = "Conversation/Composite Timeline Channel";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW = "Conversation/Sequential Workflow";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION = "Conversation/Sequential Workflow Operation";
     public static final String CONVERSATION_JAVASCRIPT_CODE = "Conversation/JavaScript Code";
@@ -63,6 +64,7 @@ public final class TypeAliases {
         // Conversation
         aliases.put(ConversationTypes.Operation.class, CONVERSATION_OPERATION);
         aliases.put(ConversationTypes.TimelineChannel.class, CONVERSATION_TIMELINE_CHANNEL);
+        aliases.put(ConversationTypes.CompositeTimelineChannel.class, CONVERSATION_COMPOSITE_TIMELINE_CHANNEL);
         aliases.put(ConversationTypes.SequentialWorkflow.class, CONVERSATION_SEQUENTIAL_WORKFLOW);
         aliases.put(ConversationTypes.SequentialWorkflowOperation.class, CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
         aliases.put(ConversationTypes.JavaScriptCode.class, CONVERSATION_JAVASCRIPT_CODE);
