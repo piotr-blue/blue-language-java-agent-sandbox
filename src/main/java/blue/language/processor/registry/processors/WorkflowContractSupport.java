@@ -5,6 +5,8 @@ import blue.language.utils.Properties;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 final class WorkflowContractSupport {
 
@@ -128,7 +130,12 @@ final class WorkflowContractSupport {
 
         String candidateBlueId = candidate.getType() != null ? candidate.getType().getBlueId() : null;
         if (candidateBlueId != null && !candidateBlueId.trim().isEmpty()) {
-            return expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId);
+            if (expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId)) {
+                return true;
+            }
+            if (hasTypeInChain(candidate.getType(), expectedBlueId, new LinkedHashSet<String>())) {
+                return true;
+            }
         }
 
         String inferredCandidateType = inferCoreType(candidate);
@@ -136,6 +143,23 @@ final class WorkflowContractSupport {
             return false;
         }
         return expectedBlueId.equals(inferredCandidateType) || equivalentCoreType(expectedBlueId, inferredCandidateType);
+    }
+
+    private static boolean hasTypeInChain(Node candidateType, String expectedBlueId, Set<String> visitedBlueIds) {
+        if (candidateType == null || expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
+            return false;
+        }
+        String candidateBlueId = candidateType.getBlueId();
+        if (candidateBlueId != null && !candidateBlueId.trim().isEmpty()) {
+            String normalized = candidateBlueId.trim();
+            if (expectedBlueId.equals(normalized) || equivalentCoreType(expectedBlueId, normalized)) {
+                return true;
+            }
+            if (!visitedBlueIds.add(normalized)) {
+                return false;
+            }
+        }
+        return hasTypeInChain(candidateType.getType(), expectedBlueId, visitedBlueIds);
     }
 
     private static boolean equivalentCoreType(String left, String right) {

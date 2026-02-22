@@ -148,15 +148,18 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
     }
 
     private boolean isOperationNode(Node node) {
-        if (node == null || node.getType() == null || node.getType().getBlueId() == null) {
+        if (node == null) {
             return false;
         }
-        String blueId = node.getType().getBlueId();
-        return blueId.endsWith("Operation")
-                || blueId.endsWith("Change Operation")
-                || "Operation".equals(blueId)
-                || "Conversation/Operation".equals(blueId)
-                || "Conversation/Change Operation".equals(blueId);
+        return matchesOperationType(node, "Conversation/Operation")
+                || matchesOperationType(node, "Operation")
+                || matchesOperationType(node, "Conversation/Change Operation")
+                || matchesOperationType(node, "ChangeOperation");
+    }
+
+    private boolean matchesOperationType(Node node, String expectedBlueId) {
+        Node requirement = new Node().type(new Node().blueId(expectedBlueId));
+        return WorkflowContractSupport.matchesTypeRequirement(node, requirement);
     }
 
     private String extractOperationChannel(Node operationNode) {

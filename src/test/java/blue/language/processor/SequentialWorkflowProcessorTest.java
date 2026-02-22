@@ -154,6 +154,43 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationSupportsInlineDerivedMarkerTypeBlueId() {
+        Blue blue = new Blue();
+        Node document = blue.yamlToNode("name: Derived Operation Marker Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  ownerChannel:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Timeline Channel\n" +
+                "    timelineId: owner-42\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Custom/Derived Operation Marker\n" +
+                "      type:\n" +
+                "        blueId: Conversation/Operation\n" +
+                "    channel: ownerChannel\n" +
+                "    request:\n" +
+                "      type: Integer\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.message.request}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = operationRequestEvent(blue, "increment", 6, true, null, "owner-42");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("6"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationSkipsWhenOperationKeyDiffers() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
