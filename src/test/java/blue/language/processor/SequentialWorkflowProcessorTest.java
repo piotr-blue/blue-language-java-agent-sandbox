@@ -380,6 +380,33 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepHasCanonicalCurrentContractBindings() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Contract Canonical Binding Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/contractSimple', val: currentContract.channel }, { op: 'ADD', path: '/contractCanonical', val: currentContractCanonical.channel.value }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-bind-canonical").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("testChannel", result.document().getProperties().get("contractSimple").getValue());
+        assertEquals("testChannel", result.document().getProperties().get("contractCanonical").getValue());
+    }
+
+    @Test
     void javaScriptCodeStepErrorsBecomeFatalTermination() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());

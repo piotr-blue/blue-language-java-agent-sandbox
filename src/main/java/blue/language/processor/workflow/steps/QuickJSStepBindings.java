@@ -3,6 +3,7 @@ package blue.language.processor.workflow.steps;
 import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.workflow.StepExecutionArgs;
+import blue.language.processor.util.ProcessorPointerConstants;
 import blue.language.utils.NodeToMapListOrValue;
 import blue.language.utils.NodeToMapListOrValue.Strategy;
 import blue.language.utils.UncheckedObjectMapper;
@@ -38,9 +39,20 @@ final class QuickJSStepBindings {
         bindings.put("__documentDataSimple", documentSimple);
         bindings.put("__documentDataCanonical", documentCanonical);
         bindings.put("__scopePath", args.context().resolvePointer("/"));
-        Map<?, ?> currentContract = UncheckedObjectMapper.JSON_MAPPER.convertValue(args.workflow(), Map.class);
-        bindings.put("currentContract", currentContract);
-        bindings.put("currentContractCanonical", currentContract);
+        String workflowKey = args.workflow() != null ? args.workflow().getKey() : null;
+        Node contractSnapshot = null;
+        if (workflowKey != null && !workflowKey.trim().isEmpty()) {
+            String contractPointer = args.context().resolvePointer(ProcessorPointerConstants.relativeContractsEntry(workflowKey.trim()));
+            contractSnapshot = args.context().documentAt(contractPointer);
+        }
+        if (contractSnapshot != null) {
+            bindings.put("currentContract", NodeToMapListOrValue.get(contractSnapshot, Strategy.SIMPLE));
+            bindings.put("currentContractCanonical", NodeToMapListOrValue.get(contractSnapshot, Strategy.OFFICIAL));
+        } else {
+            Map<?, ?> currentContract = UncheckedObjectMapper.JSON_MAPPER.convertValue(args.workflow(), Map.class);
+            bindings.put("currentContract", currentContract);
+            bindings.put("currentContractCanonical", currentContract);
+        }
         return bindings;
     }
 
