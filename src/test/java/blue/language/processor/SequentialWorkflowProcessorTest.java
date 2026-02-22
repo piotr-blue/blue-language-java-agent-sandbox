@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -9,6 +10,7 @@ import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -101,6 +103,46 @@ class SequentialWorkflowProcessorTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         assertEquals(new BigInteger("9"), result.document().getProperties().get("count").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowSupportsProviderDerivedWorkflowTypeBlueId() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"Custom/Repository Derived Sequential Workflow".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node();
+                definition.type(new Node().blueId("Conversation/Sequential Workflow"));
+                return Collections.singletonList(definition);
+            }
+        };
+        Blue blue = new Blue(provider);
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Provider Derived Workflow Type Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Custom/Repository Derived Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /count\n" +
+                "            val: 13\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-provider-derived-workflow").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("13"), result.document().getProperties().get("count").getValue());
     }
 
     @Test

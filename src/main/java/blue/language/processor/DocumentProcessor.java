@@ -19,19 +19,25 @@ public class DocumentProcessor {
     private final ContractProcessorRegistry contractRegistry;
     private final NodeToObjectConverter contractConverter;
     private final ContractLoader contractLoader;
+    private final TypeClassResolver contractTypeResolver;
 
     public DocumentProcessor() {
-        this(ContractProcessorRegistryBuilder.create().registerDefaults().build());
+        this(ContractProcessorRegistryBuilder.create().registerDefaults().build(), CONTRACT_TYPE_RESOLVER);
     }
 
     public DocumentProcessor(ContractProcessorRegistry registry) {
+        this(registry, CONTRACT_TYPE_RESOLVER);
+    }
+
+    public DocumentProcessor(ContractProcessorRegistry registry, TypeClassResolver resolver) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
-        this.contractConverter = new NodeToObjectConverter(CONTRACT_TYPE_RESOLVER);
+        this.contractTypeResolver = resolver != null ? resolver : CONTRACT_TYPE_RESOLVER;
+        this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
     }
 
     private DocumentProcessor(Builder builder) {
-        this(builder.contractRegistry);
+        this(builder.contractRegistry, builder.typeClassResolver);
     }
 
     public DocumentProcessingResult initializeDocument(Node document) {
@@ -78,9 +84,15 @@ public class DocumentProcessor {
 
     static final class Builder {
         private ContractProcessorRegistry contractRegistry = ContractProcessorRegistryBuilder.create().registerDefaults().build();
+        private TypeClassResolver typeClassResolver = CONTRACT_TYPE_RESOLVER;
 
         public Builder withRegistry(ContractProcessorRegistry registry) {
             this.contractRegistry = Objects.requireNonNull(registry, "registry");
+            return this;
+        }
+
+        public Builder withTypeClassResolver(TypeClassResolver resolver) {
+            this.typeClassResolver = Objects.requireNonNull(resolver, "resolver");
             return this;
         }
 

@@ -8,6 +8,7 @@ import blue.language.merge.processor.*;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.ContractProcessor;
+import blue.language.processor.ContractProcessorRegistryBuilder;
 import blue.language.processor.DocumentProcessor;
 import blue.language.processor.model.Contract;
 import blue.language.preprocess.Preprocessor;
@@ -314,7 +315,10 @@ public class Blue implements NodeResolver {
     }
 
     private DocumentProcessor createDefaultDocumentProcessor() {
-        return new DocumentProcessor();
+        TypeClassResolver resolver = new TypeClassResolver(nodeProvider, "blue.language.processor.model");
+        return new DocumentProcessor(
+                ContractProcessorRegistryBuilder.create().registerDefaults().build(),
+                resolver);
     }
 
     private Limits combineWithGlobalLimits(Limits methodLimits) {

@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.mapping.model.AliasMappedType;
 import blue.language.processor.model.ChannelEventCheckpoint;
@@ -11,6 +12,8 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ProcessingTerminatedMarker;
 import blue.language.processor.model.TriggeredEventChannel;
 import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -38,6 +41,26 @@ class TypeClassResolverAliasTest {
                 new Node()
                         .blueId("AliasMappedType/Derived")
                         .type(new Node().blueId("AliasMappedType/Primary")));
+
+        assertSame(AliasMappedType.class, resolver.resolveClass(derived));
+    }
+
+    @Test
+    void resolvesClassFromProviderTypeChainWhenBlueIdIsDerivedWithoutInlineChain() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"AliasMappedType/ProviderDerived".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node typeDefinition = new Node();
+                typeDefinition.type(new Node().blueId("AliasMappedType/Primary"));
+                return Collections.singletonList(typeDefinition);
+            }
+        };
+        TypeClassResolver resolver = new TypeClassResolver(provider, "blue.language.mapping.model");
+
+        Node derived = new Node().type(new Node().blueId("AliasMappedType/ProviderDerived"));
 
         assertSame(AliasMappedType.class, resolver.resolveClass(derived));
     }

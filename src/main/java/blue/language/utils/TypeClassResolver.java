@@ -1,5 +1,6 @@
 package blue.language.utils;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.blueid.BlueIdCalculator;
@@ -20,8 +21,14 @@ import java.util.Set;
 public class TypeClassResolver {
 
     private final Map<String, Class<?>> blueIdMap = new HashMap<>();
+    private final NodeProvider nodeProvider;
 
     public TypeClassResolver(String... packagesToScan) {
+        this(null, packagesToScan);
+    }
+
+    public TypeClassResolver(NodeProvider nodeProvider, String... packagesToScan) {
+        this.nodeProvider = nodeProvider;
         for (String packageName : packagesToScan) {
             Reflections reflections = new Reflections(new ConfigurationBuilder()
                     .setUrls(ClasspathHelper.forPackage(packageName))
@@ -114,8 +121,28 @@ public class TypeClassResolver {
             if (!visitedBlueIds.add(normalized)) {
                 return null;
             }
+            Class<?> resolvedFromProvider = resolveClassFromProviderType(normalized, visitedBlueIds);
+            if (resolvedFromProvider != null) {
+                return resolvedFromProvider;
+            }
         }
         return resolveClassByTypeChain(typeNode.getType(), visitedBlueIds);
+    }
+
+    private Class<?> resolveClassFromProviderType(String blueId, Set<String> visitedBlueIds) {
+        if (nodeProvider == null || blueId == null || blueId.trim().isEmpty()) {
+            return null;
+        }
+        Node typeDefinition;
+        try {
+            typeDefinition = nodeProvider.fetchFirstByBlueId(blueId);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+        if (typeDefinition == null || typeDefinition.getType() == null) {
+            return null;
+        }
+        return resolveClassByTypeChain(typeDefinition.getType(), visitedBlueIds);
     }
 
     public Map<String, Class<?>> getBlueIdMap() {
