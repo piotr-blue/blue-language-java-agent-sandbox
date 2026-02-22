@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies checkpoint behaviour for the {@link ChannelRunner} in isolation.
@@ -313,6 +314,43 @@ final class ChannelRunnerTest {
         ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
         assertNotNull(checkpoint);
         assertNull(checkpoint.lastEvent(channelBinding.key()));
+    }
+
+    @Test
+    void doesNothingWhenExternalChannelDoesNotMatch() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        Node nonMatchingEvent = new Node()
+                .type(new Node().blueId("OtherEvent"))
+                .properties("eventId", new Node().value("evt-non-match"));
+        runner.runExternalChannel("/", bundle, channelBinding, nonMatchingEvent);
+
+        assertTrue(execution.runtime().document().getProperties().get("counter") == null
+                        || execution.runtime().document().getProperties().get("counter").getValue() == null,
+                "Counter should remain untouched when channel does not match");
+        assertNull(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT));
     }
 
     private static final class ThrowingSetPropertyContractProcessor implements HandlerProcessor<SetProperty> {
