@@ -151,6 +151,11 @@ Current in-flight work:
   - nested composite recency behavior
   - workflow JS access to `event.meta.compositeSourceChannelKey`
   (`CompositeTimelineChannelProcessorTest`, `CompositeTimelineChannelIntegrationParityTest`).
+- MyOS timeline channel parity coverage now explicitly verifies:
+  - matching for both MyOS and conversation timeline-entry event shapes
+  - rejection of non-timeline or mismatched timeline-id events
+  - recency comparison behavior against prior checkpointed events
+  (`MyOSTimelineChannelProcessorTest`).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - `QuickJSEvaluator` now supports direct function-backed `document` bindings (simple and canonical pointer reads for literal pointer calls) via Java callbacks, with migration coverage in `QuickJSEvaluatorTest` (`supportsFunctionDocumentBindingForPlainAndCanonicalReads`, `supportsSimpleFunctionDocumentBindingForLiteralPointers`).

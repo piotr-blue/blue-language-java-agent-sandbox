@@ -34,4 +34,46 @@ class MyOSTimelineChannelProcessorTest {
                 new Node().properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")))
                         .properties("revision", new Node().value(new BigInteger("12")))));
     }
+
+    @Test
+    void matchesConversationTimelineEntriesInAdditionToMyOSEntries() {
+        MyOSTimelineChannelProcessor processor = new MyOSTimelineChannelProcessor();
+        MyOSTimelineChannel contract = new MyOSTimelineChannel();
+        contract.setTimelineId("owner-42");
+
+        Node conversationEntry = new Node()
+                .type(new Node().blueId("Conversation/Timeline Entry"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")));
+        Node myosEntry = new Node()
+                .type(new Node().blueId("MyOS/MyOS Timeline Entry"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")));
+
+        ChannelEvaluationContext conversationContext = new ChannelEvaluationContext(
+                "/", "myos", conversationEntry, null, null, null, null);
+        ChannelEvaluationContext myosContext = new ChannelEvaluationContext(
+                "/", "myos", myosEntry, null, null, null, null);
+
+        assertTrue(processor.matches(contract, conversationContext));
+        assertTrue(processor.matches(contract, myosContext));
+    }
+
+    @Test
+    void ignoresEventsWithoutMatchingTimelineId() {
+        MyOSTimelineChannelProcessor processor = new MyOSTimelineChannelProcessor();
+        MyOSTimelineChannel contract = new MyOSTimelineChannel();
+        contract.setTimelineId("owner-42");
+
+        Node randomEvent = new Node().type(new Node().blueId("RandomEvent"));
+        Node mismatchedTimeline = new Node()
+                .type(new Node().blueId("Conversation/Timeline Entry"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-7")));
+
+        ChannelEvaluationContext randomContext = new ChannelEvaluationContext(
+                "/", "myos", randomEvent, null, null, null, null);
+        ChannelEvaluationContext mismatchContext = new ChannelEvaluationContext(
+                "/", "myos", mismatchedTimeline, null, null, null, null);
+
+        assertFalse(processor.matches(contract, randomContext));
+        assertFalse(processor.matches(contract, mismatchContext));
+    }
 }
