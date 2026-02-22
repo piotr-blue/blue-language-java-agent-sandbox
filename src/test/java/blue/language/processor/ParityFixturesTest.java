@@ -295,26 +295,22 @@ class ParityFixturesTest {
     }
 
     private Blue createBlue(Map<String, Object> fixture) {
-        List<Node> providerNodes = listOfNodes(fixture.get("providerNodes"));
-        if (providerNodes.isEmpty()) {
+        List<ProviderNodeEntry> providerEntries = listProviderEntries(fixture.get("providerNodes"));
+        if (providerEntries.isEmpty()) {
             return new Blue();
         }
         final Map<String, List<Node>> nodesByBlueId = new HashMap<>();
-        for (Node node : providerNodes) {
-            if (node == null) {
+        for (ProviderNodeEntry entry : providerEntries) {
+            if (entry == null || entry.lookupBlueId == null || entry.definition == null) {
                 continue;
             }
-            String blueId = node.getBlueId();
-            if (blueId == null || blueId.trim().isEmpty()) {
-                continue;
-            }
-            String normalizedBlueId = blueId.trim();
+            String normalizedBlueId = entry.lookupBlueId.trim();
             List<Node> variants = nodesByBlueId.get(normalizedBlueId);
             if (variants == null) {
                 variants = new ArrayList<>();
                 nodesByBlueId.put(normalizedBlueId, variants);
             }
-            variants.add(node.clone());
+            variants.add(entry.definition.clone());
         }
         NodeProvider provider = new NodeProvider() {
             @Override
@@ -336,22 +332,72 @@ class ParityFixturesTest {
         return new Blue(provider);
     }
 
-    private List<Node> listOfNodes(Object value) {
+    @SuppressWarnings("unchecked")
+    private List<ProviderNodeEntry> listProviderEntries(Object value) {
         if (!(value instanceof List)) {
             return new ArrayList<>();
         }
-        List<Node> nodes = new ArrayList<>();
-        @SuppressWarnings("unchecked")
+        List<ProviderNodeEntry> entries = new ArrayList<>();
         List<Object> raw = (List<Object>) value;
         for (Object item : raw) {
             if (item == null) {
                 continue;
             }
-            Node node = UncheckedObjectMapper.JSON_MAPPER.convertValue(item, Node.class);
-            if (node != null) {
-                nodes.add(node);
+            if (item instanceof Map) {
+                Map<String, Object> map = (Map<String, Object>) item;
+                String explicitLookupBlueId = optionalString(map.get("lookupBlueId"));
+                if (explicitLookupBlueId == null) {
+                    explicitLookupBlueId = optionalString(map.get("blueId"));
+                }
+                Object definitionRaw = map.get("definition");
+                String propertyBlueId = optionalString(map.get("propertyBlueId"));
+                if (definitionRaw != null || propertyBlueId != null) {
+                    Node definition = definitionRaw != null
+                            ? UncheckedObjectMapper.JSON_MAPPER.convertValue(definitionRaw, Node.class)
+                            : new Node();
+                    if (definition == null) {
+                        continue;
+                    }
+                    if (propertyBlueId != null) {
+                        definition.properties("blueId", new Node().value(propertyBlueId));
+                    }
+                    String lookupBlueId = explicitLookupBlueId;
+                    if ((lookupBlueId == null || lookupBlueId.trim().isEmpty())
+                            && definition.getBlueId() != null
+                            && !definition.getBlueId().trim().isEmpty()) {
+                        lookupBlueId = definition.getBlueId().trim();
+                    }
+                    if (lookupBlueId == null || lookupBlueId.trim().isEmpty()) {
+                        continue;
+                    }
+                    entries.add(new ProviderNodeEntry(lookupBlueId.trim(), definition));
+                    continue;
+                }
             }
+            Node node = UncheckedObjectMapper.JSON_MAPPER.convertValue(item, Node.class);
+            if (node == null || node.getBlueId() == null || node.getBlueId().trim().isEmpty()) {
+                continue;
+            }
+            entries.add(new ProviderNodeEntry(node.getBlueId().trim(), node));
         }
-        return nodes;
+        return entries;
+    }
+
+    private String optionalString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private static final class ProviderNodeEntry {
+        private final String lookupBlueId;
+        private final Node definition;
+
+        private ProviderNodeEntry(String lookupBlueId, Node definition) {
+            this.lookupBlueId = lookupBlueId;
+            this.definition = definition;
+        }
     }
 }
