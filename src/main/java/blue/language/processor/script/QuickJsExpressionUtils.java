@@ -7,8 +7,15 @@ import blue.language.processor.ProcessorExecutionContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.function.Consumer;
 
 public final class QuickJsExpressionUtils {
+
+    private static final Pattern STANDALONE_EXPRESSION_PATTERN = Pattern.compile("^\\$\\{[^{}]+}$");
+    private static final Pattern TEMPLATE_EXPRESSION_PATTERN = Pattern.compile("\\$\\{([^}]+)}");
 
     public interface PointerPredicate {
         boolean test(String pointer, Node node);
@@ -22,7 +29,51 @@ public final class QuickJsExpressionUtils {
             return false;
         }
         String text = ((String) value).trim();
-        return text.startsWith("${") && text.endsWith("}");
+        return STANDALONE_EXPRESSION_PATTERN.matcher(text).matches();
+    }
+
+    public static boolean containsExpression(Object value) {
+        if (!(value instanceof String)) {
+            return false;
+        }
+        return TEMPLATE_EXPRESSION_PATTERN.matcher((String) value).find();
+    }
+
+    public static String extractExpressionContent(String expression) {
+        if (!isExpression(expression)) {
+            throw new IllegalArgumentException("Invalid expression: " + expression);
+        }
+        String text = expression.trim();
+        return text.substring(2, text.length() - 1);
+    }
+
+    public static PointerPredicate createPathPredicate(List<String> includePatterns, List<String> excludePatterns) {
+        final List<String> includes = includePatterns == null || includePatterns.isEmpty()
+                ? Collections.singletonList("/**")
+                : includePatterns;
+        final List<String> excludes = excludePatterns == null ? Collections.<String>emptyList() : excludePatterns;
+        return new PointerPredicate() {
+            @Override
+            public boolean test(String pointer, Node node) {
+                String normalized = normalizePointer(pointer);
+                boolean included = false;
+                for (String pattern : includes) {
+                    if (matchesPattern(normalized, pattern)) {
+                        included = true;
+                        break;
+                    }
+                }
+                if (!included) {
+                    return false;
+                }
+                for (String pattern : excludes) {
+                    if (matchesPattern(normalized, pattern)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        };
     }
 
     public static Node resolveExpressions(Node node,
@@ -31,10 +82,25 @@ public final class QuickJsExpressionUtils {
                                           ProcessorExecutionContext context,
                                           PointerPredicate shouldResolve,
                                           PointerPredicate shouldDescend) {
+        return resolveExpressions(node, evaluator, bindings, context, shouldResolve, shouldDescend, new Consumer<java.math.BigInteger>() {
+            @Override
+            public void accept(java.math.BigInteger amount) {
+                context.chargeWasmGas(amount);
+            }
+        });
+    }
+
+    public static Node resolveExpressions(Node node,
+                                          QuickJSEvaluator evaluator,
+                                          Map<String, Object> bindings,
+                                          ProcessorExecutionContext context,
+                                          PointerPredicate shouldResolve,
+                                          PointerPredicate shouldDescend,
+                                          Consumer<java.math.BigInteger> wasmGasConsumer) {
         if (node == null) {
             return null;
         }
-        return resolveRecursive(node, "", evaluator, bindings, context, shouldResolve, shouldDescend);
+        return resolveRecursive(node, "", evaluator, bindings, context, shouldResolve, shouldDescend, wasmGasConsumer);
     }
 
     private static Node resolveRecursive(Node node,
@@ -43,18 +109,27 @@ public final class QuickJsExpressionUtils {
                                          Map<String, Object> bindings,
                                          ProcessorExecutionContext context,
                                          PointerPredicate shouldResolve,
-                                         PointerPredicate shouldDescend) {
+                                         PointerPredicate shouldDescend,
+                                         Consumer<java.math.BigInteger> wasmGasConsumer) {
         Node cloned = node.clone();
         Object value = cloned.getValue();
-        if (isExpression(value) && (shouldResolve == null || shouldResolve.test(pointer, cloned))) {
-            String expression = String.valueOf(value).trim();
-            String code = expression.substring(2, expression.length() - 1);
-            ScriptRuntimeResult runtimeResult = evaluator.evaluate(
-                    code,
-                    bindings,
-                    ProcessorGasSchedule.DEFAULT_EXPRESSION_WASM_GAS_LIMIT);
-            context.chargeWasmGas(runtimeResult.wasmGasUsed());
-            return toNode(runtimeResult.value());
+        if (shouldResolve == null || shouldResolve.test(pointer, cloned)) {
+            if (isExpression(value)) {
+                Object evaluated = evaluateQuickJsExpression(
+                        evaluator,
+                        extractExpressionContent(String.valueOf(value)),
+                        bindings,
+                        wasmGasConsumer);
+                return toNode(evaluated);
+            }
+            if (containsExpression(value)) {
+                String rendered = resolveTemplateString(
+                        evaluator,
+                        String.valueOf(value),
+                        bindings,
+                        wasmGasConsumer);
+                return new Node().value(rendered);
+            }
         }
 
         if (cloned.getProperties() != null) {
@@ -63,7 +138,7 @@ public final class QuickJsExpressionUtils {
                 if (shouldDescend != null && !shouldDescend.test(childPointer, entry.getValue())) {
                     continue;
                 }
-                entry.setValue(resolveRecursive(entry.getValue(), childPointer, evaluator, bindings, context, shouldResolve, shouldDescend));
+                entry.setValue(resolveRecursive(entry.getValue(), childPointer, evaluator, bindings, context, shouldResolve, shouldDescend, wasmGasConsumer));
             }
         }
         if (cloned.getItems() != null) {
@@ -76,11 +151,44 @@ public final class QuickJsExpressionUtils {
                     updatedItems.add(child);
                     continue;
                 }
-                updatedItems.add(resolveRecursive(child, childPointer, evaluator, bindings, context, shouldResolve, shouldDescend));
+                updatedItems.add(resolveRecursive(child, childPointer, evaluator, bindings, context, shouldResolve, shouldDescend, wasmGasConsumer));
             }
             cloned.items(updatedItems);
         }
         return cloned;
+    }
+
+    public static Object evaluateQuickJsExpression(QuickJSEvaluator evaluator,
+                                                   String code,
+                                                   Map<String, Object> bindings,
+                                                   Consumer<java.math.BigInteger> wasmGasConsumer) {
+        try {
+            ScriptRuntimeResult runtimeResult = evaluator.evaluate(
+                    code,
+                    bindings,
+                    ProcessorGasSchedule.DEFAULT_EXPRESSION_WASM_GAS_LIMIT);
+            if (wasmGasConsumer != null && runtimeResult.wasmGasUsed() != null) {
+                wasmGasConsumer.accept(runtimeResult.wasmGasUsed());
+            }
+            return runtimeResult.value();
+        } catch (CodeBlockEvaluationError ex) {
+            throw new CodeBlockEvaluationError("Failed to evaluate code block", ex);
+        }
+    }
+
+    public static String resolveTemplateString(QuickJSEvaluator evaluator,
+                                               String template,
+                                               Map<String, Object> bindings,
+                                               Consumer<java.math.BigInteger> wasmGasConsumer) {
+        Matcher matcher = TEMPLATE_EXPRESSION_PATTERN.matcher(template);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            String expression = matcher.group(1);
+            Object value = evaluateQuickJsExpression(evaluator, expression, bindings, wasmGasConsumer);
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(String.valueOf(value)));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 
     private static Node toNode(Object value) {
@@ -112,5 +220,35 @@ public final class QuickJsExpressionUtils {
 
     private static String escapeSegment(String segment) {
         return segment.replace("~", "~0").replace("/", "~1");
+    }
+
+    private static boolean matchesPattern(String pointer, String pattern) {
+        String normalizedPattern = normalizePointer(pattern);
+        String regex = normalizedPattern
+                .replace("\\", "\\\\")
+                .replace(".", "\\.")
+                .replace("[", "\\[")
+                .replace("]", "\\]")
+                .replace("{", "\\{")
+                .replace("}", "\\}")
+                .replace("(", "\\(")
+                .replace(")", "\\)")
+                .replace("+", "\\+")
+                .replace("?", "\\?")
+                .replace("^", "\\^")
+                .replace("$", "\\$")
+                .replace("|", "\\|")
+                .replace("**", "___DOUBLE_STAR___")
+                .replace("*", "[^/]*")
+                .replace("___DOUBLE_STAR___", ".*");
+        return pointer.matches(regex);
+    }
+
+    private static String normalizePointer(String pointer) {
+        if (pointer == null || pointer.trim().isEmpty()) {
+            return "/";
+        }
+        String trimmed = pointer.trim();
+        return trimmed.startsWith("/") ? trimmed : "/" + trimmed;
     }
 }

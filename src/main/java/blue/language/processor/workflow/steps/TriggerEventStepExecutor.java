@@ -37,12 +37,9 @@ public class TriggerEventStepExecutor implements WorkflowStepExecutor {
                 evaluator,
                 QuickJSStepBindings.create(args),
                 args.context(),
-                new QuickJsExpressionUtils.PointerPredicate() {
-                    @Override
-                    public boolean test(String pointer, Node node) {
-                        return "/event".equals(pointer) || pointer.startsWith("/event/");
-                    }
-                },
+                QuickJsExpressionUtils.createPathPredicate(
+                        java.util.Arrays.asList("/event", "/event/**"),
+                        null),
                 new QuickJsExpressionUtils.PointerPredicate() {
                     @Override
                     public boolean test(String pointer, Node node) {

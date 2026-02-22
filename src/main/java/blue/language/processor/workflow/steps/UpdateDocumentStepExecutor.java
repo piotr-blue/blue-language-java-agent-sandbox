@@ -39,12 +39,9 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
                 evaluator,
                 QuickJSStepBindings.create(args),
                 args.context(),
-                new QuickJsExpressionUtils.PointerPredicate() {
-                    @Override
-                    public boolean test(String pointer, Node node) {
-                        return "/changeset".equals(pointer) || pointer.startsWith("/changeset/");
-                    }
-                },
+                QuickJsExpressionUtils.createPathPredicate(
+                        java.util.Arrays.asList("/changeset", "/changeset/**"),
+                        null),
                 null);
         List<Node> changes = readChangeset(stepNode);
         args.context().chargeUpdateDocumentBase(changes.size());
