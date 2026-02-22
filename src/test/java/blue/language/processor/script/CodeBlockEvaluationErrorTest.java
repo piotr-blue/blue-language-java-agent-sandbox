@@ -3,6 +3,8 @@ package blue.language.processor.script;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CodeBlockEvaluationErrorTest {
@@ -30,5 +32,28 @@ class CodeBlockEvaluationErrorTest {
         assertTrue(error.getMessage().startsWith("Failed to evaluate code block: "));
         assertTrue(error.getMessage().endsWith("..."));
         assertTrue(error.getMessage().length() < ("Failed to evaluate code block: " + longCode).length());
+    }
+
+    @Test
+    void exposesRuntimeMetadataWhenCauseIsScriptRuntimeException() {
+        ScriptRuntimeException cause = new ScriptRuntimeException(
+                "runtime failed",
+                "TypeError",
+                "bad input",
+                true);
+        CodeBlockEvaluationError error = new CodeBlockEvaluationError("throw new TypeError('bad input')", cause);
+
+        assertEquals("TypeError", error.runtimeErrorName());
+        assertEquals("bad input", error.runtimeErrorMessage());
+        assertTrue(error.runtimeStackAvailable());
+    }
+
+    @Test
+    void runtimeMetadataDefaultsWhenCauseIsNotScriptRuntimeException() {
+        CodeBlockEvaluationError error = new CodeBlockEvaluationError("throw new Error('x')", new RuntimeException("x"));
+
+        assertNull(error.runtimeErrorName());
+        assertNull(error.runtimeErrorMessage());
+        assertFalse(error.runtimeStackAvailable());
     }
 }
