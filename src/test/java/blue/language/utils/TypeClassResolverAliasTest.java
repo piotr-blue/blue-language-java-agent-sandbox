@@ -71,6 +71,44 @@ class TypeClassResolverAliasTest {
     }
 
     @Test
+    void resolvesClassFromProviderPropertyBlueIdChainWhenDerivedTypeLacksInlineParent() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"AliasMappedType/ProviderPropertyDerived".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node typeDefinition = new Node().properties("blueId", new Node().value("AliasMappedType/Primary"));
+                return Collections.singletonList(typeDefinition);
+            }
+        };
+        TypeClassResolver resolver = new TypeClassResolver(provider, "blue.language.mapping.model");
+
+        Node derived = new Node().type(new Node().blueId("AliasMappedType/ProviderPropertyDerived"));
+
+        assertSame(AliasMappedType.class, resolver.resolveClass(derived));
+    }
+
+    @Test
+    void resolvesClassFromProviderScalarValueChainWhenDerivedTypeLacksInlineParent() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"AliasMappedType/ProviderValueDerived".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node typeDefinition = new Node().value("AliasMappedType/Primary");
+                return Collections.singletonList(typeDefinition);
+            }
+        };
+        TypeClassResolver resolver = new TypeClassResolver(provider, "blue.language.mapping.model");
+
+        Node derived = new Node().type(new Node().blueId("AliasMappedType/ProviderValueDerived"));
+
+        assertSame(AliasMappedType.class, resolver.resolveClass(derived));
+    }
+
+    @Test
     void resolvesCoreBlueIdAliasesForBuiltInProcessorContracts() {
         TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
 

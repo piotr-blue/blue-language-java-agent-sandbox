@@ -111,15 +111,13 @@ public class TypeClassResolver {
             return null;
         }
 
-        String currentBlueId = typeNode.getBlueId();
-        if (currentBlueId != null && !currentBlueId.trim().isEmpty()) {
-            String normalized = currentBlueId.trim();
+        for (String normalized : extractBlueIds(typeNode)) {
             Class<?> match = blueIdMap.get(normalized);
             if (match != null) {
                 return match;
             }
             if (!visitedBlueIds.add(normalized)) {
-                return null;
+                continue;
             }
             Class<?> resolvedFromProvider = resolveClassFromProviderType(normalized, visitedBlueIds);
             if (resolvedFromProvider != null) {
@@ -139,10 +137,39 @@ public class TypeClassResolver {
         } catch (RuntimeException ignored) {
             return null;
         }
-        if (typeDefinition == null || typeDefinition.getType() == null) {
+        if (typeDefinition == null) {
             return null;
         }
-        return resolveClassByTypeChain(typeDefinition.getType(), visitedBlueIds);
+        return resolveClassByTypeChain(typeDefinition, visitedBlueIds);
+    }
+
+    private List<String> extractBlueIds(Node node) {
+        if (node == null) {
+            return Collections.emptyList();
+        }
+        List<String> blueIds = new ArrayList<>();
+        addBlueId(blueIds, node.getBlueId());
+        if (node.getProperties() != null) {
+            Node blueIdNode = node.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+            }
+        }
+        if (node.getValue() instanceof String) {
+            addBlueId(blueIds, String.valueOf(node.getValue()));
+        }
+        return blueIds;
+    }
+
+    private void addBlueId(List<String> blueIds, String candidate) {
+        if (candidate == null) {
+            return;
+        }
+        String normalized = candidate.trim();
+        if (normalized.isEmpty() || blueIds.contains(normalized)) {
+            return;
+        }
+        blueIds.add(normalized);
     }
 
     public Map<String, Class<?>> getBlueIdMap() {
