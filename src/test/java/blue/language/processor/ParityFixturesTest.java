@@ -46,6 +46,7 @@ class ParityFixturesTest {
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
         Map<String, Object> expectedTriggeredPathValues = mapValue(expected.get("triggeredPathValues"));
         List<String> expectedPresentPaths = listOfStrings(expected.get("presentPaths"));
+        List<String> expectedAbsentPaths = listOfStrings(expected.get("absentPaths"));
         List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
         List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
@@ -95,6 +96,10 @@ class ParityFixturesTest {
         for (String pointer : expectedPresentPaths) {
             Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
             assertNotNull(actualNode, fixtureName + " expected present node missing at " + pointer);
+        }
+        for (String pointer : expectedAbsentPaths) {
+            Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
+            assertTrue(actualNode == null, fixtureName + " expected node to be absent at " + pointer);
         }
         for (String pointer : expectedNotNullPaths) {
             Node actualNode = ProcessorEngine.nodeAt(result.document(), pointer);
