@@ -478,6 +478,43 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsPosixAlnumCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:alnum:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a/value", null));
+        assertTrue(predicate.test("/contracts/7/value", null));
+        assertFalse(predicate.test("/contracts/_/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixWordCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:word:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a/value", null));
+        assertTrue(predicate.test("/contracts/7/value", null));
+        assertTrue(predicate.test("/contracts/_/value", null));
+        assertFalse(predicate.test("/contracts/-/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixSpaceCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:space:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/ /value", null));
+        assertTrue(predicate.test("/contracts/\t/value", null));
+        assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNegatedCharacterClassPatterns() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/contracts/[!ab]/value"),
