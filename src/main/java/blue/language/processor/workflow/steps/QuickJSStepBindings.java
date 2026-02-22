@@ -22,6 +22,7 @@ final class QuickJSStepBindings {
         Node documentSnapshot = args.context().documentAt("/");
         args.context().chargeDocumentSnapshot("/", documentSnapshot);
         bindings.put("__documentData", documentSnapshot != null ? NodeToMapListOrValue.get(documentSnapshot) : null);
+        bindings.put("__scopePath", args.context().resolvePointer("/"));
         Map<?, ?> currentContract = UncheckedObjectMapper.JSON_MAPPER.convertValue(args.workflow(), Map.class);
         bindings.put("currentContract", currentContract);
         bindings.put("currentContractCanonical", currentContract);

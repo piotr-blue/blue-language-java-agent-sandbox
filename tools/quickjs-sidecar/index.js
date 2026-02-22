@@ -4,14 +4,35 @@ const readline = require('readline');
 const vm = require('vm');
 
 function evaluateCode(code, bindings) {
-  const sandbox = Object.assign({}, bindings || {});
+  const emittedEvents = [];
+  const sandbox = Object.assign({}, bindings || {}, {
+    emit: (event) => {
+      emittedEvents.push(event);
+      return event;
+    },
+  });
   const context = vm.createContext(sandbox);
+  let result;
   try {
-    return vm.runInContext(code, context, { timeout: 1000 });
+    result = vm.runInContext(code, context, { timeout: 1000 });
   } catch (firstError) {
     const wrapped = `(function(){${code}\n})()`;
-    return vm.runInContext(wrapped, context, { timeout: 1000 });
+    result = vm.runInContext(wrapped, context, { timeout: 1000 });
   }
+
+  if (emittedEvents.length === 0) {
+    return result;
+  }
+  if (result && typeof result === 'object' && !Array.isArray(result)) {
+    const withEvents = { ...result };
+    if (Array.isArray(withEvents.events)) {
+      withEvents.events = [...withEvents.events, ...emittedEvents];
+    } else {
+      withEvents.events = emittedEvents;
+    }
+    return withEvents;
+  }
+  return { __result: result, events: emittedEvents };
 }
 
 function respond(payload) {

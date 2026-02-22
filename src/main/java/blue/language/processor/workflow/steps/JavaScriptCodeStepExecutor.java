@@ -52,7 +52,7 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
         Object result = runtimeResult.value();
         handleEvents(args, result);
         applyRuntimeEffects(args, result);
-        return result;
+        return unwrapResult(result);
     }
 
     @SuppressWarnings("unchecked")
@@ -171,5 +171,17 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
             return new Node().items(items);
         }
         return new Node().value(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Object unwrapResult(Object result) {
+        if (!(result instanceof Map)) {
+            return result;
+        }
+        Map<String, Object> map = (Map<String, Object>) result;
+        if (map.containsKey("__result")) {
+            return map.get("__result");
+        }
+        return result;
     }
 }

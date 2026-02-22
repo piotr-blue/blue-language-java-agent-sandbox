@@ -13,6 +13,7 @@ import java.math.BigInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 
 class SequentialWorkflowProcessorTest {
 
@@ -220,6 +221,67 @@ class SequentialWorkflowProcessorTest {
         assertNotNull(terminated);
         assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
         assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue()).contains("Failed to evaluate code block"));
+    }
+
+    @Test
+    void javaScriptCodeStepSupportsEmitCallbackStyle() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Emit Callback Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  triggered:\n" +
+                "    type:\n" +
+                "      blueId: TriggeredEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"emit({ kind: 'js-callback' }); ({ changeset: [{ op: 'ADD', path: '/callbackHit', val: 11 }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-callback").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("11"), result.document().getProperties().get("callbackHit").getValue());
+        assertTrue(result.triggeredEvents().stream()
+                .anyMatch(emitted -> emitted != null
+                        && emitted.getProperties() != null
+                        && emitted.getProperties().get("kind") != null
+                        && "js-callback".equals(String.valueOf(emitted.getProperties().get("kind").getValue()))));
+    }
+
+    @Test
+    void javaScriptCodeStepCanonicalDocumentReadIncludesTypeMetadata() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Canonical Read Doc\n" +
+                "base: 5\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/canonicalType', val: document.canonical('/base').type.blueId }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-canon").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(INTEGER_TYPE_BLUE_ID, result.document().getProperties().get("canonicalType").getValue());
     }
 
     @Test

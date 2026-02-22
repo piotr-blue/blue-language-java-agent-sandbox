@@ -4,10 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class QuickJsSidecarRuntimeTest {
@@ -29,6 +31,14 @@ class QuickJsSidecarRuntimeTest {
             assertEquals("12", String.valueOf(withBindings.value()));
             assertEquals(BigInteger.ZERO, withBindings.wasmGasUsed());
             assertEquals(new BigInteger("1234"), withBindings.wasmGasRemaining());
+
+            ScriptRuntimeResult withEmit = runtime.evaluate(ScriptRuntimeRequest.of(
+                    "emit({ kind: 'callback' }); 9"));
+            assertTrue(withEmit.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> emittedPayload = (Map<String, Object>) withEmit.value();
+            assertEquals("9", String.valueOf(emittedPayload.get("__result")));
+            assertTrue(emittedPayload.get("events") instanceof List);
         }
     }
 
