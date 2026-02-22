@@ -2,14 +2,25 @@ package blue.language.processor;
 
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.CompositeTimelineChannel;
 import blue.language.processor.model.Contract;
+import blue.language.processor.model.DocumentAnchorsMarker;
 import blue.language.processor.model.DocumentUpdateChannel;
+import blue.language.processor.model.DocumentLinksMarker;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.HandlerContract;
+import blue.language.processor.model.InitializationMarker;
+import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.MarkerContract;
+import blue.language.processor.model.MyOSParticipantsOrchestrationMarker;
+import blue.language.processor.model.MyOSSessionInteractionMarker;
+import blue.language.processor.model.MyOSWorkerAgencyMarker;
 import blue.language.processor.model.ProcessEmbedded;
+import blue.language.processor.model.ProcessingTerminatedMarker;
+import blue.language.processor.model.TriggeredEventChannel;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
 
@@ -19,11 +30,14 @@ import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.HashMap;
+import java.util.Collections;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
  */
 final class ContractLoader {
+
+    private static final Set<String> BUILTIN_CONTRACT_BLUE_IDS = createBuiltInContractBlueIds();
 
     private final ContractProcessorRegistry registry;
     private final NodeToObjectConverter converter;
@@ -52,7 +66,17 @@ final class ContractLoader {
                 throw new IllegalStateException(
                         "Duplicate normalized contract key '" + key + "' at scope " + scopePath);
             }
-            Contract contract = converter.convertWithType(entry.getValue(), Contract.class, false);
+            Node contractNode = entry.getValue();
+            Contract contract;
+            try {
+                contract = converter.convertWithType(contractNode, Contract.class, false);
+            } catch (RuntimeException ex) {
+                String blueId = contractBlueId(contractNode);
+                if (isUnsupportedContractBlueId(blueId)) {
+                    throw new MustUnderstandFailureException("Unsupported contract type: " + blueId);
+                }
+                throw ex;
+            }
             if (contract == null) {
                 continue;
             }
@@ -115,6 +139,43 @@ final class ContractLoader {
             throw new IllegalStateException("Contract key must not be blank at scope " + scopePath);
         }
         return key.trim();
+    }
+
+    private boolean isUnsupportedContractBlueId(String blueId) {
+        if (blueId == null) {
+            return false;
+        }
+        String normalized = blueId.trim();
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        if (BUILTIN_CONTRACT_BLUE_IDS.contains(normalized)) {
+            return false;
+        }
+        if (registry.lookupHandler(normalized).isPresent()
+                || registry.lookupChannel(normalized).isPresent()
+                || registry.lookupMarker(normalized).isPresent()) {
+            return false;
+        }
+        return true;
+    }
+
+    private String contractBlueId(Node contractNode) {
+        if (contractNode == null || contractNode.getType() == null) {
+            return null;
+        }
+        String blueId = contractNode.getType().getBlueId();
+        if (blueId != null && !blueId.trim().isEmpty()) {
+            return blueId.trim();
+        }
+        if (contractNode.getType().getProperties() == null) {
+            return null;
+        }
+        Node blueIdNode = contractNode.getType().getProperties().get("blueId");
+        if (blueIdNode == null || blueIdNode.getValue() == null) {
+            return null;
+        }
+        return String.valueOf(blueIdNode.getValue()).trim();
     }
 
     private void normalizePointerBackedContracts(Contract contract, String key, String scopePath) {
@@ -211,5 +272,42 @@ final class ContractLoader {
             }
         }
         visitState.put(key, 2);
+    }
+
+    private static Set<String> createBuiltInContractBlueIds() {
+        Set<String> ids = new LinkedHashSet<>();
+        addTypeBlueIds(ids, DocumentUpdateChannel.class);
+        addTypeBlueIds(ids, EmbeddedNodeChannel.class);
+        addTypeBlueIds(ids, LifecycleChannel.class);
+        addTypeBlueIds(ids, TriggeredEventChannel.class);
+        addTypeBlueIds(ids, ProcessEmbedded.class);
+        addTypeBlueIds(ids, InitializationMarker.class);
+        addTypeBlueIds(ids, ProcessingTerminatedMarker.class);
+        addTypeBlueIds(ids, ChannelEventCheckpoint.class);
+        addTypeBlueIds(ids, DocumentAnchorsMarker.class);
+        addTypeBlueIds(ids, DocumentLinksMarker.class);
+        addTypeBlueIds(ids, MyOSParticipantsOrchestrationMarker.class);
+        addTypeBlueIds(ids, MyOSSessionInteractionMarker.class);
+        addTypeBlueIds(ids, MyOSWorkerAgencyMarker.class);
+        return Collections.unmodifiableSet(ids);
+    }
+
+    private static void addTypeBlueIds(Set<String> ids, Class<?> contractClass) {
+        TypeBlueId annotation = contractClass.getAnnotation(TypeBlueId.class);
+        if (annotation == null) {
+            return;
+        }
+        String[] declared = annotation.value();
+        if (declared != null) {
+            for (String blueId : declared) {
+                if (blueId != null && !blueId.trim().isEmpty()) {
+                    ids.add(blueId.trim());
+                }
+            }
+        }
+        String defaultValue = annotation.defaultValue();
+        if (defaultValue != null && !defaultValue.trim().isEmpty()) {
+            ids.add(defaultValue.trim());
+        }
     }
 }
