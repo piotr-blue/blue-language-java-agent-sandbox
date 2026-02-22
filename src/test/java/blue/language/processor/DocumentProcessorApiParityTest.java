@@ -12,6 +12,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class DocumentProcessorApiParityTest {
 
@@ -60,6 +61,33 @@ class DocumentProcessorApiParityTest {
 
         Map<String, MarkerContract> markers = processor.markersFor(initialized.document(), "/");
         assertTrue(markers.containsKey("initialized"));
+    }
+
+    @Test
+    void returnsCapabilityFailureWhenContractsAreNotUnderstood() {
+        Blue blue = new Blue();
+        DocumentProcessor processor = new DocumentProcessor();
+        String yaml = "name: Capability Failure Doc\n" +
+                "contracts:\n" +
+                "  lifecycleChannel:\n" +
+                "    type:\n" +
+                "      blueId: Core/Lifecycle Event Channel\n" +
+                "  onLifecycle:\n" +
+                "    channel: lifecycleChannel\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n";
+
+        Node original = blue.yamlToNode(yaml);
+        String originalJson = blue.nodeToJson(original.clone());
+        DocumentProcessingResult result = processor.initializeDocument(original);
+
+        assertTrue(result.capabilityFailure());
+        assertFalse(result.failureReason() == null || result.failureReason().trim().isEmpty());
+        assertEquals("0", String.valueOf(result.totalGas()));
+        assertEquals(0, result.triggeredEvents().size());
+        assertEquals(originalJson, blue.nodeToJson(result.document()));
     }
 
     private String documentWithLifecycleAndEventHandlers() {
