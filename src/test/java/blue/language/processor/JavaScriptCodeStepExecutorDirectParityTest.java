@@ -154,4 +154,73 @@ class JavaScriptCodeStepExecutorDirectParityTest {
         assertEquals("TypeError", error.runtimeErrorName());
         assertEquals("bad input", error.runtimeErrorMessage());
     }
+
+    @Test
+    void enforcesGasLimitsForRunawayDirectExecution() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Runaway")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value("while (true) {}"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        CodeBlockEvaluationError error = assertThrows(CodeBlockEvaluationError.class, () -> executor.execute(args));
+        assertEquals("OutOfGasError", error.runtimeErrorName());
+        assertTrue(String.valueOf(error.runtimeErrorMessage()).contains("OutOfGas"));
+    }
+
+    @Test
+    void doesNotExposeDateOrProcessInDirectExecution() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("DeterministicGlobals")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value("return { dateType: typeof Date, processType: typeof process };"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        Object result = executor.execute(args);
+        assertTrue(result instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resultMap = (Map<String, Object>) result;
+        assertEquals("undefined", String.valueOf(resultMap.get("dateType")));
+        assertEquals("undefined", String.valueOf(resultMap.get("processType")));
+    }
 }

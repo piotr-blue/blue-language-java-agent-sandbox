@@ -159,6 +159,8 @@ Current in-flight work:
   - document/event binding evaluation (`document('/counter') + event.x`)
   - fatal validation for missing `code` payload
   - direct wrapped script-error metadata via `CodeBlockEvaluationError`
+  - direct out-of-gas error surfacing for runaway code
+  - deterministic `Date`/`process` masking in direct execution path
   - direct fatal error path for invalid step schema/type payloads
   - wasm gas charging side effect on processor runtime totals
   (`JavaScriptCodeStepExecutorDirectParityTest`).
