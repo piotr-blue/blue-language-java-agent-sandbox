@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
@@ -11,6 +12,7 @@ import blue.language.processor.registry.processors.TimelineChannelProcessor;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -74,6 +76,27 @@ class ContractProcessorRegistryTest {
         assertSame(handlerProcessor, registry.lookupHandler(derivedHandlerNode).orElse(null));
         assertSame(channelProcessor, registry.lookupChannel(derivedChannelNode).orElse(null));
         assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
+    }
+
+    @Test
+    void lookupByNodeTypeChainSupportsProviderDerivedBlueIds() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"Derived/Handler".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node().type(new Node().blueId("BaseHandler"));
+                return Collections.singletonList(definition);
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        registry.registerHandler(handlerProcessor);
+
+        Node derivedHandlerNode = new Node().type(new Node().blueId("Derived/Handler"));
+
+        assertSame(handlerProcessor, registry.lookupHandler(derivedHandlerNode).orElse(null));
     }
 
     @Test

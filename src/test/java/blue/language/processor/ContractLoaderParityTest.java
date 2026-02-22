@@ -1,6 +1,7 @@
 package blue.language.processor;
 
 import blue.language.Blue;
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -92,6 +93,39 @@ class ContractLoaderParityTest {
                 "  handler:\n" +
                 "    type:\n" +
                 "      blueId: SetProperty\n" +
+                "    channel: testChannel\n" +
+                "    propertyKey: /x\n" +
+                "    propertyValue: 1\n");
+
+        ContractBundle bundle = loader.load(scope, "/");
+
+        assertEquals(1, bundle.handlersFor("testChannel").size());
+        assertEquals("handler", bundle.handlersFor("testChannel").get(0).key());
+    }
+
+    @Test
+    void loadsProviderDerivedHandlerContractsUsingTypeChainLookup() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"Derived/SetProperty".equals(blueId)) {
+                    return java.util.Collections.emptyList();
+                }
+                Node definition = new Node().type(new Node().blueId("SetProperty"));
+                return java.util.Collections.singletonList(definition);
+            }
+        };
+        Blue blue = new Blue(provider);
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        ContractLoader loader = blue.getDocumentProcessor().contractLoader();
+        Node scope = blue.yamlToNode("contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  handler:\n" +
+                "    type:\n" +
+                "      blueId: Derived/SetProperty\n" +
                 "    channel: testChannel\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n");

@@ -32,6 +32,7 @@ public class DocumentProcessor {
     public DocumentProcessor(ContractProcessorRegistry registry, TypeClassResolver resolver) {
         this.contractRegistry = Objects.requireNonNull(registry, "registry");
         this.contractTypeResolver = resolver != null ? resolver : CONTRACT_TYPE_RESOLVER;
+        this.contractRegistry.nodeProvider(this.contractTypeResolver.nodeProvider());
         this.contractConverter = new NodeToObjectConverter(this.contractTypeResolver);
         this.contractLoader = new ContractLoader(contractRegistry, contractConverter);
     }

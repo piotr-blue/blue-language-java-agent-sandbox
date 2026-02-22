@@ -148,4 +148,8 @@ public class TypeClassResolver {
     public Map<String, Class<?>> getBlueIdMap() {
         return Collections.unmodifiableMap(blueIdMap);
     }
+
+    public NodeProvider nodeProvider() {
+        return nodeProvider;
+    }
 }

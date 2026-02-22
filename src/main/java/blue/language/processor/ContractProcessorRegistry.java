@@ -1,5 +1,6 @@
 package blue.language.processor;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 import blue.language.processor.model.ChannelContract;
@@ -30,6 +31,20 @@ public class ContractProcessorRegistry {
     private final Map<String, HandlerProcessor<? extends HandlerContract>> handlerProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ChannelProcessor<? extends ChannelContract>> channelProcessorsByBlueId = new LinkedHashMap<>();
     private final Map<String, ContractProcessor<? extends MarkerContract>> markerProcessorsByBlueId = new LinkedHashMap<>();
+    private NodeProvider nodeProvider;
+
+    public ContractProcessorRegistry() {
+        this(null);
+    }
+
+    public ContractProcessorRegistry(NodeProvider nodeProvider) {
+        this.nodeProvider = nodeProvider;
+    }
+
+    public ContractProcessorRegistry nodeProvider(NodeProvider nodeProvider) {
+        this.nodeProvider = nodeProvider;
+        return this;
+    }
 
     public <T extends HandlerContract> void registerHandler(HandlerProcessor<T> processor) {
         Objects.requireNonNull(processor, "processor");
@@ -89,7 +104,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(Node contractNode) {
-        return lookupByTypeChain(contractNode, handlerProcessorsByBlueId);
+        return lookupByTypeChain(contractNode, handlerProcessorsByBlueId, nodeProvider);
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
@@ -108,7 +123,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Node contractNode) {
-        return lookupByTypeChain(contractNode, channelProcessorsByBlueId);
+        return lookupByTypeChain(contractNode, channelProcessorsByBlueId, nodeProvider);
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
@@ -127,7 +142,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Node contractNode) {
-        return lookupByTypeChain(contractNode, markerProcessorsByBlueId);
+        return lookupByTypeChain(contractNode, markerProcessorsByBlueId, nodeProvider);
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
@@ -252,11 +267,13 @@ public class ContractProcessorRegistry {
         return Integer.MAX_VALUE;
     }
 
-    private static <P> Optional<P> lookupByTypeChain(Node contractNode, Map<String, P> processorsByBlueId) {
+    private static <P> Optional<P> lookupByTypeChain(Node contractNode,
+                                                     Map<String, P> processorsByBlueId,
+                                                     NodeProvider nodeProvider) {
         if (contractNode == null || processorsByBlueId == null || processorsByBlueId.isEmpty()) {
             return Optional.empty();
         }
-        for (String blueId : resolveTypeChainBlueIds(contractNode.getType())) {
+        for (String blueId : resolveTypeChainBlueIds(contractNode.getType(), nodeProvider)) {
             P processor = processorsByBlueId.get(blueId);
             if (processor != null) {
                 return Optional.of(processor);
@@ -265,22 +282,70 @@ public class ContractProcessorRegistry {
         return Optional.empty();
     }
 
-    private static List<String> resolveTypeChainBlueIds(Node typeNode) {
+    private static List<String> resolveTypeChainBlueIds(Node typeNode, NodeProvider nodeProvider) {
         List<String> blueIds = new ArrayList<>();
         if (typeNode == null) {
             return blueIds;
         }
-        Set<Node> visited = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
-        Node current = typeNode;
-        while (current != null && visited.add(current)) {
-            addBlueId(blueIds, current.getBlueId());
-            if (current.getProperties() != null) {
-                Node blueIdNode = current.getProperties().get("blueId");
-                if (blueIdNode != null && blueIdNode.getValue() != null) {
-                    addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+        Set<Node> visitedNodes = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
+        Set<String> visitedProviderBlueIds = new LinkedHashSet<>();
+        collectBlueIds(typeNode, nodeProvider, blueIds, visitedNodes, visitedProviderBlueIds);
+        return blueIds;
+    }
+
+    private static void collectBlueIds(Node typeNode,
+                                       NodeProvider nodeProvider,
+                                       List<String> blueIds,
+                                       Set<Node> visitedNodes,
+                                       Set<String> visitedProviderBlueIds) {
+        if (typeNode == null || !visitedNodes.add(typeNode)) {
+            return;
+        }
+        List<String> directBlueIds = extractBlueIds(typeNode);
+        for (String blueId : directBlueIds) {
+            addBlueId(blueIds, blueId);
+        }
+        if (nodeProvider != null) {
+            for (String blueId : directBlueIds) {
+                if (!visitedProviderBlueIds.add(blueId)) {
+                    continue;
                 }
+                Node typeDefinition = fetchTypeDefinition(nodeProvider, blueId);
+                if (typeDefinition == null) {
+                    continue;
+                }
+                collectBlueIds(typeDefinition.getType(),
+                        nodeProvider,
+                        blueIds,
+                        visitedNodes,
+                        visitedProviderBlueIds);
             }
-            current = current.getType();
+        }
+        collectBlueIds(typeNode.getType(), nodeProvider, blueIds, visitedNodes, visitedProviderBlueIds);
+    }
+
+    private static Node fetchTypeDefinition(NodeProvider nodeProvider, String blueId) {
+        if (nodeProvider == null || blueId == null || blueId.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return nodeProvider.fetchFirstByBlueId(blueId);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static List<String> extractBlueIds(Node node) {
+        List<String> blueIds = new ArrayList<>();
+        if (node == null) {
+            return blueIds;
+        }
+        addBlueId(blueIds, node.getBlueId());
+        if (node.getProperties() != null) {
+            Node blueIdNode = node.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+            }
         }
         return blueIds;
     }
