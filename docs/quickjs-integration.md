@@ -133,5 +133,6 @@ WASM usage is charged via `chargeWasmGas`.
   - `emit` must be function-shaped (non-null non-function values are rejected)
 - Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
 - Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
+- JavaScript step event emission now promotes payload `type` values (string or `{ blueId }`) into node semantic type metadata before enqueueing, preserving Triggered Event Channel routing behavior for JS-produced events.
 - Sidecar masks non-deterministic globals (`Date`, `process`) to align workflow execution with deterministic runtime expectations.
 

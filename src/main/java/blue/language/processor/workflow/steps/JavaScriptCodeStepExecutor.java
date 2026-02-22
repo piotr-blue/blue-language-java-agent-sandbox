@@ -63,7 +63,7 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
         Map<String, Object> map = (Map<String, Object>) result;
         Object emit = map.get("emit");
         if (emit != null) {
-            args.context().emitEvent(toNode(emit));
+            args.context().emitEvent(toEventNode(emit));
         }
 
         Object gas = map.get("consumeGas");
@@ -99,8 +99,24 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
             return;
         }
         for (Object event : (List<Object>) events) {
-            args.context().emitEvent(toNode(event));
+            args.context().emitEvent(toEventNode(event));
         }
+    }
+
+    private Node toEventNode(Object value) {
+        Node node = toNode(value);
+        if (node == null || node.getType() != null || node.getProperties() == null) {
+            return node;
+        }
+        Node typeNode = node.getProperties().get("type");
+        if (typeNode == null) {
+            return node;
+        }
+        String blueId = extractBlueId(typeNode);
+        if (blueId != null && !blueId.trim().isEmpty()) {
+            node.type(new Node().blueId(blueId.trim()));
+        }
+        return node;
     }
 
     private void applyPatchChange(StepExecutionArgs args, Map<String, Object> change) {
@@ -171,6 +187,31 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
             return new Node().items(items);
         }
         return new Node().value(value);
+    }
+
+    private String extractBlueId(Node typeNode) {
+        if (typeNode == null) {
+            return null;
+        }
+        if (typeNode.getBlueId() != null && !typeNode.getBlueId().trim().isEmpty()) {
+            return typeNode.getBlueId().trim();
+        }
+        if (typeNode.getValue() instanceof String) {
+            String value = ((String) typeNode.getValue()).trim();
+            if (!value.isEmpty()) {
+                return value;
+            }
+        }
+        if (typeNode.getProperties() != null && typeNode.getProperties().get("blueId") != null) {
+            Node blueIdNode = typeNode.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                String value = String.valueOf(blueIdNode.getValue()).trim();
+                if (!value.isEmpty()) {
+                    return value;
+                }
+            }
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
