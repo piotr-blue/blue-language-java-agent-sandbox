@@ -265,10 +265,20 @@ public final class QuickJsExpressionUtils {
             normalizedPattern = normalizedPattern.toLowerCase(java.util.Locale.ROOT);
             pointerToMatch = pointerToMatch.toLowerCase(java.util.Locale.ROOT);
         }
-        if (options.noglobstar()) {
-            normalizedPattern = normalizedPattern.replace("**", "*");
-        }
+        List<String> expandedPatterns = expandBraces(normalizedPattern);
 
+        for (String expandedPattern : expandedPatterns) {
+            String effectivePattern = options.noglobstar()
+                    ? expandedPattern.replace("**", "*")
+                    : expandedPattern;
+            if (matchesSinglePattern(pointerToMatch, effectivePattern, options.dot())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matchesSinglePattern(String pointerToMatch, String normalizedPattern, boolean dot) {
         StringBuilder regex = new StringBuilder();
         regex.append("^");
         for (int i = 0; i < normalizedPattern.length(); i++) {
@@ -276,16 +286,16 @@ public final class QuickJsExpressionUtils {
             boolean segmentStart = i == 0 || normalizedPattern.charAt(i - 1) == '/';
             if (ch == '*') {
                 boolean isDoubleStar = (i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '*');
-                if (isDoubleStar && !options.noglobstar()) {
+                if (isDoubleStar) {
                     regex.append(".*");
                     i++;
                     continue;
                 }
-                regex.append(segmentStart && !options.dot() ? "(?!\\.)[^/]*" : "[^/]*");
+                regex.append(segmentStart && !dot ? "(?!\\.)[^/]*" : "[^/]*");
                 continue;
             }
             if (ch == '?') {
-                regex.append(segmentStart && !options.dot() ? "(?!\\.)[^/]" : "[^/]");
+                regex.append(segmentStart && !dot ? "(?!\\.)[^/]" : "[^/]");
                 continue;
             }
             if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
@@ -298,12 +308,73 @@ public final class QuickJsExpressionUtils {
         if (!matched) {
             return false;
         }
-        if (!options.dot()
+        if (!dot
                 && pointerToMatch.matches(".*(^|/)\\.[^/]+(/|$).*")
                 && !normalizedPattern.contains("/.")) {
             return false;
         }
         return true;
+    }
+
+    private static List<String> expandBraces(String pattern) {
+        if (pattern == null || pattern.indexOf('{') < 0) {
+            return Collections.singletonList(pattern);
+        }
+        int open = -1;
+        int depth = 0;
+        for (int i = 0; i < pattern.length(); i++) {
+            char ch = pattern.charAt(i);
+            if (ch == '{') {
+                if (depth == 0) {
+                    open = i;
+                }
+                depth++;
+            } else if (ch == '}') {
+                if (depth == 0) {
+                    continue;
+                }
+                depth--;
+                if (depth == 0 && open >= 0) {
+                    String prefix = pattern.substring(0, open);
+                    String body = pattern.substring(open + 1, i);
+                    String suffix = pattern.substring(i + 1);
+                    List<String> expanded = new ArrayList<>();
+                    for (String option : splitBraceOptions(body)) {
+                        for (String expandedOption : expandBraces(option + suffix)) {
+                            expanded.add(prefix + expandedOption);
+                        }
+                    }
+                    return expanded;
+                }
+            }
+        }
+        return Collections.singletonList(pattern);
+    }
+
+    private static List<String> splitBraceOptions(String body) {
+        List<String> options = new ArrayList<>();
+        if (body == null || body.isEmpty()) {
+            options.add("");
+            return options;
+        }
+        StringBuilder current = new StringBuilder();
+        int depth = 0;
+        for (int i = 0; i < body.length(); i++) {
+            char ch = body.charAt(i);
+            if (ch == ',' && depth == 0) {
+                options.add(current.toString());
+                current.setLength(0);
+                continue;
+            }
+            if (ch == '{') {
+                depth++;
+            } else if (ch == '}' && depth > 0) {
+                depth--;
+            }
+            current.append(ch);
+        }
+        options.add(current.toString());
+        return options;
     }
 
     private static String normalizePointer(String pointer) {

@@ -98,7 +98,7 @@ Status legend:
 
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
 Current in-flight work:
-- Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns.
+- Expression utility parity still needs closer picomatch-equivalent semantics for complex glob patterns (brace expansion now supported, but extglob/character-class parity remains partial).
 - Registry/type-chain lookup remains class-hierarchy based; deeper semantic subtype matching parity is still pending.
 - QuickJS sidecar failures now preserve structured error names/messages (and stack availability marker), but evaluator-level error-shape parity still needs further hardening.
 - Golden fixtures now cover sequential workflow happy path, operation mismatch scenarios (operation key mismatch, pinned document mismatch, operation-vs-handler channel conflict), direct/complex operation requests, handler event filtering, derived change workflow, operation-marker type preservation, JS emit callback/deterministic globals/document blueId/canonical reads/document.get aliases/eventCanonical helper behavior, MyOS timeline, composite timeline, and expected initialization failures/cycle validation; broader integration fixture migration remains.
