@@ -45,6 +45,7 @@ class ParityFixturesTest {
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
         Map<String, Object> expectedTriggeredPathValues = mapValue(expected.get("triggeredPathValues"));
+        Map<String, Object> expectedTriggeredPathValuesAny = mapValue(expected.get("triggeredPathValuesAny"));
         List<String> expectedPresentPaths = listOfStrings(expected.get("presentPaths"));
         List<String> expectedAbsentPaths = listOfStrings(expected.get("absentPaths"));
         List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
@@ -130,6 +131,24 @@ class ParityFixturesTest {
             assertEquals(String.valueOf(entry.getValue()),
                     String.valueOf(actualNode.getValue()),
                     fixtureName + " triggered value mismatch at " + key);
+        }
+        for (Map.Entry<String, Object> entry : expectedTriggeredPathValuesAny.entrySet()) {
+            String pointer = entry.getKey();
+            Object expectedValue = entry.getValue();
+            boolean matched = false;
+            for (Node emitted : result.triggeredEvents()) {
+                Node actualNode = ProcessorEngine.nodeAt(emitted, pointer);
+                if (actualNode == null) {
+                    continue;
+                }
+                if (String.valueOf(expectedValue).equals(String.valueOf(actualNode.getValue()))) {
+                    matched = true;
+                    break;
+                }
+            }
+            assertTrue(matched,
+                    fixtureName + " expected triggered value not found at any event for pointer "
+                            + pointer + " value " + expectedValue);
         }
         for (String expectedKind : expectedTriggeredKinds) {
             boolean present = false;
