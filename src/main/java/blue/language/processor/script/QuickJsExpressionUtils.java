@@ -405,6 +405,7 @@ public final class QuickJsExpressionUtils {
         }
         int open = -1;
         int depth = 0;
+        int bracketDepth = 0;
         boolean escaping = false;
         for (int i = 0; i < pattern.length(); i++) {
             char ch = pattern.charAt(i);
@@ -414,6 +415,17 @@ public final class QuickJsExpressionUtils {
             }
             if (ch == '\\') {
                 escaping = true;
+                continue;
+            }
+            if (ch == '[') {
+                bracketDepth++;
+                continue;
+            }
+            if (ch == ']' && bracketDepth > 0) {
+                bracketDepth--;
+                continue;
+            }
+            if (bracketDepth > 0) {
                 continue;
             }
             if (ch == '{') {

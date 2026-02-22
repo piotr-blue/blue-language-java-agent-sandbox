@@ -452,6 +452,20 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsCharacterClassesContainingBraceAndCommaLiterals() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[{},x]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/{/value", null));
+        assertTrue(predicate.test("/contracts/}/value", null));
+        assertTrue(predicate.test("/contracts/,/value", null));
+        assertTrue(predicate.test("/contracts/x/value", null));
+        assertFalse(predicate.test("/contracts/y/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsAtExtglobPatterns() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/contracts/@(primary|secondary)/value"),
