@@ -3,7 +3,7 @@ package blue.language.processor.model;
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("ProcessingTerminatedMarker")
+@TypeBlueId({"Core/Processing Terminated Marker", "ProcessingTerminatedMarker"})
 public class ProcessingTerminatedMarker extends MarkerContract {
 
     private String cause;

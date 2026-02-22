@@ -41,6 +41,7 @@ class ParityFixturesTest {
         String fixtureName = stringValue(fixture.get("name"), fixturePath.getFileName().toString());
         String documentYaml = stringValue(fixture.get("document"), null);
         String eventYaml = stringValue(fixture.get("event"), null);
+        List<String> eventYamls = listOfStrings(fixture.get("events"));
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
         List<String> expectedPresentPaths = listOfStrings(expected.get("presentPaths"));
@@ -69,7 +70,15 @@ class ParityFixturesTest {
 
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         DocumentProcessingResult result = initialized;
-        if (eventYaml != null && !eventYaml.trim().isEmpty()) {
+        if (!eventYamls.isEmpty()) {
+            for (String eventEntry : eventYamls) {
+                if (eventEntry == null || eventEntry.trim().isEmpty()) {
+                    continue;
+                }
+                Node event = blue.yamlToNode(eventEntry);
+                result = blue.processDocument(result.document(), event);
+            }
+        } else if (eventYaml != null && !eventYaml.trim().isEmpty()) {
             Node event = blue.yamlToNode(eventYaml);
             result = blue.processDocument(initialized.document(), event);
         }
