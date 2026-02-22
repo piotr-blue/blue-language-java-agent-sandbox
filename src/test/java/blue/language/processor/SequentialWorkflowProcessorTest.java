@@ -154,6 +154,32 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationKeepsOperationMarkerContractType() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+
+        Node operationContract = initialized.getProperties()
+                .get("contracts")
+                .getProperties()
+                .get("increment");
+        assertNotNull(operationContract);
+        assertNotNull(operationContract.getType());
+        assertEquals("Conversation/Operation", operationContract.getType().getBlueId());
+    }
+
+    @Test
+    void sequentialWorkflowOperationHonorsOperationChannelMetadata() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument("ownerChannel", "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+        Node event = operationRequestEvent(blue, "increment", 7, false, storedBlueId, "owner-42");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("7"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationAppliesHandlerEventPattern() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
