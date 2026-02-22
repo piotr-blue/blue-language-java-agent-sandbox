@@ -292,6 +292,7 @@ class CompositeTimelineChannelProcessorTest {
     private static Node timelineEvent(String timelineId, long sequence) {
         Node timeline = new Node().properties("timelineId", new Node().value(timelineId));
         return new Node()
+                .type(new Node().blueId("Conversation/Timeline Entry"))
                 .properties("eventId", new Node().value(String.valueOf(sequence)))
                 .properties("timeline", timeline)
                 .properties("sequence", new Node().value(sequence));
