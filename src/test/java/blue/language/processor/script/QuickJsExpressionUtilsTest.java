@@ -487,6 +487,30 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsExtglobOptionsWithEscapedPipe() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/@(a\\|b|c)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a|b/value", null));
+        assertTrue(predicate.test("/contracts/c/value", null));
+        assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsExtglobOptionsWithEscapedClosingParenthesis() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/@(a\\)|c)/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a)/value", null));
+        assertTrue(predicate.test("/contracts/c/value", null));
+        assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
     void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 
