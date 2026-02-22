@@ -85,7 +85,10 @@ function evaluateCode(code, bindings, wasmGasLimit) {
     }
     return withEvents;
   }
-  return { __result: result, events: emittedEvents };
+  if (typeof result === 'undefined') {
+    return { __resultDefined: false, events: emittedEvents };
+  }
+  return { __result: result, __resultDefined: true, events: emittedEvents };
 }
 
 function estimateWasmGasUsed(code) {
@@ -158,6 +161,7 @@ reader.on('line', (line) => {
     respond({
       id,
       ok: true,
+      resultDefined: typeof result !== 'undefined',
       result,
       wasmGasUsed: wasmGasUsed.toString(),
       wasmGasRemaining: wasmGasRemaining == null ? null : wasmGasRemaining.toString(),

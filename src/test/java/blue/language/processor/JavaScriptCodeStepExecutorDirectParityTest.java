@@ -6,6 +6,7 @@ import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
 import blue.language.processor.script.CodeBlockEvaluationError;
 import blue.language.processor.workflow.StepExecutionArgs;
+import blue.language.processor.workflow.WorkflowStepExecutor;
 import blue.language.processor.workflow.steps.JavaScriptCodeStepExecutor;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -224,6 +226,70 @@ class JavaScriptCodeStepExecutorDirectParityTest {
         Map<String, Object> resultMap = (Map<String, Object>) result;
         assertEquals("undefined", String.valueOf(resultMap.get("dateType")));
         assertEquals("undefined", String.valueOf(resultMap.get("processType")));
+    }
+
+    @Test
+    void returnsNoResultForUndefinedCodeResult() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("UndefinedResult")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value("const ignored = 1;"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        Object result = executor.execute(args);
+        assertTrue(result == WorkflowStepExecutor.NO_RESULT);
+    }
+
+    @Test
+    void preservesExplicitNullCodeResult() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("NullResult")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("code", new Node().value("return null;"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        Object result = executor.execute(args);
+        assertNull(result);
     }
 
     @Test

@@ -9,6 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -22,6 +24,7 @@ class QuickJsSidecarRuntimeTest {
         try (QuickJsSidecarRuntime runtime = new QuickJsSidecarRuntime()) {
             ScriptRuntimeResult simple = runtime.evaluate(ScriptRuntimeRequest.of("1 + 1"));
             assertEquals("2", String.valueOf(simple.value()));
+            assertTrue(simple.valueDefined());
 
             Map<String, Object> bindings = new LinkedHashMap<>();
             bindings.put("a", 5);
@@ -30,6 +33,7 @@ class QuickJsSidecarRuntimeTest {
                     new ScriptRuntimeRequest("a + b", bindings, BigInteger.valueOf(1234L)));
 
             assertEquals("12", String.valueOf(withBindings.value()));
+            assertTrue(withBindings.valueDefined());
             assertTrue(withBindings.wasmGasUsed() != null && withBindings.wasmGasUsed().compareTo(BigInteger.ZERO) > 0);
             assertTrue(withBindings.wasmGasRemaining() != null
                     && withBindings.wasmGasRemaining().compareTo(new BigInteger("1234")) < 0
@@ -38,6 +42,7 @@ class QuickJsSidecarRuntimeTest {
             ScriptRuntimeResult withEmit = runtime.evaluate(ScriptRuntimeRequest.of(
                     "emit({ kind: 'callback' }); 9"));
             assertTrue(withEmit.value() instanceof Map);
+            assertTrue(withEmit.valueDefined());
             @SuppressWarnings("unchecked")
             Map<String, Object> emittedPayload = (Map<String, Object>) withEmit.value();
             assertEquals("9", String.valueOf(emittedPayload.get("__result")));
@@ -45,9 +50,19 @@ class QuickJsSidecarRuntimeTest {
 
             ScriptRuntimeResult withoutDate = runtime.evaluate(ScriptRuntimeRequest.of("typeof Date"));
             assertEquals("undefined", String.valueOf(withoutDate.value()));
+            assertTrue(withoutDate.valueDefined());
 
             ScriptRuntimeResult withoutProcess = runtime.evaluate(ScriptRuntimeRequest.of("typeof process"));
             assertEquals("undefined", String.valueOf(withoutProcess.value()));
+            assertTrue(withoutProcess.valueDefined());
+
+            ScriptRuntimeResult explicitNull = runtime.evaluate(ScriptRuntimeRequest.of("null"));
+            assertTrue(explicitNull.valueDefined());
+            assertNull(explicitNull.value());
+
+            ScriptRuntimeResult undefinedResult = runtime.evaluate(ScriptRuntimeRequest.of("void 0"));
+            assertNull(undefinedResult.value());
+            assertFalse(undefinedResult.valueDefined());
 
             ScriptRuntimeException thrown = assertThrows(
                     ScriptRuntimeException.class,

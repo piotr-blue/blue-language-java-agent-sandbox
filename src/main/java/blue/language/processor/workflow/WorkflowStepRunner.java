@@ -76,7 +76,7 @@ public final class WorkflowStepRunner {
                     results,
                     i,
                     contractNode));
-            if (value != null) {
+            if (value != WorkflowStepExecutor.NO_RESULT) {
                 String key = resolveResultKey(stepNode, i);
                 results.put(key, value);
             }

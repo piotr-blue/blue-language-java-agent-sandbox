@@ -75,10 +75,14 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
                         details.message(),
                         details.stackAvailable());
             }
+            boolean valueDefined = response.containsKey("result");
+            if (response.get("resultDefined") instanceof Boolean) {
+                valueDefined = ((Boolean) response.get("resultDefined")).booleanValue();
+            }
             Object result = response.get("result");
             BigInteger used = toBigInteger(response.get("wasmGasUsed"));
             BigInteger remaining = toBigInteger(response.get("wasmGasRemaining"));
-            return new ScriptRuntimeResult(result, used, remaining);
+            return new ScriptRuntimeResult(result, used, remaining, valueDefined);
         } catch (IOException ex) {
             throw new ScriptRuntimeException("Failed to evaluate QuickJS sidecar request", ex);
         }

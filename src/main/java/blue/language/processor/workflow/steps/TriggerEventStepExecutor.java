@@ -37,7 +37,7 @@ public class TriggerEventStepExecutor implements WorkflowStepExecutor {
     public Object execute(StepExecutionArgs args) {
         if (!isValidStepNode(args.stepNode(), args)) {
             args.context().throwFatal("Trigger Event step payload is invalid");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         Node stepNode = QuickJsExpressionUtils.resolveExpressions(
                 args.stepNode(),
@@ -58,16 +58,16 @@ public class TriggerEventStepExecutor implements WorkflowStepExecutor {
                 });
         if (stepNode == null || stepNode.getProperties() == null) {
             args.context().throwFatal("Trigger Event step payload is invalid");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         Node eventNode = stepNode.getProperties().get("event");
         if (eventNode == null) {
             args.context().throwFatal("Trigger Event step must declare event payload");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         args.context().chargeTriggerEventBase();
         args.context().emitEvent(eventNode.clone());
-        return null;
+        return WorkflowStepExecutor.NO_RESULT;
     }
 
     private boolean isEmbeddedDocumentNode(Node node) {

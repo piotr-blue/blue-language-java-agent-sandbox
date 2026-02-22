@@ -45,12 +45,12 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
     public Object execute(StepExecutionArgs args) {
         if (!isValidStepNode(args.stepNode(), args)) {
             args.context().throwFatal("JavaScript Code step payload is invalid");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         String code = readCode(args.stepNode());
         if (code == null || code.trim().isEmpty()) {
             args.context().throwFatal("JavaScript Code step requires non-empty code");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         ScriptRuntimeResult runtimeResult = evaluator.evaluate(
                 code,
@@ -60,7 +60,7 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
         Object result = runtimeResult.value();
         handleEvents(args, result);
         applyRuntimeEffects(args, result);
-        return unwrapResult(result);
+        return unwrapResult(result, runtimeResult.valueDefined());
     }
 
     @SuppressWarnings("unchecked")
@@ -223,13 +223,28 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
     }
 
     @SuppressWarnings("unchecked")
-    private Object unwrapResult(Object result) {
+    private Object unwrapResult(Object result, boolean valueDefined) {
+        if (result == null) {
+            return valueDefined ? null : WorkflowStepExecutor.NO_RESULT;
+        }
         if (!(result instanceof Map)) {
             return result;
         }
         Map<String, Object> map = (Map<String, Object>) result;
+        boolean defined = valueDefined;
+        if (map.get("__resultDefined") instanceof Boolean) {
+            defined = ((Boolean) map.get("__resultDefined")).booleanValue();
+        }
         if (map.containsKey("__result")) {
             return map.get("__result");
+        }
+        if (!defined) {
+            return WorkflowStepExecutor.NO_RESULT;
+        }
+        if (map.containsKey("__resultDefined")) {
+            Map<String, Object> sanitized = new LinkedHashMap<String, Object>(map);
+            sanitized.remove("__resultDefined");
+            return sanitized;
         }
         return result;
     }

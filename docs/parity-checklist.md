@@ -113,6 +113,7 @@ Current in-flight work:
 - JavaScript step parity coverage now also includes:
   - special document segment reads for `name`/`description`/`value`/`blueId` via both plain and canonical document helpers
   - previous-step result access from `steps.<name>.*`
+  - explicit `null` step-result propagation across JS steps while preserving skip semantics for `undefined` returns
   - deterministic rejection of async/await and runaway-loop fatal termination behavior in workflow processing
   (`SequentialWorkflowProcessorTest`).
 - Update/Trigger step parity coverage now also includes:
@@ -231,6 +232,7 @@ Current in-flight work:
 - `evaluateQuickJsExpression(...)` now wraps expressions as `return (<expr>);` before runtime evaluation (JS parity), so object-literal expressions evaluate as objects rather than statement blocks (`QuickJsExpressionUtilsTest` coverage).
 - QuickJS path-predicate parity now hardens `dot=false` globstar behavior for hidden path segments while still allowing explicit hidden-segment patterns such as character-class dot matches (`/[.]hidden`, `/**/[.]hidden`) in `QuickJsExpressionUtilsTest`.
 - QuickJS path-predicate parity now also covers basic brace-range expansion semantics (`{1..3}`, `{c..a}`) while preserving picomatch-like non-expansion of zero-padded numeric ranges (`{01..03}`), with direct `QuickJsExpressionUtilsTest` coverage.
+- Script/evaluator parity now preserves explicit `null` vs `undefined` result distinction from sidecar protocol (`resultDefined`), enabling workflow-step parity where only `undefined` skips step-result registration (`QuickJsSidecarRuntimeTest`, `QuickJSEvaluatorTest`, `WorkflowStepRunnerTest`, `JavaScriptCodeStepExecutorDirectParityTest`, `SequentialWorkflowProcessorTest`).
 - Deep embedded initialization parity now includes direct Java migration coverage ensuring initialization lifecycle events can drive nested document-update watchers across embedded scope boundaries (`DeepEmbeddedInitializationPropagationTest`).
 - Sequential workflow operation parity now includes derived-channel `currentContract.channel` binding coverage when handler channel is inferred from the operation marker (`SequentialWorkflowProcessorTest#sequentialWorkflowOperationExposesDerivedChannelInCurrentContractBindings`).
 - Sequential workflow operation matcher parity now supports provider-backed semantic subtype chains (beyond inline `type.type...` nodes) for request payload typing, operation-definition typing, and operation-marker channel derivation, with integration + matcher regression coverage in `SequentialWorkflowOperationProviderTypeChainIntegrationParityTest` and `WorkflowContractSupportTest`.

@@ -11,8 +11,10 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -297,12 +299,34 @@ class QuickJSEvaluatorTest {
                     BigInteger.valueOf(1000L));
 
             assertEquals("7", String.valueOf(result.value()));
+            assertTrue(result.valueDefined());
             assertEquals(1, emissions.size());
             assertTrue(emissions.get(0) instanceof Map);
             @SuppressWarnings("unchecked")
             Map<String, Object> emitted = (Map<String, Object>) emissions.get(0);
             assertEquals("debug", String.valueOf(emitted.get("level")));
             assertEquals("42", String.valueOf(emitted.get("value")));
+        }
+    }
+
+    @Test
+    void distinguishesUndefinedFromExplicitNullResults() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            ScriptRuntimeResult explicitNull = evaluator.evaluate(
+                    "null",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+            ScriptRuntimeResult undefined = evaluator.evaluate(
+                    "void 0",
+                    new LinkedHashMap<String, Object>(),
+                    BigInteger.valueOf(1000L));
+
+            assertNull(explicitNull.value());
+            assertTrue(explicitNull.valueDefined());
+            assertNull(undefined.value());
+            assertFalse(undefined.valueDefined());
         }
     }
 

@@ -40,7 +40,7 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
     public Object execute(StepExecutionArgs args) {
         if (!isValidStepNode(args.stepNode(), args)) {
             args.context().throwFatal("Update Document step payload is invalid");
-            return null;
+            return WorkflowStepExecutor.NO_RESULT;
         }
         Node stepNode = QuickJsExpressionUtils.resolveExpressions(
                 args.stepNode(),
@@ -56,7 +56,7 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
         for (Node change : changes) {
             applyChange(args, change);
         }
-        return null;
+        return WorkflowStepExecutor.NO_RESULT;
     }
 
     private List<Node> readChangeset(Node stepNode) {

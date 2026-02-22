@@ -259,6 +259,10 @@ public class QuickJSEvaluator implements AutoCloseable {
         }
         @SuppressWarnings("unchecked")
         Map<String, Object> valueMap = (Map<String, Object>) runtimeResult.value();
+        boolean valueDefined = runtimeResult.valueDefined();
+        if (valueMap.get("__resultDefined") instanceof Boolean) {
+            valueDefined = ((Boolean) valueMap.get("__resultDefined")).booleanValue();
+        }
         Object events = valueMap.get("events");
         if (!(events instanceof List)) {
             return runtimeResult;
@@ -272,11 +276,16 @@ public class QuickJSEvaluator implements AutoCloseable {
             return new ScriptRuntimeResult(
                     valueMap.get("__result"),
                     runtimeResult.wasmGasUsed(),
-                    runtimeResult.wasmGasRemaining());
+                    runtimeResult.wasmGasRemaining(),
+                    true);
         }
         Map<String, Object> stripped = new LinkedHashMap<String, Object>(valueMap);
         stripped.remove("events");
-        return new ScriptRuntimeResult(stripped, runtimeResult.wasmGasUsed(), runtimeResult.wasmGasRemaining());
+        stripped.remove("__resultDefined");
+        if (!valueDefined && stripped.isEmpty()) {
+            return new ScriptRuntimeResult(null, runtimeResult.wasmGasUsed(), runtimeResult.wasmGasRemaining(), false);
+        }
+        return new ScriptRuntimeResult(stripped, runtimeResult.wasmGasUsed(), runtimeResult.wasmGasRemaining(), true);
     }
 
     @SuppressWarnings("unchecked")

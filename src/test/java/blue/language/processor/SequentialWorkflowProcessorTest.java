@@ -964,6 +964,68 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void javaScriptCodeStepPreservesExplicitNullResultsInStepBindings() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Null Step Result Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - name: Nuller\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"return null;\"\n" +
+                "      - name: Finalize\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/nullSeen', val: steps.Nuller === null }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-null-step").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(Boolean.TRUE, result.document().getProperties().get("nullSeen").getValue());
+    }
+
+    @Test
+    void javaScriptCodeStepSkipsUndefinedResultsInStepBindings() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Undefined Step Result Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - name: Maybe\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"const v = 1;\"\n" +
+                "      - name: Finalize\n" +
+                "        type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/undefinedSeen', val: typeof steps.Maybe === 'undefined' }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-undefined-step").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(Boolean.TRUE, result.document().getProperties().get("undefinedSeen").getValue());
+    }
+
+    @Test
     void updateDocumentStepResolvesExpressionValues() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());

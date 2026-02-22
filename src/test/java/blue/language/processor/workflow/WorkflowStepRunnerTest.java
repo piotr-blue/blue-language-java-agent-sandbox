@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorkflowStepRunnerTest {
@@ -131,5 +133,45 @@ class WorkflowStepRunnerTest {
                 contractNode);
 
         assertEquals("ok", results.get("Step1"));
+    }
+
+    @Test
+    void runStoresExplicitNullResultsButSkipsNoResultSentinel() {
+        WorkflowStepExecutor nullResult = new WorkflowStepExecutor() {
+            @Override
+            public Set<String> supportedBlueIds() {
+                return Collections.unmodifiableSet(new LinkedHashSet<String>(Collections.singletonList("Step/Null")));
+            }
+
+            @Override
+            public Object execute(StepExecutionArgs args) {
+                return null;
+            }
+        };
+        WorkflowStepExecutor noResult = new WorkflowStepExecutor() {
+            @Override
+            public Set<String> supportedBlueIds() {
+                return Collections.unmodifiableSet(new LinkedHashSet<String>(Collections.singletonList("Step/Skip")));
+            }
+
+            @Override
+            public Object execute(StepExecutionArgs args) {
+                return WorkflowStepExecutor.NO_RESULT;
+            }
+        };
+
+        WorkflowStepRunner runner = new WorkflowStepRunner(Arrays.asList(nullResult, noResult));
+        Node first = new Node().name("NullStep").type(new Node().blueId("Step/Null"));
+        Node second = new Node().name("SkipStep").type(new Node().blueId("Step/Skip"));
+
+        Map<String, Object> results = runner.run(
+                new SequentialWorkflow(),
+                Arrays.asList(first, second),
+                new Node(),
+                null);
+
+        assertTrue(results.containsKey("NullStep"));
+        assertNull(results.get("NullStep"));
+        assertFalse(results.containsKey("SkipStep"));
     }
 }
