@@ -48,6 +48,15 @@ class QuickJsSidecarRuntimeTest {
             assertEquals("9", String.valueOf(emittedPayload.get("__result")));
             assertTrue(emittedPayload.get("events") instanceof List);
 
+            ScriptRuntimeResult withEmitUndefined = runtime.evaluate(ScriptRuntimeRequest.of(
+                    "(() => { emit({ kind: 'callback' }); })();"));
+            assertTrue(withEmitUndefined.value() instanceof Map);
+            assertFalse(withEmitUndefined.valueDefined());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> undefinedPayload = (Map<String, Object>) withEmitUndefined.value();
+            assertEquals(Boolean.FALSE, undefinedPayload.get("__resultDefined"));
+            assertTrue(undefinedPayload.get("events") instanceof List);
+
             ScriptRuntimeResult withoutDate = runtime.evaluate(ScriptRuntimeRequest.of("typeof Date"));
             assertEquals("undefined", String.valueOf(withoutDate.value()));
             assertTrue(withoutDate.valueDefined());

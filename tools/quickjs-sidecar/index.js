@@ -73,8 +73,9 @@ function evaluateCode(code, bindings, wasmGasLimit) {
     }
   }
 
+  const resultDefined = typeof result !== 'undefined';
   if (emittedEvents.length === 0) {
-    return result;
+    return { value: result, resultDefined };
   }
   if (result && typeof result === 'object' && !Array.isArray(result)) {
     const withEvents = { ...result };
@@ -83,12 +84,18 @@ function evaluateCode(code, bindings, wasmGasLimit) {
     } else {
       withEvents.events = emittedEvents;
     }
-    return withEvents;
+    return { value: withEvents, resultDefined };
   }
   if (typeof result === 'undefined') {
-    return { __resultDefined: false, events: emittedEvents };
+    return {
+      value: { __resultDefined: false, events: emittedEvents },
+      resultDefined: false,
+    };
   }
-  return { __result: result, __resultDefined: true, events: emittedEvents };
+  return {
+    value: { __result: result, __resultDefined: true, events: emittedEvents },
+    resultDefined: true,
+  };
 }
 
 function estimateWasmGasUsed(code) {
@@ -155,14 +162,14 @@ reader.on('line', (line) => {
   const wasmGasLimit = request.wasmGasLimit != null ? String(request.wasmGasLimit) : null;
 
   try {
-    const result = evaluateCode(code, bindings, wasmGasLimit);
+    const evaluation = evaluateCode(code, bindings, wasmGasLimit);
     const wasmGasUsed = estimateWasmGasUsed(code);
     const wasmGasRemaining = computeWasmGasRemaining(wasmGasLimit, wasmGasUsed);
     respond({
       id,
       ok: true,
-      resultDefined: typeof result !== 'undefined',
-      result,
+      resultDefined: evaluation.resultDefined,
+      result: evaluation.value,
       wasmGasUsed: wasmGasUsed.toString(),
       wasmGasRemaining: wasmGasRemaining == null ? null : wasmGasRemaining.toString(),
     });

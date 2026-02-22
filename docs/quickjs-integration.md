@@ -35,12 +35,19 @@ Message format:
 - Response:
   - `id`
   - `ok` (boolean)
+  - `resultDefined` (boolean, whether script returned a defined value; distinguishes `undefined` from explicit `null`)
   - `result` (any, when ok)
   - `error` (object|string, when not ok)
   - `wasmGasUsed` (string|number|null)
   - `wasmGasRemaining` (string|number|null)
 
 `QuickJsSidecarRuntime` validates `id` correspondence and surfaces protocol/runtime errors as `ScriptRuntimeException`.
+
+`ScriptRuntimeResult` now carries:
+
+- `value` (evaluated value or `null`)
+- `valueDefined` (true when script produced a defined value, false for `undefined`)
+- gas fields (`wasmGasUsed`, `wasmGasRemaining`)
 
 Timeout/error normalization parity:
 
@@ -108,6 +115,7 @@ Emit callback behavior:
 
 - when no host emit callback is supplied, sidecar `emit(...)` values are returned via the existing `result.events[]` envelope used by workflow steps.
 - when a host emit callback is supplied to `QuickJSEvaluator` (direct evaluator usage), emitted values are forwarded to the callback and the evaluator returns the plain script result value (JS parity behavior).
+- evaluator now preserves `undefined` vs explicit `null` semantics in this callback path as well (using sidecar `resultDefined` / envelope `__resultDefined` metadata), enabling workflow step-runner parity where only `undefined` skips step-result registration.
 
 Document callback behavior (direct evaluator usage):
 

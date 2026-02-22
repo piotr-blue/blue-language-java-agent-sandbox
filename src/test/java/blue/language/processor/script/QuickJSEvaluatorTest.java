@@ -310,6 +310,32 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void forwardsEmitCallsWithUndefinedResultAsNoResult() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            final List<Object> emissions = new ArrayList<Object>();
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("emit", new Consumer<Object>() {
+                @Override
+                public void accept(Object value) {
+                    emissions.add(value);
+                }
+            });
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "(() => { emit({ level: 'debug', message: 'only-event' }); })();",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertNull(result.value());
+            assertFalse(result.valueDefined());
+            assertEquals(1, emissions.size());
+            assertTrue(emissions.get(0) instanceof Map);
+        }
+    }
+
+    @Test
     void distinguishesUndefinedFromExplicitNullResults() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
