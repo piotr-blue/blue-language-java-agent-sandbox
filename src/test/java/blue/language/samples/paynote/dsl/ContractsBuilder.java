@@ -9,7 +9,7 @@ public final class ContractsBuilder {
 
     private final Map<String, Node> contracts;
 
-    ContractsBuilder(Map<String, Node> contracts) {
+    public ContractsBuilder(Map<String, Node> contracts) {
         this.contracts = contracts;
     }
 

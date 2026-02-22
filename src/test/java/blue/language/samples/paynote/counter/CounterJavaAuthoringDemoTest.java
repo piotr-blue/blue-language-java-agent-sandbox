@@ -7,8 +7,6 @@ import blue.language.snapshot.ResolvedSnapshot;
 import blue.language.snapshot.WorkingDocument;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -18,8 +16,10 @@ class CounterJavaAuthoringDemoTest {
 
     @Test
     void authorsCounterInJavaAndAttachesExtraContracts() {
-        CounterDocument counter = CounterBuilder.baseline("timeline-demo-002");
-        CounterBuilder.withExtensions(counter, "ownerChannel");
+        CounterDocument counter = CounterBuilder.withExtensions(
+                CounterBuilder.baseline("timeline-demo-002"),
+                "ownerChannel"
+        );
 
         Node node = blue.objectToNode(counter);
         Node contracts = node.getProperties().get("contracts");
@@ -32,11 +32,8 @@ class CounterJavaAuthoringDemoTest {
         assertNotNull(contracts.getProperties().get("say"));
         assertNotNull(contracts.getProperties().get("sayImpl"));
 
-        Blue resolvingBlue = new Blue(blueId -> {
-            return Collections.singletonList(new Node().name("Demo Type " + blueId));
-        });
-        ResolvedSnapshot snapshot = resolvingBlue.resolveToSnapshot(node);
-        WorkingDocument workingDocument = WorkingDocument.forSnapshot(resolvingBlue, snapshot);
+        ResolvedSnapshot snapshot = blue.resolveToSnapshot(node);
+        WorkingDocument workingDocument = WorkingDocument.forSnapshot(blue, snapshot);
         workingDocument.applyPatch(JsonPatch.replace("/counter", new Node().value(9)));
         ResolvedSnapshot committed = workingDocument.commit();
 

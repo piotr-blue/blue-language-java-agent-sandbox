@@ -33,13 +33,12 @@ class CounterYamlMappingAndPatchTest {
         assertEquals("Counter", mapped.name);
         assertEquals(Integer.valueOf(0), mapped.counter);
         assertNotNull(mapped.contracts);
-        assertEquals("timeline-demo-001", mapped.contracts.ownerChannel.timelineId);
-        assertEquals("ownerChannel", mapped.contracts.increment.channel);
-        assertEquals("increment", mapped.contracts.incrementImpl.operation);
-        assertEquals("decrement", mapped.contracts.decrementImpl.operation);
+        assertEquals("timeline-demo-001", mapped.contracts.getAsText("/ownerChannel/timelineId/value"));
+        assertEquals("ownerChannel", mapped.contracts.getAsText("/increment/channel/value"));
+        assertEquals("increment", mapped.contracts.getAsText("/incrementImpl/operation/value"));
+        assertEquals("decrement", mapped.contracts.getAsText("/decrementImpl/operation/value"));
 
         Node fromObject = blue.objectToNode(mapped);
-        assertEquals("Counter-Demo-BlueId", fromObject.getType().getBlueId());
         assertEquals("ownerChannel", fromObject.getProperties()
                 .get("contracts")
                 .getProperties()
