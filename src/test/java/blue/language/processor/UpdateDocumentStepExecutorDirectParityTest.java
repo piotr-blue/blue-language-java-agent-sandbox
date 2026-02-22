@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UpdateDocumentStepExecutorDirectParityTest {
@@ -93,5 +94,40 @@ class UpdateDocumentStepExecutorDirectParityTest {
         Node status = context.documentAt("/status");
         assertNotNull(status);
         assertEquals("ready", String.valueOf(status.getValue()));
+    }
+
+    @Test
+    void throwsFatalForUnsupportedPatchOperationsInDirectExecution() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Conversation/Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("UPSERT"))
+                                .properties("path", new Node().value("/status"))
+                                .properties("val", new Node().value("ready"))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
     }
 }
