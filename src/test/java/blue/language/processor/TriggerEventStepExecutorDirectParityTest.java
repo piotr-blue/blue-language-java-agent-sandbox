@@ -210,4 +210,92 @@ class TriggerEventStepExecutorDirectParityTest {
         assertNotNull(emitted);
         assertEquals("derived-step", String.valueOf(emitted.getProperties().get("kind").getValue()));
     }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueIdFromDefinitionValue() {
+        TriggerEventStepExecutor executor = new TriggerEventStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Trigger Event".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().value("Conversation/Trigger Event");
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Emit")
+                .type(new Node().blueId("Custom/Derived Trigger Event"))
+                .properties("event", new Node()
+                        .properties("kind", new Node().value("derived-step-value")));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        Node emitted = execution.runtime().scope("/").triggeredQueue().peekFirst();
+        assertNotNull(emitted);
+        assertEquals("derived-step-value", String.valueOf(emitted.getProperties().get("kind").getValue()));
+    }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueIdFromDefinitionProperty() {
+        TriggerEventStepExecutor executor = new TriggerEventStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Trigger Event".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().properties("blueId", new Node().value("Conversation/Trigger Event"));
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Emit")
+                .type(new Node().blueId("Custom/Derived Trigger Event"))
+                .properties("event", new Node()
+                        .properties("kind", new Node().value("derived-step-property")));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        Node emitted = execution.runtime().scope("/").triggeredQueue().peekFirst();
+        assertNotNull(emitted);
+        assertEquals("derived-step-property", String.valueOf(emitted.getProperties().get("kind").getValue()));
+    }
 }

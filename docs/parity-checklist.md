@@ -151,7 +151,7 @@ Current in-flight work:
   - real context emission path with expression-resolved payload values
   - trigger-base gas charging side-effect assertions
   - nested embedded-document expression preservation in emitted payloads
-  - provider-backed derived step-type acceptance in direct execution
+  - provider-backed derived step-type acceptance in direct execution (including provider definitions exposing parent step type via `type.blueId`, root `properties.blueId`, or scalar-string `value`)
   - direct fatal error path for missing event payloads
   - direct fatal error path for invalid step schema/type payloads
   (`TriggerEventStepExecutorDirectParityTest`).
@@ -167,7 +167,7 @@ Current in-flight work:
   - direct wrapped script-error metadata via `CodeBlockEvaluationError`
   - direct out-of-gas error surfacing for runaway code
   - deterministic `Date`/`process` masking in direct execution path
-  - provider-backed derived step-type acceptance in direct execution
+  - provider-backed derived step-type acceptance in direct execution (including provider definitions exposing parent step type via `type.blueId`, root `properties.blueId`, or scalar-string `value`)
   - direct fatal error path for invalid step schema/type payloads
   - wasm gas charging side effect on processor runtime totals
   (`JavaScriptCodeStepExecutorDirectParityTest`).
@@ -259,4 +259,4 @@ Current in-flight work:
 - Golden fixture coverage now also includes provider-backed operation-workflow event-filter subtype matching for both timeline-envelope and direct request event shapes (`provider-derived-operation-event-filter-type-chain.yaml`, `provider-derived-direct-operation-event-filter-type-chain.yaml`) to lock provider-chain filtering parity for sequential workflow operations in the fixture harness path (`ParityFixturesTest`).
 - Golden fixture harness now supports optional gas assertions (`totalGas`, `totalGasMin`, `totalGasMax`) and uses them in migrated fixtures (e.g. `sequential-workflow-happy.yaml`) to validate runtime accounting in addition to document/event outcomes.
 - Golden fixtures now also cover initialization-time capability-failure parity for missing contract processors, including failure-reason and zero-gas assertions (`initialization-capability-failure-missing-processor.yaml`).
-- Golden fixtures now also cover provider-derived workflow step-type chains for Update Document / Trigger Event / JavaScript Code (`provider-derived-update-step-type-chain.yaml`, `provider-derived-trigger-step-type-chain.yaml`, `provider-derived-javascript-step-type-chain.yaml`), plus Update Document provider-definition fallback via scalar value ancestry (`provider-derived-update-step-blueid-value-chain.yaml`).
+- Golden fixtures now also cover provider-derived workflow step-type chains for Update Document / Trigger Event / JavaScript Code (`provider-derived-update-step-type-chain.yaml`, `provider-derived-trigger-step-type-chain.yaml`, `provider-derived-javascript-step-type-chain.yaml`), plus provider-definition fallback via scalar value ancestry for all three step families (`provider-derived-update-step-blueid-value-chain.yaml`, `provider-derived-trigger-step-blueid-value-chain.yaml`, `provider-derived-javascript-step-blueid-value-chain.yaml`).
