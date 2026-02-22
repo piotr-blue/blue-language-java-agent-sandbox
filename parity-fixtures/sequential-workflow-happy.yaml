@@ -40,6 +40,7 @@ expected:
     /count: 3
     /emitted: 1
   triggeredEventsCount: 1
+  totalGasMin: 1
   triggeredKinds:
     - emitted
   capabilityFailure: false

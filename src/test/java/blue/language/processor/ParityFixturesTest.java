@@ -55,6 +55,9 @@ class ParityFixturesTest {
         List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
         boolean expectedCapabilityFailure = boolValue(expected.get("capabilityFailure"), false);
+        Long expectedTotalGas = nullableLongValue(expected.get("totalGas"));
+        Long expectedTotalGasMin = nullableLongValue(expected.get("totalGasMin"));
+        Long expectedTotalGasMax = nullableLongValue(expected.get("totalGasMax"));
         boolean expectedInitFailure = boolValue(expected.get("initFailure"), false);
         String initFailureMessageContains = stringValue(expected.get("initFailureMessageContains"), null);
 
@@ -173,6 +176,19 @@ class ParityFixturesTest {
         assertEquals(expectedCapabilityFailure,
                 result.capabilityFailure(),
                 fixtureName + " unexpected capabilityFailure flag");
+        if (expectedTotalGas != null) {
+            assertEquals(expectedTotalGas.longValue(),
+                    result.totalGas(),
+                    fixtureName + " unexpected totalGas value");
+        }
+        if (expectedTotalGasMin != null) {
+            assertTrue(result.totalGas() >= expectedTotalGasMin.longValue(),
+                    fixtureName + " totalGas below expected minimum: " + expectedTotalGasMin);
+        }
+        if (expectedTotalGasMax != null) {
+            assertTrue(result.totalGas() <= expectedTotalGasMax.longValue(),
+                    fixtureName + " totalGas above expected maximum: " + expectedTotalGasMax);
+        }
     }
 
     private List<Path> fixtureFiles() throws IOException {
@@ -248,6 +264,27 @@ class ParityFixturesTest {
             return Boolean.parseBoolean((String) value);
         }
         return fallback;
+    }
+
+    private Long nullableLongValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        if (value instanceof String) {
+            String text = ((String) value).trim();
+            if (text.isEmpty()) {
+                return null;
+            }
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private Blue createBlue(Map<String, Object> fixture) {
