@@ -40,7 +40,6 @@ final class TerminationService {
         }
 
         if (ScopeRuntimeContext.TerminationKind.FATAL.equals(kind) && "/".equals(normalized)) {
-            runtime.recordRootEmission(createFatalOutboxEvent(normalized, reason));
             runtime.markRunTerminated();
             throw new RunTerminationException(true);
         }
@@ -70,13 +69,4 @@ final class TerminationService {
         return event;
     }
 
-    private Node createFatalOutboxEvent(String scopePath, String reason) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Fatal Error"));
-        event.properties("domain", new Node().value(scopePath));
-        event.properties("code", new Node().value("RuntimeFatal"));
-        if (reason != null && !reason.isEmpty()) {
-            event.properties("reason", new Node().value(reason));
-        }
-        return event;
-    }
 }
