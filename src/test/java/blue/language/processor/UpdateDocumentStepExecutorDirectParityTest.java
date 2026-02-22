@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.SequentialWorkflow;
+import blue.language.processor.script.CodeBlockEvaluationError;
 import blue.language.processor.workflow.StepExecutionArgs;
 import blue.language.processor.workflow.steps.UpdateDocumentStepExecutor;
 import org.junit.jupiter.api.Test;
@@ -97,6 +98,52 @@ class UpdateDocumentStepExecutorDirectParityTest {
     }
 
     @Test
+    void appliesStaticAddAndRemoveOperationsInDirectExecution() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+
+        Node document = new Node()
+                .properties("status", new Node().value("stale"))
+                .properties("obsolete", new Node().value("remove-me"));
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Conversation/Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("ADD"))
+                                .properties("path", new Node().value("/added"))
+                                .properties("val", new Node().value("fresh")),
+                        new Node().properties("op", new Node().value("REMOVE"))
+                                .properties("path", new Node().value("/obsolete"))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        Node added = context.documentAt("/added");
+        Node obsolete = context.documentAt("/obsolete");
+        assertNotNull(added);
+        assertEquals("fresh", String.valueOf(added.getValue()));
+        assertTrue(obsolete == null);
+    }
+
+    @Test
     void throwsFatalForUnsupportedPatchOperationsInDirectExecution() {
         UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
 
@@ -129,6 +176,41 @@ class UpdateDocumentStepExecutorDirectParityTest {
                 0);
 
         assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
+    }
+
+    @Test
+    void wrapsPathEvaluationErrorsInCodeBlockEvaluationError() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Conversation/Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("REPLACE"))
+                                .properties("path", new Node().value("${doesNotExist.value}"))
+                                .properties("val", new Node().value("hi"))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        assertThrows(CodeBlockEvaluationError.class, () -> executor.execute(args));
     }
 
     @Test

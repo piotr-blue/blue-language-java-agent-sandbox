@@ -128,7 +128,9 @@ Current in-flight work:
   (`UpdateDocumentStepExecutorIntegrationParityTest`).
 - Update Document direct step parity now includes:
   - real context execution for expression-resolved value changes
+  - static ADD/REMOVE patch operation execution paths
   - expression-returned `changeset` array execution
+  - path-expression evaluation failure surfacing as `CodeBlockEvaluationError`
   - base gas charging side-effect assertions
   - direct fatal error path for unsupported patch operations
   - direct fatal error path for invalid step schema/type payloads
