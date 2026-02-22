@@ -19,7 +19,10 @@ public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimeli
             return false;
         }
         String eventTimelineId = TimelineEventSupport.timelineId(context.event());
-        return expectedTimelineId.trim().equals(eventTimelineId);
+        if (!expectedTimelineId.trim().equals(eventTimelineId)) {
+            return false;
+        }
+        return WorkflowContractSupport.matchesEventFilter(context.event(), contract.getEvent());
     }
 
     @Override

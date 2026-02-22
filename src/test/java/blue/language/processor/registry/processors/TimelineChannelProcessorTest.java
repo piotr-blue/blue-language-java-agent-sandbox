@@ -62,6 +62,38 @@ class TimelineChannelProcessorTest {
         assertFalse(processor.matches(contract, missing));
     }
 
+    @Test
+    void respectsChannelLevelEventFilters() {
+        TimelineChannelProcessor processor = new TimelineChannelProcessor();
+        TimelineChannel contract = new TimelineChannel();
+        contract.setTimelineId("owner-42");
+        contract.setEvent(new Node().properties(
+                "message",
+                new Node().properties("kind", new Node().value("set-price"))));
+
+        ChannelEvaluationContext matching = new ChannelEvaluationContext(
+                "/",
+                "timeline",
+                timelineEvent("owner-42", "evt-1", BigInteger.ONE)
+                        .properties("message", new Node().properties("kind", new Node().value("set-price"))),
+                null,
+                null,
+                null,
+                null);
+        ChannelEvaluationContext nonMatching = new ChannelEvaluationContext(
+                "/",
+                "timeline",
+                timelineEvent("owner-42", "evt-2", BigInteger.TWO)
+                        .properties("message", new Node().properties("kind", new Node().value("adjust-price"))),
+                null,
+                null,
+                null,
+                null);
+
+        assertTrue(processor.matches(contract, matching));
+        assertFalse(processor.matches(contract, nonMatching));
+    }
+
     private Node timelineEvent(String timelineId, String eventId, BigInteger sequence) {
         return new Node()
                 .properties("eventId", new Node().value(eventId))
