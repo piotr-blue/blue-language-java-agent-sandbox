@@ -131,6 +131,7 @@ Current in-flight work:
   - expression-returned `changeset` array execution
   - base gas charging side-effect assertions
   - direct fatal error path for unsupported patch operations
+  - direct fatal error path for invalid step schema/type payloads
   (`UpdateDocumentStepExecutorDirectParityTest`).
 - Trigger Event step integration parity now has dedicated lifecycle-init migration coverage for:
   - initialization-time payload emission
@@ -143,6 +144,7 @@ Current in-flight work:
   - trigger-base gas charging side-effect assertions
   - nested embedded-document expression preservation in emitted payloads
   - direct fatal error path for missing event payloads
+  - direct fatal error path for invalid step schema/type payloads
   (`TriggerEventStepExecutorDirectParityTest`).
 - JavaScript Code step integration parity now has dedicated lifecycle-init migration coverage for:
   - emitted payload composition across multiple JS steps

@@ -131,4 +131,37 @@ class TriggerEventStepExecutorDirectParityTest {
 
         assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
     }
+
+    @Test
+    void throwsFatalWhenStepSchemaIsInvalid() {
+        TriggerEventStepExecutor executor = new TriggerEventStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("WrongStepType")
+                .type(new Node().blueId("Conversation/JavaScript Code"))
+                .properties("event", new Node()
+                        .properties("kind", new Node().value("should-not-emit")));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
+        assertTrue(String.valueOf(fatal.getMessage()).contains("step payload is invalid"));
+    }
 }

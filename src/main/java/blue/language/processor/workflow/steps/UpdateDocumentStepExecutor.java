@@ -10,9 +10,16 @@ import blue.language.processor.workflow.WorkflowStepExecutor;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
+
+    private static final Set<String> SUPPORTED_BLUE_IDS =
+            Collections.unmodifiableSet(new LinkedHashSet<String>(java.util.Arrays.asList(
+                    "Conversation/Update Document",
+                    "UpdateDocument"
+            )));
 
     private final QuickJSEvaluator evaluator;
 
@@ -26,14 +33,15 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
 
     @Override
     public Set<String> supportedBlueIds() {
-        return Collections.unmodifiableSet(new java.util.LinkedHashSet<String>(java.util.Arrays.asList(
-                "Conversation/Update Document",
-                "UpdateDocument"
-        )));
+        return SUPPORTED_BLUE_IDS;
     }
 
     @Override
     public Object execute(StepExecutionArgs args) {
+        if (!isValidStepNode(args.stepNode())) {
+            args.context().throwFatal("Update Document step payload is invalid");
+            return null;
+        }
         Node stepNode = QuickJsExpressionUtils.resolveExpressions(
                 args.stepNode(),
                 evaluator,
@@ -109,5 +117,71 @@ public class UpdateDocumentStepExecutor implements WorkflowStepExecutor {
             return null;
         }
         return String.valueOf(valueNode.getValue());
+    }
+
+    private boolean isValidStepNode(Node stepNode) {
+        if (stepNode == null || stepNode.getType() == null) {
+            return false;
+        }
+        return hasSupportedType(stepNode.getType(), new LinkedHashSet<String>());
+    }
+
+    private boolean hasSupportedType(Node typeNode, Set<String> visitedBlueIds) {
+        if (typeNode == null) {
+            return false;
+        }
+        boolean foundUnvisitedBlueId = false;
+        for (String blueId : extractBlueIds(typeNode)) {
+            if (SUPPORTED_BLUE_IDS.contains(blueId)) {
+                return true;
+            }
+            if (visitedBlueIds.add(blueId)) {
+                foundUnvisitedBlueId = true;
+            }
+        }
+        Node parentType = typeNode.getType();
+        if (parentType == null) {
+            return false;
+        }
+        if (!foundUnvisitedBlueId) {
+            List<String> parentBlueIds = extractBlueIds(parentType);
+            boolean parentHasUnvisitedBlueId = false;
+            for (String blueId : parentBlueIds) {
+                if (!visitedBlueIds.contains(blueId)) {
+                    parentHasUnvisitedBlueId = true;
+                    break;
+                }
+            }
+            if (!parentHasUnvisitedBlueId && parentBlueIds.isEmpty()) {
+                return false;
+            }
+        }
+        return hasSupportedType(parentType, visitedBlueIds);
+    }
+
+    private List<String> extractBlueIds(Node typeNode) {
+        List<String> blueIds = new java.util.ArrayList<>();
+        addBlueId(blueIds, typeNode.getBlueId());
+        if (typeNode.getValue() instanceof String) {
+            addBlueId(blueIds, String.valueOf(typeNode.getValue()));
+        }
+        if (typeNode.getProperties() != null && typeNode.getProperties().get("blueId") != null) {
+            Node blueIdNode = typeNode.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() != null) {
+                addBlueId(blueIds, String.valueOf(blueIdNode.getValue()));
+            }
+        }
+        return blueIds;
+    }
+
+    private void addBlueId(List<String> blueIds, String blueId) {
+        if (blueId == null) {
+            return;
+        }
+        String normalized = blueId.trim();
+        if (normalized.isEmpty() || blueIds.contains(normalized)) {
+            return;
+        }
+        blueIds.add(normalized);
     }
 }
