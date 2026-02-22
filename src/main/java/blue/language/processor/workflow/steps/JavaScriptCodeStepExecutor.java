@@ -50,6 +50,7 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
                 ProcessorGasSchedule.DEFAULT_WASM_GAS_LIMIT);
         args.context().chargeWasmGas(runtimeResult.wasmGasUsed());
         Object result = runtimeResult.value();
+        handleEvents(args, result);
         applyRuntimeEffects(args, result);
         return result;
     }
@@ -85,6 +86,20 @@ public class JavaScriptCodeStepExecutor implements WorkflowStepExecutor {
                 continue;
             }
             applyPatchChange(args, (Map<String, Object>) rawChange);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleEvents(StepExecutionArgs args, Object result) {
+        if (!(result instanceof Map)) {
+            return;
+        }
+        Object events = ((Map<String, Object>) result).get("events");
+        if (!(events instanceof List)) {
+            return;
+        }
+        for (Object event : (List<Object>) events) {
+            args.context().emitEvent(toNode(event));
         }
     }
 

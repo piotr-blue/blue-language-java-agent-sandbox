@@ -86,7 +86,15 @@ final class ChannelRunner {
             }
             runtime.chargeHandlerOverhead();
             ProcessorExecutionContext context = execution.createContext(scopePath, bundle, event, allowTerminatedWork);
-            ProcessorEngine.executeHandler(owner, handler.contract(), context);
+            try {
+                ProcessorEngine.executeHandler(owner, handler.contract(), context);
+            } catch (ProcessorFatalException ex) {
+                execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Processor fatal"));
+                break;
+            } catch (RuntimeException ex) {
+                execution.enterFatalTermination(scopePath, bundle, execution.fatalReason(ex, "Runtime fatal"));
+                break;
+            }
             if (execution.isScopeInactive(scopePath) && !allowTerminatedWork) {
                 break;
             }

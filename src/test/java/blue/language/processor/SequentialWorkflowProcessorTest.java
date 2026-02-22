@@ -12,6 +12,7 @@ import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SequentialWorkflowProcessorTest {
 
@@ -147,7 +148,7 @@ class SequentialWorkflowProcessorTest {
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/JavaScript Code\n" +
-                "        code: \"({ changeset: [{ op: 'ADD', path: '/jsValue', val: 9 }], emit: { kind: 'js' } })\"\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/jsValue', val: 9 }], events: [{ kind: 'js' }] })\"\n" +
                 "  observeJsEmission:\n" +
                 "    channel: triggered\n" +
                 "    type:\n" +
@@ -162,6 +163,63 @@ class SequentialWorkflowProcessorTest {
 
         assertEquals(new BigInteger("9"), result.document().getProperties().get("jsValue").getValue());
         assertEquals(new BigInteger("1"), result.document().getProperties().get("jsObserved").getValue());
+    }
+
+    @Test
+    void javaScriptCodeStepHasCurrentContractBindings() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Contract Binding Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"({ changeset: [{ op: 'ADD', path: '/contractChannel', val: currentContract.channel }] })\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-bind").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("testChannel", result.document().getProperties().get("contractChannel").getValue());
+    }
+
+    @Test
+    void javaScriptCodeStepErrorsBecomeFatalTermination() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: JavaScript Error Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/JavaScript Code\n" +
+                "        code: \"throw new Error('boom')\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-err").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue()).contains("Failed to evaluate code block"));
     }
 
     @Test

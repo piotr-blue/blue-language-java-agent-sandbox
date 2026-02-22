@@ -24,7 +24,7 @@ public class QuickJSEvaluator implements AutoCloseable {
         try {
             return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
         } catch (ScriptRuntimeException ex) {
-            throw new CodeBlockEvaluationError("QuickJS code block evaluation failed", ex);
+            throw new CodeBlockEvaluationError("Failed to evaluate code block", ex);
         }
     }
 
@@ -64,9 +64,38 @@ public class QuickJSEvaluator implements AutoCloseable {
         prelude.append("return current;");
         prelude.append("};");
         prelude.append("const fn = function(pointer){ return __read(pointer); };");
-        prelude.append("fn.canonical = function(pointer){ return __read(pointer); };");
+        prelude.append("fn.canonical = function(pointer){");
+        prelude.append("const value = __read(pointer);");
+        prelude.append("if (value === undefined) return null;");
+        prelude.append("return { value: value };");
+        prelude.append("};");
         prelude.append("return fn;");
         prelude.append("})();");
+        prelude.append("const canon = {");
+        prelude.append("at: function(value, pointer){");
+        prelude.append("if (value === undefined || value === null) return null;");
+        prelude.append("if (pointer === undefined || pointer === null || pointer === '' || pointer === '/') return value;");
+        prelude.append("if (typeof pointer !== 'string') throw new TypeError('canon.at() expects a string pointer');");
+        prelude.append("let current = value;");
+        prelude.append("const normalized = pointer.startsWith('/') ? pointer : '/' + pointer;");
+        prelude.append("const segments = normalized === '/' ? [] : normalized.substring(1).split('/').map(function(s){return s.replace(/~1/g,'/').replace(/~0/g,'~');});");
+        prelude.append("for (const segment of segments) {");
+        prelude.append("if (current === undefined || current === null) return null;");
+        prelude.append("if (Array.isArray(current)) {");
+        prelude.append("if (!/^\\d+$/.test(segment)) return null;");
+        prelude.append("current = current[Number(segment)];");
+        prelude.append("continue;");
+        prelude.append("}");
+        prelude.append("current = current[segment];");
+        prelude.append("}");
+        prelude.append("if (current === undefined) return null;");
+        prelude.append("return current;");
+        prelude.append("},");
+        prelude.append("unwrap: function(value){");
+        prelude.append("if (value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value,'value')) return value.value;");
+        prelude.append("return value;");
+        prelude.append("}");
+        prelude.append("};");
         prelude.append("\n");
         prelude.append(code);
         return prelude.toString();
