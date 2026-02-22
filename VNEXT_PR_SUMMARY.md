@@ -75,3 +75,11 @@ Branch: `cursor/blue-java-sdk-vnext-5cee`
 
 PR creation is blocked in this environment by token permissions (`Resource not accessible by integration`, HTTP 403).
 Use the branch above to open the PR from a token/account with pull request write access.
+
+Manual PR URL:
+
+- https://github.com/piotr-blue/blue-language-java-agent-sandbox/pull/new/cursor/blue-java-sdk-vnext-5cee
+
+Equivalent CLI command (from an account/token with PR write permissions):
+
+- `gh pr create --base master --head cursor/blue-java-sdk-vnext-5cee --title "feat: blue java sdk vnext paynote dsl and examples"`
