@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class QuickJSEvaluator implements AutoCloseable {
 
@@ -35,9 +37,12 @@ public class QuickJSEvaluator implements AutoCloseable {
 
     public ScriptRuntimeResult evaluate(String code, Map<String, Object> bindings, BigInteger wasmGasLimit) {
         Map<String, Object> safeBindings = normalizeBindings(bindings);
+        Consumer<Object> emitCallback = extractEmitCallback(safeBindings);
         validateBindings(safeBindings);
         try {
-            return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
+            ScriptRuntimeResult runtimeResult = runtime.evaluate(
+                    new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
+            return applyEmitCallback(runtimeResult, emitCallback);
         } catch (ScriptRuntimeException ex) {
             throw new CodeBlockEvaluationError(code, ex);
         }
@@ -208,5 +213,48 @@ public class QuickJSEvaluator implements AutoCloseable {
             normalized.put("currentContractCanonical", currentContract);
         }
         return normalized;
+    }
+
+    private Consumer<Object> extractEmitCallback(Map<String, Object> bindings) {
+        if (bindings == null || !bindings.containsKey("emit")) {
+            return null;
+        }
+        Object emit = bindings.get("emit");
+        if (emit == null) {
+            return null;
+        }
+        if (emit instanceof Consumer) {
+            bindings.remove("emit");
+            @SuppressWarnings("unchecked")
+            Consumer<Object> callback = (Consumer<Object>) emit;
+            return callback;
+        }
+        throw new IllegalArgumentException("QuickJS emit binding must be a function");
+    }
+
+    private ScriptRuntimeResult applyEmitCallback(ScriptRuntimeResult runtimeResult, Consumer<Object> emitCallback) {
+        if (emitCallback == null || runtimeResult == null || !(runtimeResult.value() instanceof Map)) {
+            return runtimeResult;
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> valueMap = (Map<String, Object>) runtimeResult.value();
+        Object events = valueMap.get("events");
+        if (!(events instanceof List)) {
+            return runtimeResult;
+        }
+        @SuppressWarnings("unchecked")
+        List<Object> emittedEvents = (List<Object>) events;
+        for (Object emitted : emittedEvents) {
+            emitCallback.accept(emitted);
+        }
+        if (valueMap.containsKey("__result")) {
+            return new ScriptRuntimeResult(
+                    valueMap.get("__result"),
+                    runtimeResult.wasmGasUsed(),
+                    runtimeResult.wasmGasRemaining());
+        }
+        Map<String, Object> stripped = new LinkedHashMap<String, Object>(valueMap);
+        stripped.remove("events");
+        return new ScriptRuntimeResult(stripped, runtimeResult.wasmGasUsed(), runtimeResult.wasmGasRemaining());
     }
 }

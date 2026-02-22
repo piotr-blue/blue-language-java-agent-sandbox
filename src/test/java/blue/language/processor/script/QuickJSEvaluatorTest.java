@@ -7,6 +7,8 @@ import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -183,6 +185,35 @@ class QuickJSEvaluatorTest {
             @SuppressWarnings("unchecked")
             List<Object> events = (List<Object>) payload.get("events");
             assertEquals(1, events.size());
+        }
+    }
+
+    @Test
+    void forwardsEmitCallsToHostBindingAndReturnsPlainResult() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            final List<Object> emissions = new ArrayList<Object>();
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("emit", new Consumer<Object>() {
+                @Override
+                public void accept(Object value) {
+                    emissions.add(value);
+                }
+            });
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "emit({ level: 'debug', message: 'hello', value: 42 }); 7",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertEquals("7", String.valueOf(result.value()));
+            assertEquals(1, emissions.size());
+            assertTrue(emissions.get(0) instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> emitted = (Map<String, Object>) emissions.get(0);
+            assertEquals("debug", String.valueOf(emitted.get("level")));
+            assertEquals("42", String.valueOf(emitted.get("value")));
         }
     }
 

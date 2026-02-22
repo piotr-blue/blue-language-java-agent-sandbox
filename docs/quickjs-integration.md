@@ -104,6 +104,11 @@ QuickJS evaluator binding defaults/fallbacks:
 - missing `currentContract` defaults to `null`
 - missing `currentContractCanonical` defaults to `currentContract`
 
+Emit callback behavior:
+
+- when no host emit callback is supplied, sidecar `emit(...)` values are returned via the existing `result.events[]` envelope used by workflow steps.
+- when a host emit callback is supplied to `QuickJSEvaluator` (direct evaluator usage), emitted values are forwarded to the callback and the evaluator returns the plain script result value (JS parity behavior).
+
 Document snapshots are charged via `chargeDocumentSnapshot`.
 WASM usage is charged via `chargeWasmGas`.
 
