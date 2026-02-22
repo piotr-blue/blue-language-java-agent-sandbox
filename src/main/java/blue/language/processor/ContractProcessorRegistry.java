@@ -370,7 +370,7 @@ public class ContractProcessorRegistry {
                 if (typeDefinition == null) {
                     continue;
                 }
-                collectBlueIds(typeDefinition.getType(),
+                collectBlueIds(typeDefinition,
                         nodeProvider,
                         blueIds,
                         visitedNodes,

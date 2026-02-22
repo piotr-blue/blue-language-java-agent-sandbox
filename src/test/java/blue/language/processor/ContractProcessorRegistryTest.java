@@ -161,6 +161,39 @@ class ContractProcessorRegistryTest {
     }
 
     @Test
+    void lookupByBlueIdStringSupportsProviderDefinitionsWithPropertyAndScalarBlueIds() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if ("Derived/Handler".equals(blueId)) {
+                    Node definition = new Node().properties("blueId", new Node().value("BaseHandler"));
+                    return Collections.singletonList(definition);
+                }
+                if ("Derived/Channel".equals(blueId)) {
+                    Node definition = new Node().value("BaseChannel");
+                    return Collections.singletonList(definition);
+                }
+                if ("Derived/Marker".equals(blueId)) {
+                    Node definition = new Node().properties("blueId", new Node().value("BaseMarker"));
+                    return Collections.singletonList(definition);
+                }
+                return Collections.emptyList();
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseChannelProcessor channelProcessor = new BaseChannelProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.registerHandler(handlerProcessor);
+        registry.registerChannel(channelProcessor);
+        registry.registerMarker(markerProcessor);
+
+        assertSame(handlerProcessor, registry.lookupHandler("Derived/Handler").orElse(null));
+        assertSame(channelProcessor, registry.lookupChannel("Derived/Channel").orElse(null));
+        assertSame(markerProcessor, registry.lookupMarker("Derived/Marker").orElse(null));
+    }
+
+    @Test
     void lookupMarkerByNodeSupportsProviderDerivedMarkerTypes() {
         NodeProvider provider = new NodeProvider() {
             @Override
@@ -178,6 +211,43 @@ class ContractProcessorRegistryTest {
 
         Node derivedMarkerNode = new Node().type(new Node().blueId("Derived/Marker"));
 
+        assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
+    }
+
+    @Test
+    void lookupByNodeTypeChainSupportsProviderDefinitionsWithPropertyAndScalarBlueIds() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if ("Derived/Handler".equals(blueId)) {
+                    Node definition = new Node().properties("blueId", new Node().value("BaseHandler"));
+                    return Collections.singletonList(definition);
+                }
+                if ("Derived/Channel".equals(blueId)) {
+                    Node definition = new Node().value("BaseChannel");
+                    return Collections.singletonList(definition);
+                }
+                if ("Derived/Marker".equals(blueId)) {
+                    Node definition = new Node().properties("blueId", new Node().value("BaseMarker"));
+                    return Collections.singletonList(definition);
+                }
+                return Collections.emptyList();
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        BaseChannelProcessor channelProcessor = new BaseChannelProcessor();
+        BaseMarkerProcessor markerProcessor = new BaseMarkerProcessor();
+        registry.registerHandler(handlerProcessor);
+        registry.registerChannel(channelProcessor);
+        registry.registerMarker(markerProcessor);
+
+        Node derivedHandlerNode = new Node().type(new Node().blueId("Derived/Handler"));
+        Node derivedChannelNode = new Node().type(new Node().blueId("Derived/Channel"));
+        Node derivedMarkerNode = new Node().type(new Node().blueId("Derived/Marker"));
+
+        assertSame(handlerProcessor, registry.lookupHandler(derivedHandlerNode).orElse(null));
+        assertSame(channelProcessor, registry.lookupChannel(derivedChannelNode).orElse(null));
         assertSame(markerProcessor, registry.lookupMarker(derivedMarkerNode).orElse(null));
     }
 
