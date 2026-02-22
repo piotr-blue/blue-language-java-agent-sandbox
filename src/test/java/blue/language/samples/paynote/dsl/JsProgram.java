@@ -62,12 +62,35 @@ public final class JsProgram {
             return block("if (" + condition + ")", customizer);
         }
 
+        public Builder ifElseBlock(String condition,
+                                   Consumer<Builder> thenCustomizer,
+                                   Consumer<Builder> elseCustomizer) {
+            line("if (" + condition + ") {");
+            indentLevel++;
+            thenCustomizer.accept(this);
+            indentLevel--;
+            line("} else {");
+            indentLevel++;
+            elseCustomizer.accept(this);
+            indentLevel--;
+            line("}");
+            return this;
+        }
+
+        public Builder constVar(String name, String expression) {
+            return line("const " + name + " = " + expression + ";");
+        }
+
         public Builder returnStatement(String expression) {
             return line("return " + expression + ";");
         }
 
         public Builder returnObject(JsObjectBuilder objectBuilder) {
             return returnStatement(objectBuilder.build());
+        }
+
+        public Builder returnOutput(JsOutputBuilder outputBuilder) {
+            return returnStatement(outputBuilder.build());
         }
 
         public JsProgram build() {

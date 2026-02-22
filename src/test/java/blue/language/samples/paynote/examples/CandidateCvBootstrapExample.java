@@ -2,8 +2,13 @@ package blue.language.samples.paynote.examples;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
+import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
+import blue.language.samples.paynote.dsl.JsOutputBuilder;
+import blue.language.samples.paynote.dsl.JsPatchBuilder;
 import blue.language.samples.paynote.dsl.JsProgram;
+import blue.language.samples.paynote.dsl.MyOsDsl;
+import blue.language.samples.paynote.dsl.TypeAliases;
 
 public final class CandidateCvBootstrapExample {
 
@@ -13,7 +18,7 @@ public final class CandidateCvBootstrapExample {
     public static Node build(String timestamp,
                              String recruitmentSessionId,
                              String currentAccountId) {
-        return BlueDocDsl.documentSessionBootstrap()
+        return MyOsDsl.bootstrap()
                 .documentName("Candidate CV B - " + timestamp)
                 .putDocumentValue("processingStatus", "pending")
                 .putDocumentObject("cv", cv -> cv
@@ -29,13 +34,13 @@ public final class CandidateCvBootstrapExample {
                     c.operation("changeProcessingStatus",
                             "ownerChannel",
                             "Change CV processing status.",
-                            request -> request.putNode("status", new Node().type("Text")));
+                            request -> request.putNode("status", new Node().type(TypeAliases.TEXT)));
 
-                    c.sequentialWorkflowOperation("changeProcessingStatusImpl", "changeProcessingStatus", steps -> steps
+                    c.implementOperation("changeProcessingStatusImpl", "changeProcessingStatus", steps -> steps
                             .js("ApplyStatus", applyStatusProgram())
                             .updateDocumentFromExpression("PersistStatus", "steps.ApplyStatus.changeset"));
 
-                    c.sequentialWorkflowOperation("updateCvImpl", "updateCv", steps -> steps
+                    c.implementOperation("updateCvImpl", "updateCv", steps -> steps
                             .js("ApplyCvUpdate", applyCvUpdateProgram())
                             .updateDocumentFromExpression("PersistCvUpdate", "steps.ApplyCvUpdate.changeset"));
                 })
@@ -45,29 +50,27 @@ public final class CandidateCvBootstrapExample {
 
     private static JsProgram applyStatusProgram() {
         return BlueDocDsl.js(js -> js
-                .line("const request = event.message?.request ?? {};")
-                .line("const status = request.status ?? document('/processingStatus') ?? 'pending';")
-                .returnObject(JsObjectBuilder.object()
-                        .propArrayRaw("changeset", "[{ op: 'replace', path: '/processingStatus', val: status }]")));
+                .constVar("request", "event.message?.request ?? {}")
+                .constVar("status", "request.status ?? document('/processingStatus') ?? 'pending'")
+                .returnOutput(JsOutputBuilder.output()
+                        .changesetRaw(JsPatchBuilder.patch()
+                                .replaceValue("/processingStatus", "status")
+                                .build())));
     }
 
     private static JsProgram applyCvUpdateProgram() {
         return BlueDocDsl.js(js -> js
-                .line("const request = event.message?.request ?? {};")
-                .line("const changeset = [")
-                .line("  { op: 'replace', path: '/cv/name', val: request.candidateName ?? document('/cv/name') ?? '' },")
-                .line("  { op: 'replace', path: '/cv/experience', val: request.experience ?? document('/cv/experience') ?? '' },")
-                .line("  { op: 'replace', path: '/processingStatus', val: 'pending' },")
-                .line("];")
-                .blank()
-                .line("return {")
-                .line("  changeset,")
-                .line("  events: [")
-                .line("    {")
-                .line("      type: 'Conversation/Event',")
-                .line("      message: 'CV updated',")
-                .line("    },")
-                .line("  ],")
-                .line("};"));
+                .constVar("request", "event.message?.request ?? {}")
+                .constVar("changeset", JsPatchBuilder.patch()
+                        .replaceValue("/cv/name", "request.candidateName ?? document('/cv/name') ?? ''")
+                        .replaceValue("/cv/experience", "request.experience ?? document('/cv/experience') ?? ''")
+                        .replaceValue("/processingStatus", "'pending'")
+                        .build())
+                .returnOutput(JsOutputBuilder.output()
+                        .changesetRaw("changeset")
+                        .eventsArray(JsArrayBuilder.array()
+                                .itemObject(JsObjectBuilder.object()
+                                        .propString("type", TypeAliases.CONVERSATION_EVENT)
+                                        .propString("message", "CV updated")))));
     }
 }

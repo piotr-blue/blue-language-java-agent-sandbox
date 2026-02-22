@@ -44,6 +44,11 @@ public final class JsObjectBuilder {
         return this;
     }
 
+    public JsObjectBuilder propArray(String key, JsArrayBuilder array) {
+        properties.put(key, array.build());
+        return this;
+    }
+
     public String build() {
         StringBuilder out = new StringBuilder();
         out.append("{ ");

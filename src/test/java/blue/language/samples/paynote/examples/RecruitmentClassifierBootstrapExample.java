@@ -2,7 +2,13 @@ package blue.language.samples.paynote.examples;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
+import blue.language.samples.paynote.dsl.JsArrayBuilder;
+import blue.language.samples.paynote.dsl.JsObjectBuilder;
+import blue.language.samples.paynote.dsl.JsOutputBuilder;
+import blue.language.samples.paynote.dsl.MyOsEvents;
 import blue.language.samples.paynote.dsl.JsProgram;
+import blue.language.samples.paynote.dsl.MyOsDsl;
+import blue.language.samples.paynote.dsl.TypeAliases;
 
 import java.util.LinkedHashMap;
 
@@ -15,9 +21,9 @@ public final class RecruitmentClassifierBootstrapExample {
                              String recruitmentSessionId,
                              String llmProviderSessionId,
                              String currentAccountId) {
-        return BlueDocDsl.documentSessionBootstrap()
+        return MyOsDsl.bootstrap()
                 .documentName("Recruitment Classifier - " + timestamp)
-                .documentType("MyOS/Agent")
+                .documentType(TypeAliases.MYOS_AGENT)
                 .documentDescription("Classifies linked CVs via llm-provider and emits message for new senior candidates.")
                 .putDocumentValue("recruitmentSessionId", recruitmentSessionId)
                 .putDocumentValue("llmProviderSessionId", llmProviderSessionId)
@@ -31,52 +37,46 @@ public final class RecruitmentClassifierBootstrapExample {
                 .putDocumentValue("classificationByCv", emptyObject())
                 .contracts(c -> {
                     c.timelineChannel("recruitmentChannel");
-                    c.timelineChannel("myOsAdminChannel");
-                    c.lifecycleEventChannel("initLifecycleChannel", "Core/Document Processing Initiated");
+                    c.withMyOsAdminDefaults();
+                    c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
                     c.triggeredEventChannel("triggeredEventChannel");
 
-                    c.operation("myOsAdminUpdate", "myOsAdminChannel", null);
-                    c.sequentialWorkflowOperation("myOsAdminUpdateImpl", "myOsAdminUpdate", steps -> steps
-                            .js("EmitAdminEvents", myOsAdminUpdateProgram()));
-
-                    c.sequentialWorkflow("requestAccess", "initLifecycleChannel", null, steps -> steps
+                    c.onLifecycle("requestAccess", "initLifecycleChannel", steps -> steps
                             .triggerEvent("RequestLlmProviderAccess", requestLlmProviderAccessEvent())
                             .triggerEvent("RequestCvAccess", requestCvAccessEvent()));
 
-                    c.sequentialWorkflow("onCvAccessGranted",
-                            "triggeredEventChannel",
-                            eventType("MyOS/Single Document Permission Granted"),
+                    c.onTriggered("onCvAccessGranted",
+                            MyOsEvents.singlePermissionGrantedFilter(),
                             steps -> steps.js("SubscribeToCvUpdates", onCvAccessGrantedProgram()));
 
-                    c.sequentialWorkflow("onLlmProviderAccessGranted",
-                            "triggeredEventChannel",
-                            eventType("MyOS/Single Document Permission Granted"),
+                    c.onTriggered("onLlmProviderAccessGranted",
+                            MyOsEvents.singlePermissionGrantedFilter(),
                             steps -> steps.js("SubscribeToLlmProvider", onLlmAccessGrantedProgram()));
 
-                    c.sequentialWorkflow("onCvSubscriptionInitiated",
-                            "triggeredEventChannel",
-                            cvSubscriptionInitiatedEventFilter(),
+                    c.onTriggered("onCvSubscriptionInitiated",
+                            MyOsEvents.subscriptionInitiated("SUB_RECRUITMENT_CVS").build(),
                             steps -> steps
                                     .js("MarkReadyAndSetProcessing", onCvSubscriptionInitiatedProgram())
                                     .updateDocumentFromExpression("PersistCvSubscriptionReady", "steps.MarkReadyAndSetProcessing.changeset"));
 
-                    c.sequentialWorkflow("onProviderSubscriptionInitiated",
-                            "triggeredEventChannel",
-                            providerSubscriptionInitiatedEventFilter(),
+                    c.onTriggered("onProviderSubscriptionInitiated",
+                            MyOsEvents.subscriptionInitiated("SUB_RECRUITMENT_PROVIDER").build(),
                             steps -> steps
                                     .updateDocument("MarkProviderSubscriptionReady", changeset -> changeset
                                             .replaceValue("/providerSubscriptionReady", true)));
 
-                    c.sequentialWorkflow("onCvEpoch",
-                            "triggeredEventChannel",
-                            cvEpochEventFilter(),
+                    c.onTriggered("onCvEpoch",
+                            MyOsEvents.subscriptionUpdate("SUB_RECRUITMENT_CVS")
+                                    .updateType(TypeAliases.MYOS_SESSION_EPOCH_ADVANCED)
+                                    .build(),
                             steps -> steps
                                     .js("RequestClassification", onCvEpochProgram())
                                     .updateDocumentFromExpression("PersistClassificationRequest", "steps.RequestClassification.changeset"));
 
-                    c.sequentialWorkflow("onProviderResponse",
-                            "triggeredEventChannel",
-                            providerResponseFilter(),
+                    c.onTriggered("onProviderResponse",
+                            MyOsEvents.providerResponseUpdate("SUB_RECRUITMENT_PROVIDER")
+                                    .requester("RECRUITMENT_CV_CLASSIFIER")
+                                    .build(),
                             steps -> steps
                                     .js("ApplyClassificationResult", onProviderResponseProgram())
                                     .updateDocumentFromExpression("PersistClassificationResult", "steps.ApplyClassificationResult.changeset"));
@@ -90,110 +90,60 @@ public final class RecruitmentClassifierBootstrapExample {
         return new Node().properties(new LinkedHashMap<String, Node>());
     }
 
-    private static Node eventType(String typeAlias) {
-        return new Node().type(typeAlias);
-    }
-
     private static Node requestLlmProviderAccessEvent() {
-        return new Node().type("MyOS/Single Document Permission Grant Requested")
-                .properties("onBehalfOf", new Node().value("recruitmentChannel"))
-                .properties("requestId", new Node().value("REQ_RECRUITMENT_PROVIDER"))
-                .properties("targetSessionId", new Node().value(BlueDocDsl.expr("document('/llmProviderSessionId')")))
-                .properties("permissions", new Node()
-                        .properties("read", new Node().value(true))
-                        .properties("singleOps", new Node().items(new Node().value("provideInstructions"))));
+        return MyOsEvents.singlePermissionGrantRequested()
+                .onBehalfOf("recruitmentChannel")
+                .requestId("REQ_RECRUITMENT_PROVIDER")
+                .targetSessionIdExpression("document('/llmProviderSessionId')")
+                .readPermission(true)
+                .singleOperation("provideInstructions")
+                .build();
     }
 
     private static Node requestCvAccessEvent() {
-        return new Node().type("MyOS/Linked Documents Permission Grant Requested")
-                .properties("onBehalfOf", new Node().value("recruitmentChannel"))
-                .properties("requestId", new Node().value("REQ_RECRUITMENT_CVS"))
-                .properties("targetSessionId", new Node().value(BlueDocDsl.expr("document('/recruitmentSessionId')")))
-                .properties("links", new Node()
-                        .properties("cvs", new Node()
-                                .properties("read", new Node().value(true))
-                                .properties("allOps", new Node().value(true))));
-    }
-
-    private static Node cvSubscriptionInitiatedEventFilter() {
-        return new Node().type("MyOS/Subscription to Session Initiated")
-                .properties("subscriptionId", new Node().value("SUB_RECRUITMENT_CVS"));
-    }
-
-    private static Node providerSubscriptionInitiatedEventFilter() {
-        return new Node().type("MyOS/Subscription to Session Initiated")
-                .properties("subscriptionId", new Node().value("SUB_RECRUITMENT_PROVIDER"));
-    }
-
-    private static Node cvEpochEventFilter() {
-        return new Node().type("MyOS/Subscription Update")
-                .properties("subscriptionId", new Node().value("SUB_RECRUITMENT_CVS"))
-                .properties("update", new Node().type("MyOS/Session Epoch Advanced"));
-    }
-
-    private static Node providerResponseFilter() {
-        return new Node().type("MyOS/Subscription Update")
-                .properties("subscriptionId", new Node().value("SUB_RECRUITMENT_PROVIDER"))
-                .properties("update", new Node()
-                        .type("Conversation/Response")
-                        .properties("inResponseTo", new Node()
-                                .properties("incomingEvent", new Node()
-                                        .properties("requester", new Node().value("RECRUITMENT_CV_CLASSIFIER")))));
-    }
-
-    private static JsProgram myOsAdminUpdateProgram() {
-        return BlueDocDsl.js(js -> js.returnStatement("{ events: event.message.request }"));
+        return MyOsEvents.linkedPermissionsGrantRequested()
+                .onBehalfOf("recruitmentChannel")
+                .requestId("REQ_RECRUITMENT_CVS")
+                .targetSessionIdExpression("document('/recruitmentSessionId')")
+                .linkPermissions("cvs", true, true)
+                .build();
     }
 
     private static JsProgram onCvAccessGrantedProgram() {
         return BlueDocDsl.js(js -> js
-                .lines(
-                        "const cvSessionId = event.targetSessionId;",
-                        "if (!cvSessionId) {",
-                        "  return { events: [] };",
-                        "}",
-                        "if (cvSessionId === document('/llmProviderSessionId')) {",
-                        "  return { events: [] };",
-                        "}",
-                        "",
-                        "const events = [",
-                        "  {",
-                        "    type: 'MyOS/Subscribe to Session Requested',",
-                        "    targetSessionId: cvSessionId,",
-                        "    subscription: {",
-                        "      id: document('/cvSubscriptionId'),",
-                        "      events: [],",
-                        "    },",
-                        "  },",
-                        "];",
-                        "",
-                        "return { events };"
-                ));
+                .constVar("cvSessionId", "event.targetSessionId")
+                .ifBlock("!cvSessionId", b -> b.returnOutput(
+                        JsOutputBuilder.output().eventsArray(JsArrayBuilder.array())))
+                .ifBlock("cvSessionId === document('/llmProviderSessionId')", b -> b.returnOutput(
+                        JsOutputBuilder.output().eventsArray(JsArrayBuilder.array())))
+                .constVar("events", JsArrayBuilder.array()
+                        .itemObject(JsObjectBuilder.object()
+                                .propString("type", TypeAliases.MYOS_SUBSCRIBE_TO_SESSION_REQUESTED)
+                                .propRaw("targetSessionId", "cvSessionId")
+                                .propObject("subscription", JsObjectBuilder.object()
+                                        .propRaw("id", "document('/cvSubscriptionId')")
+                                        .propArray("events", JsArrayBuilder.array())))
+                        .build())
+                .returnOutput(JsOutputBuilder.output().eventsRaw("events")));
     }
 
     private static JsProgram onLlmAccessGrantedProgram() {
         return BlueDocDsl.js(js -> js
-                .lines(
-                        "if (event.targetSessionId !== document('/llmProviderSessionId')) {",
-                        "  return { events: [] };",
-                        "}",
-                        "",
-                        "return {",
-                        "  events: [",
-                        "    {",
-                        "      type: 'MyOS/Subscribe to Session Requested',",
-                        "      targetSessionId: document('/llmProviderSessionId'),",
-                        "      subscription: {",
-                        "        id: document('/providerSubscriptionId'),",
-                        "        events: [",
-                        "          {",
-                        "            type: 'Conversation/Response',",
-                        "          },",
-                        "        ],",
-                        "      },",
-                        "    },",
-                        "  ],",
-                        "};"
+                .ifBlock("event.targetSessionId !== document('/llmProviderSessionId')", b -> b.returnOutput(
+                        JsOutputBuilder.output().eventsArray(JsArrayBuilder.array())))
+                .returnOutput(
+                        JsOutputBuilder.output().eventsArray(
+                                JsArrayBuilder.array().itemObject(
+                                        JsObjectBuilder.object()
+                                                .propString("type", TypeAliases.MYOS_SUBSCRIBE_TO_SESSION_REQUESTED)
+                                                .propRaw("targetSessionId", "document('/llmProviderSessionId')")
+                                                .propObject("subscription", JsObjectBuilder.object()
+                                                        .propRaw("id", "document('/providerSubscriptionId')")
+                                                        .propArray("events", JsArrayBuilder.array()
+                                                                .itemObject(JsObjectBuilder.object()
+                                                                        .propString("type", TypeAliases.CONVERSATION_RESPONSE))))
+                                )
+                        )
                 ));
     }
 
@@ -211,7 +161,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "",
                         "const events = [",
                         "  {",
-                        "    type: 'MyOS/Call Operation Requested',",
+                        "    type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
                         "    onBehalfOf: 'recruitmentChannel',",
                         "    targetSessionId: cvSessionId,",
                         "    operation: 'changeProcessingStatus',",
@@ -262,7 +212,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "    ],",
                         "    events: [",
                         "      {",
-                        "        type: 'MyOS/Call Operation Requested',",
+                        "        type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
                         "        onBehalfOf: 'recruitmentChannel',",
                         "        targetSessionId: cvSessionId,",
                         "        operation: 'changeProcessingStatus',",
@@ -297,7 +247,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "  ],",
                         "  events: [",
                         "    {",
-                        "      type: 'MyOS/Call Operation Requested',",
+                        "      type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
                         "      onBehalfOf: 'recruitmentChannel',",
                         "      targetSessionId: document('/llmProviderSessionId'),",
                         "      operation: 'provideInstructions',",
@@ -352,13 +302,13 @@ public final class RecruitmentClassifierBootstrapExample {
                         "",
                         "const events = shouldAlert",
                         "  ? [{",
-                        "      type: 'Conversation/Chat Message',",
+                        "      type: '" + TypeAliases.CONVERSATION_CHAT_MESSAGE + "',",
                         "      message: 'New senior CV to review: ' + candidateName + ' (' + experienceSummary + '). CV sessionId: ' + cvSessionId + '.',",
                         "    }]",
                         "  : [];",
                         "",
                         "events.push({",
-                        "  type: 'MyOS/Call Operation Requested',",
+                        "  type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
                         "  onBehalfOf: 'recruitmentChannel',",
                         "  targetSessionId: cvSessionId,",
                         "  operation: 'changeProcessingStatus',",

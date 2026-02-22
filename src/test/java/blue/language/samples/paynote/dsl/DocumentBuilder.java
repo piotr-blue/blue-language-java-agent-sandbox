@@ -18,7 +18,7 @@ public final class DocumentBuilder {
     }
 
     public static DocumentBuilder documentSessionBootstrap() {
-        return new DocumentBuilder("MyOS/Document Session Bootstrap");
+        return new DocumentBuilder(TypeAliases.MYOS_DOCUMENT_SESSION_BOOTSTRAP);
     }
 
     public DocumentBuilder documentName(String name) {

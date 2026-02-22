@@ -4,6 +4,7 @@ import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
 import blue.language.samples.paynote.dsl.ContractsBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
+import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.dsl.JsProgram;
 
 import java.util.LinkedHashMap;
@@ -42,7 +43,7 @@ public final class CounterBuilder {
                     "increment",
                     "ownerChannel",
                     "Increment the counter by the given number",
-                    request -> request.type("Integer").put("description", "Represents a value by which counter will be incremented")
+                    request -> request.type(TypeAliases.INTEGER).put("description", "Represents a value by which counter will be incremented")
             );
             contractsBuilder.sequentialWorkflowOperation(
                     "incrementImpl",
@@ -58,7 +59,7 @@ public final class CounterBuilder {
                     "decrement",
                     "ownerChannel",
                     "Decrement the counter by the given number",
-                    request -> request.type("Integer").put("description", "Value to subtract")
+                    request -> request.type(TypeAliases.INTEGER).put("description", "Value to subtract")
             );
             contractsBuilder.sequentialWorkflowOperation(
                     "decrementImpl",
@@ -72,12 +73,12 @@ public final class CounterBuilder {
         public CounterAuthoring withCounterChangeNotification() {
             contractsBuilder.putRaw("counterChanged",
                     new Node()
-                            .type("Core/Document Update Channel")
+                            .type(TypeAliases.CORE_DOCUMENT_UPDATE_CHANNEL)
                             .properties("path", new Node().value("/counter")));
 
             contractsBuilder.sequentialWorkflow("onCounterChanged",
                     "counterChanged",
-                    new Node().type("Core/Document Update"),
+                    new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE),
                     steps -> steps.js("EmitCounterChangeNotification", counterChangeProgram()));
             return this;
         }
@@ -87,7 +88,7 @@ public final class CounterBuilder {
                     "say",
                     channelKey,
                     "Say something and store it in the counter document",
-                    request -> request.type("Text")
+                    request -> request.type(TypeAliases.TEXT)
             );
             contractsBuilder.sequentialWorkflowOperation("sayImpl", "say", steps -> steps
                     .js("EmitSayEvent", sayEventProgram())

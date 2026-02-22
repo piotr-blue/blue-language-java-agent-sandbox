@@ -11,7 +11,7 @@ public final class StepsBuilder {
     private final List<Node> steps = new ArrayList<Node>();
 
     public StepsBuilder js(String name, JsProgram program) {
-        Node step = new Node().type("Conversation/JavaScript Code");
+        Node step = new Node().type(TypeAliases.CONVERSATION_JAVASCRIPT_CODE);
         if (name != null) {
             step.name(name);
         }
@@ -24,7 +24,7 @@ public final class StepsBuilder {
         ChangesetBuilder changesetBuilder = new ChangesetBuilder();
         customizer.accept(changesetBuilder);
 
-        Node step = new Node().type("Conversation/Update Document");
+        Node step = new Node().type(TypeAliases.CONVERSATION_UPDATE_DOCUMENT);
         if (name != null) {
             step.name(name);
         }
@@ -34,7 +34,7 @@ public final class StepsBuilder {
     }
 
     public StepsBuilder updateDocumentFromExpression(String name, String expression) {
-        Node step = new Node().type("Conversation/Update Document");
+        Node step = new Node().type(TypeAliases.CONVERSATION_UPDATE_DOCUMENT);
         if (name != null) {
             step.name(name);
         }
@@ -44,7 +44,7 @@ public final class StepsBuilder {
     }
 
     public StepsBuilder triggerEvent(String name, Node event) {
-        Node step = new Node().type("Conversation/Trigger Event");
+        Node step = new Node().type(TypeAliases.CONVERSATION_TRIGGER_EVENT);
         if (name != null) {
             step.name(name);
         }

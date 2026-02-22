@@ -19,17 +19,17 @@ public final class ContractsBuilder {
     }
 
     public ContractsBuilder timelineChannel(String key) {
-        contracts.put(key, new Node().type("MyOS/MyOS Timeline Channel"));
+        contracts.put(key, new Node().type(TypeAliases.MYOS_TIMELINE_CHANNEL));
         return this;
     }
 
     public ContractsBuilder triggeredEventChannel(String key) {
-        contracts.put(key, new Node().type("Core/Triggered Event Channel"));
+        contracts.put(key, new Node().type(TypeAliases.CORE_TRIGGERED_EVENT_CHANNEL));
         return this;
     }
 
     public ContractsBuilder lifecycleEventChannel(String key, String eventTypeAlias) {
-        Node channel = new Node().type("Core/Lifecycle Event Channel");
+        Node channel = new Node().type(TypeAliases.CORE_LIFECYCLE_EVENT_CHANNEL);
         if (eventTypeAlias != null) {
             channel.properties("event", new Node().type(eventTypeAlias));
         }
@@ -48,7 +48,7 @@ public final class ContractsBuilder {
                                       String channel,
                                       String description,
                                       Consumer<NodeObjectBuilder> requestCustomizer) {
-        Node operation = new Node().type("Conversation/Operation");
+        Node operation = new Node().type(TypeAliases.CONVERSATION_OPERATION);
         if (description != null) {
             operation.properties("description", new Node().value(description));
         }
@@ -66,17 +66,32 @@ public final class ContractsBuilder {
         return operation(key, channel, description, null);
     }
 
+    public ContractsBuilder withMyOsAdminDefaults() {
+        timelineChannel("myOsAdminChannel");
+        operation("myOsAdminUpdate", "myOsAdminChannel", null);
+        implementOperation("myOsAdminUpdateImpl", "myOsAdminUpdate", steps -> steps
+                .js("EmitAdminEvents", BlueDocDsl.js(js -> js.returnOutput(
+                        JsOutputBuilder.output().eventsRaw("event.message.request")))));
+        return this;
+    }
+
     public ContractsBuilder sequentialWorkflowOperation(String key,
                                                         String operationName,
                                                         Consumer<StepsBuilder> customizer) {
         StepsBuilder stepsBuilder = new StepsBuilder();
         customizer.accept(stepsBuilder);
 
-        Node workflow = new Node().type("Conversation/Sequential Workflow Operation");
+        Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
         workflow.properties("operation", new Node().value(operationName));
         workflow.properties("steps", new Node().items(stepsBuilder.build()));
         contracts.put(key, workflow);
         return this;
+    }
+
+    public ContractsBuilder implementOperation(String key,
+                                               String operationName,
+                                               Consumer<StepsBuilder> customizer) {
+        return sequentialWorkflowOperation(key, operationName, customizer);
     }
 
     public ContractsBuilder sequentialWorkflow(String key,
@@ -86,7 +101,7 @@ public final class ContractsBuilder {
         StepsBuilder stepsBuilder = new StepsBuilder();
         customizer.accept(stepsBuilder);
 
-        Node workflow = new Node().type("Conversation/Sequential Workflow");
+        Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW);
         workflow.properties("channel", new Node().value(channel));
         if (event != null) {
             workflow.properties("event", event);
@@ -94,5 +109,17 @@ public final class ContractsBuilder {
         workflow.properties("steps", new Node().items(stepsBuilder.build()));
         contracts.put(key, workflow);
         return this;
+    }
+
+    public ContractsBuilder onTriggered(String key,
+                                        Node event,
+                                        Consumer<StepsBuilder> customizer) {
+        return sequentialWorkflow(key, "triggeredEventChannel", event, customizer);
+    }
+
+    public ContractsBuilder onLifecycle(String key,
+                                        String lifecycleChannelKey,
+                                        Consumer<StepsBuilder> customizer) {
+        return sequentialWorkflow(key, lifecycleChannelKey, null, customizer);
     }
 }
