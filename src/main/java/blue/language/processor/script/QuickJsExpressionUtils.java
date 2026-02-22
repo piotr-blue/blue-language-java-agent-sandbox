@@ -298,6 +298,18 @@ public final class QuickJsExpressionUtils {
                 regex.append(segmentStart && !dot ? "(?!\\.)[^/]" : "[^/]");
                 continue;
             }
+            if (ch == '[') {
+                int closingBracket = findClosingBracket(normalizedPattern, i + 1);
+                if (closingBracket > i + 1) {
+                    if (segmentStart && !dot) {
+                        regex.append("(?!\\.)");
+                    }
+                    regex.append(toCharacterClassRegex(
+                            normalizedPattern.substring(i + 1, closingBracket)));
+                    i = closingBracket;
+                    continue;
+                }
+            }
             if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
                 regex.append('\\');
             }
@@ -375,6 +387,42 @@ public final class QuickJsExpressionUtils {
         }
         options.add(current.toString());
         return options;
+    }
+
+    private static int findClosingBracket(String pattern, int start) {
+        for (int i = start; i < pattern.length(); i++) {
+            if (pattern.charAt(i) == ']') {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String toCharacterClassRegex(String classBody) {
+        if (classBody == null || classBody.isEmpty()) {
+            return "\\[\\]";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append('[');
+        int index = 0;
+        char first = classBody.charAt(0);
+        if (first == '!' || first == '^') {
+            builder.append('^');
+            index = 1;
+        }
+        for (int i = index; i < classBody.length(); i++) {
+            char ch = classBody.charAt(i);
+            if (ch == '\\') {
+                builder.append("\\\\");
+                continue;
+            }
+            if (ch == '[' || ch == ']' || ch == '^') {
+                builder.append('\\');
+            }
+            builder.append(ch);
+        }
+        builder.append(']');
+        return builder.toString();
     }
 
     private static String normalizePointer(String pointer) {

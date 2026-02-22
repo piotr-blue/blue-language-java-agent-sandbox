@@ -202,6 +202,30 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[ab]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a/value", null));
+        assertTrue(predicate.test("/contracts/b/value", null));
+        assertFalse(predicate.test("/contracts/c/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsNegatedCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[!ab]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertFalse(predicate.test("/contracts/a/value", null));
+        assertFalse(predicate.test("/contracts/b/value", null));
+        assertTrue(predicate.test("/contracts/c/value", null));
+    }
+
+    @Test
     void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 
