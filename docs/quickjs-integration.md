@@ -77,6 +77,7 @@ Evaluator prelude host APIs:
   - resolves relative pointers against `__scopePath`
   - reads from simple snapshot
   - unwraps scalar node wrappers
+  - for raw terminal segments (`/blueId`, `/name`, `/description`, `/value`) falls back to canonical snapshot when needed
 - `document.canonical(pointer?)`
   - resolves from canonical snapshot (preserves metadata/type wrappers)
 - `canon.at(value, pointer)` and `canon.unwrap(value)`
@@ -92,4 +93,5 @@ WASM usage is charged via `chargeWasmGas`.
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
 - Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
 - Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
+- Sidecar masks non-deterministic globals (`Date`, `process`) to align workflow execution with deterministic runtime expectations.
 
