@@ -154,6 +154,7 @@ Current in-flight work:
 - JavaScript Code step direct parity now includes runtime-context execution coverage for:
   - direct executor invocation with real processor context
   - document/event binding evaluation (`document('/counter') + event.x`)
+  - direct fatal error path for invalid step schema/type payloads
   - wasm gas charging side effect on processor runtime totals
   (`JavaScriptCodeStepExecutorDirectParityTest`).
 - `JavaScriptCodeStepExecutor` now normalizes emitted event `type` payloads into semantic node-type metadata to preserve Triggered Event Channel routing parity for JS object emissions.

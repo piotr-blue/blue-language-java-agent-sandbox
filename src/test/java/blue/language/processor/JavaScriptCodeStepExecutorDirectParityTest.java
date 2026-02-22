@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JavaScriptCodeStepExecutorDirectParityTest {
@@ -55,5 +56,37 @@ class JavaScriptCodeStepExecutorDirectParityTest {
         Map<String, Object> resultMap = (Map<String, Object>) result;
         assertEquals("12", String.valueOf(resultMap.get("result")));
         assertTrue(afterGas > beforeGas);
+    }
+
+    @Test
+    void throwsFatalWhenStepSchemaIsInvalid() {
+        JavaScriptCodeStepExecutor executor = new JavaScriptCodeStepExecutor();
+
+        DocumentProcessor owner = new DocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node());
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("WrongStepType")
+                .type(new Node().blueId("Conversation/Trigger Event"))
+                .properties("code", new Node().value("return 1;"));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        ProcessorFatalException fatal = assertThrows(ProcessorFatalException.class, () -> executor.execute(args));
+        assertTrue(String.valueOf(fatal.getMessage()).contains("step payload is invalid"));
     }
 }
