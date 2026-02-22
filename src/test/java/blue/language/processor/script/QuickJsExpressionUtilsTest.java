@@ -429,6 +429,30 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsPosixAlphaCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:alpha:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/a/value", null));
+        assertTrue(predicate.test("/contracts/Z/value", null));
+        assertFalse(predicate.test("/contracts/3/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixDigitCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:digit:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/3/value", null));
+        assertTrue(predicate.test("/contracts/9/value", null));
+        assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNegatedCharacterClassPatterns() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/contracts/[!ab]/value"),

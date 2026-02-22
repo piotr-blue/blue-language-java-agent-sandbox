@@ -642,6 +642,7 @@ public final class QuickJsExpressionUtils {
 
     private static int findClosingBracket(String pattern, int start) {
         boolean escaping = false;
+        char posixDelimiter = 0;
         for (int i = start; i < pattern.length(); i++) {
             char ch = pattern.charAt(i);
             if (escaping) {
@@ -652,11 +653,27 @@ public final class QuickJsExpressionUtils {
                 escaping = true;
                 continue;
             }
+            if (posixDelimiter != 0) {
+                if (ch == posixDelimiter && i + 1 < pattern.length() && pattern.charAt(i + 1) == ']') {
+                    posixDelimiter = 0;
+                    i++;
+                }
+                continue;
+            }
+            if (ch == '[' && i + 1 < pattern.length() && isPosixCharacterClassDelimiter(pattern.charAt(i + 1))) {
+                posixDelimiter = pattern.charAt(i + 1);
+                i++;
+                continue;
+            }
             if (ch == ']') {
                 return i;
             }
         }
         return -1;
+    }
+
+    private static boolean isPosixCharacterClassDelimiter(char ch) {
+        return ch == ':' || ch == '=' || ch == '.';
     }
 
     private static String toCharacterClassRegex(String classBody) {
@@ -677,6 +694,12 @@ public final class QuickJsExpressionUtils {
             if (escaping) {
                 appendEscapedCharacterClassLiteral(builder, ch);
                 escaping = false;
+                continue;
+            }
+            PosixCharacterClassToken posixToken = tryParsePosixCharacterClass(classBody, i);
+            if (posixToken != null) {
+                builder.append(posixToken.regexToken);
+                i = posixToken.endIndex;
                 continue;
             }
             if (ch == '\\') {
@@ -700,6 +723,67 @@ public final class QuickJsExpressionUtils {
             builder.append('\\');
         }
         builder.append(ch);
+    }
+
+    private static PosixCharacterClassToken tryParsePosixCharacterClass(String classBody, int startIndex) {
+        if (classBody == null || startIndex < 0 || startIndex >= classBody.length()) {
+            return null;
+        }
+        if (classBody.charAt(startIndex) != '[' || startIndex + 1 >= classBody.length()
+                || classBody.charAt(startIndex + 1) != ':') {
+            return null;
+        }
+        int tokenClose = classBody.indexOf(":]", startIndex + 2);
+        if (tokenClose < 0) {
+            return null;
+        }
+        String tokenName = classBody.substring(startIndex + 2, tokenClose).toLowerCase(java.util.Locale.ROOT);
+        String mapped = mapPosixCharacterClass(tokenName);
+        if (mapped == null) {
+            return null;
+        }
+        return new PosixCharacterClassToken(mapped, tokenClose + 1);
+    }
+
+    private static String mapPosixCharacterClass(String tokenName) {
+        if ("alnum".equals(tokenName)) {
+            return "A-Za-z0-9";
+        }
+        if ("alpha".equals(tokenName)) {
+            return "A-Za-z";
+        }
+        if ("blank".equals(tokenName)) {
+            return " \\t";
+        }
+        if ("digit".equals(tokenName)) {
+            return "0-9";
+        }
+        if ("lower".equals(tokenName)) {
+            return "a-z";
+        }
+        if ("space".equals(tokenName)) {
+            return "\\s";
+        }
+        if ("upper".equals(tokenName)) {
+            return "A-Z";
+        }
+        if ("word".equals(tokenName)) {
+            return "\\w";
+        }
+        if ("xdigit".equals(tokenName)) {
+            return "A-Fa-f0-9";
+        }
+        return null;
+    }
+
+    private static final class PosixCharacterClassToken {
+        private final String regexToken;
+        private final int endIndex;
+
+        private PosixCharacterClassToken(String regexToken, int endIndex) {
+            this.regexToken = regexToken;
+            this.endIndex = endIndex;
+        }
     }
 
     private static boolean characterClassExplicitlyMatchesDot(String classBody) {
