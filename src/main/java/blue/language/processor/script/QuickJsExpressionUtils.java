@@ -172,7 +172,7 @@ public final class QuickJsExpressionUtils {
             }
             return runtimeResult.value();
         } catch (CodeBlockEvaluationError ex) {
-            throw new CodeBlockEvaluationError("Failed to evaluate code block", ex);
+            throw new CodeBlockEvaluationError(code, ex);
         }
     }
 

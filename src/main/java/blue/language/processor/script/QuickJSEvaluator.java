@@ -24,7 +24,7 @@ public class QuickJSEvaluator implements AutoCloseable {
         try {
             return runtime.evaluate(new ScriptRuntimeRequest(withRuntimePrelude(code), safeBindings, wasmGasLimit));
         } catch (ScriptRuntimeException ex) {
-            throw new CodeBlockEvaluationError("Failed to evaluate code block", ex);
+            throw new CodeBlockEvaluationError(code, ex);
         }
     }
 

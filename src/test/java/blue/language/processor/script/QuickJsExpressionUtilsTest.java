@@ -121,6 +121,8 @@ class QuickJsExpressionUtilsTest {
                             new LinkedHashMap<String, Object>(),
                             null));
             assertTrue(error.getMessage().contains("Failed to evaluate code block"));
+            assertTrue(error.getMessage().contains("invalid ?? expression"));
+            assertEquals("invalid ?? expression", error.code());
         }
     }
 
