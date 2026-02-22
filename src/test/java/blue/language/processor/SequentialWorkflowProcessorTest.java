@@ -407,6 +407,59 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationDirectRequestHonorsHandlerEventFilters() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Direct Operation Request Event Filter Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Operation\n" +
+                "    channel: testChannel\n" +
+                "    request:\n" +
+                "      type: Integer\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    event:\n" +
+                "      allowNewerVersion: false\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.request}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node matching = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-op-direct-filter-match\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "allowNewerVersion: false\n" +
+                "request: 4\n");
+        DocumentProcessingResult matched = blue.processDocument(initialized, matching);
+        assertEquals(new BigInteger("4"), matched.document().getProperties().get("counter").getValue());
+
+        Node nonMatching = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-op-direct-filter-skip\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "allowNewerVersion: true\n" +
+                "request: 9\n");
+        DocumentProcessingResult skipped = blue.processDocument(matched.document(), nonMatching);
+        assertEquals(new BigInteger("4"), skipped.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationSkipsWhenPinnedDocumentDiffers() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
