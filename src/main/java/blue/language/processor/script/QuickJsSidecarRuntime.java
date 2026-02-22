@@ -68,7 +68,7 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
             Object ok = response.get("ok");
             if (!(ok instanceof Boolean) || !((Boolean) ok)) {
                 Object error = response.get("error");
-                throw new ScriptRuntimeException("QuickJS sidecar evaluation failed: " + String.valueOf(error));
+                throw new ScriptRuntimeException("QuickJS sidecar evaluation failed: " + describeError(error));
             }
             Object result = response.get("result");
             BigInteger used = toBigInteger(response.get("wasmGasUsed"));
@@ -133,6 +133,34 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private static String describeError(Object payload) {
+        if (!(payload instanceof Map)) {
+            return String.valueOf(payload);
+        }
+        @SuppressWarnings("unchecked")
+        Map<Object, Object> map = (Map<Object, Object>) payload;
+        Object name = map.get("name");
+        Object message = map.get("message");
+        Object stack = map.get("stack");
+        StringBuilder builder = new StringBuilder();
+        if (name != null && String.valueOf(name).trim().length() > 0) {
+            builder.append(String.valueOf(name).trim());
+        }
+        if (message != null && String.valueOf(message).trim().length() > 0) {
+            if (builder.length() > 0) {
+                builder.append(": ");
+            }
+            builder.append(String.valueOf(message).trim());
+        }
+        if (builder.length() == 0) {
+            builder.append(String.valueOf(payload));
+        }
+        if (stack != null && String.valueOf(stack).trim().length() > 0) {
+            builder.append(" [stack available]");
+        }
+        return builder.toString();
     }
 
     private static Path defaultSidecarScriptPath() {

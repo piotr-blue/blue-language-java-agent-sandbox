@@ -85,6 +85,7 @@ reader.on('line', (line) => {
       error: {
         name: error && error.name ? error.name : 'Error',
         message: error && error.message ? error.message : String(error),
+        stack: error && error.stack ? String(error.stack) : undefined,
       },
     });
   }

@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -45,6 +46,11 @@ class QuickJsSidecarRuntimeTest {
 
             ScriptRuntimeResult withoutProcess = runtime.evaluate(ScriptRuntimeRequest.of("typeof process"));
             assertEquals("undefined", String.valueOf(withoutProcess.value()));
+
+            ScriptRuntimeException thrown = assertThrows(
+                    ScriptRuntimeException.class,
+                    () -> runtime.evaluate(ScriptRuntimeRequest.of("throw new Error('boom')")));
+            assertTrue(thrown.getMessage().contains("Error: boom"));
         }
     }
 

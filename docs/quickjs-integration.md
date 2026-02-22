@@ -90,6 +90,7 @@ WASM usage is charged via `chargeWasmGas`.
 ## Failure handling
 
 - Sidecar startup, protocol, or evaluation failures => `ScriptRuntimeException`.
+  - sidecar error payloads (`name`, `message`, optional `stack`) are normalized into readable exception text.
 - Evaluator wraps script failures => `CodeBlockEvaluationError` with:
   - original source code available via `code()`
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
