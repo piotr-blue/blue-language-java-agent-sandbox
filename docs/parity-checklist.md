@@ -53,7 +53,7 @@ Status legend:
 | Step runner framework | `src/registry/processors/workflow/step-runner.ts` | `processor/workflow/WorkflowStepRunner.java` | IN_PROGRESS |
 | Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | `processor/workflow/steps/UpdateDocumentStepExecutor.java` | IN_PROGRESS |
 | Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | `processor/workflow/steps/TriggerEventStepExecutor.java` | IN_PROGRESS |
-| Operation matcher helpers | `src/registry/processors/workflow/operation-matcher.ts` | _missing_ | TODO |
+| Operation matcher helpers | `src/registry/processors/workflow/operation-matcher.ts` | `processor/registry/processors/SequentialWorkflowOperationProcessor.java` | IN_PROGRESS |
 
 ## 5) Merge behavior
 

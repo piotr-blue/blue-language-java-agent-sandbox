@@ -14,19 +14,75 @@ final class WorkflowContractSupport {
         if (event == null) {
             return false;
         }
-        Node expectedType = filter.getType();
+        return matchesNode(event, filter);
+    }
+
+    private static boolean matchesNode(Node candidate, Node pattern) {
+        if (pattern == null) {
+            return true;
+        }
+        if (candidate == null) {
+            return false;
+        }
+
+        if (!matchesType(candidate, pattern)) {
+            return false;
+        }
+        if (pattern.getValue() != null) {
+            if (candidate.getValue() == null) {
+                return false;
+            }
+            if (!pattern.getValue().equals(candidate.getValue())) {
+                return false;
+            }
+        }
+
+        if (pattern.getProperties() != null && !pattern.getProperties().isEmpty()) {
+            if (candidate.getProperties() == null) {
+                return false;
+            }
+            for (java.util.Map.Entry<String, Node> entry : pattern.getProperties().entrySet()) {
+                if (!candidate.getProperties().containsKey(entry.getKey())) {
+                    return false;
+                }
+                if (!matchesNode(candidate.getProperties().get(entry.getKey()), entry.getValue())) {
+                    return false;
+                }
+            }
+        }
+
+        if (pattern.getItems() != null && !pattern.getItems().isEmpty()) {
+            if (candidate.getItems() == null || candidate.getItems().size() < pattern.getItems().size()) {
+                return false;
+            }
+            for (int i = 0; i < pattern.getItems().size(); i++) {
+                Node patternItem = pattern.getItems().get(i);
+                if (patternItem == null) {
+                    continue;
+                }
+                if (!matchesNode(candidate.getItems().get(i), patternItem)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean matchesType(Node candidate, Node pattern) {
+        Node expectedType = pattern.getType();
         if (expectedType == null) {
             return true;
         }
-        Node eventType = event.getType();
-        if (eventType == null) {
+        Node candidateType = candidate.getType();
+        if (candidateType == null) {
             return false;
         }
         String expectedBlueId = expectedType.getBlueId();
-        if (expectedBlueId == null) {
+        if (expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
             return true;
         }
-        String eventBlueId = eventType.getBlueId();
-        return expectedBlueId.equals(eventBlueId);
+        String candidateBlueId = candidateType.getBlueId();
+        return expectedBlueId.equals(candidateBlueId);
     }
 }
