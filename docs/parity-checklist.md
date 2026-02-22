@@ -76,9 +76,9 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Canonical signature/size helpers | `src/util/node-canonicalizer.ts` | `processor/util/NodeCanonicalizer.java` + `ProcessorEngine#canonicalSignature` | IN_PROGRESS |
-| Gas meter methods | `src/runtime/gas-meter.ts` | `processor/GasMeter.java` | IN_PROGRESS |
-| Gas schedule conversions | `src/runtime/gas-schedule.ts` | _missing_ | TODO |
+| Canonical signature/size helpers | `src/util/node-canonicalizer.ts` | `processor/util/NodeCanonicalizer.java` + `ProcessorEngine#canonicalSignature` | DONE |
+| Gas meter methods | `src/runtime/gas-meter.ts` | `processor/GasMeter.java` | DONE |
+| Gas schedule conversions | `src/runtime/gas-schedule.ts` | `processor/ProcessorGasSchedule.java` | DONE |
 
 ## 8) Test coverage mapping
 

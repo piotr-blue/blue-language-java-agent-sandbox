@@ -2,6 +2,7 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.JsonPatch;
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,26 @@ public final class DocumentProcessingRuntime {
 
     public void chargeFatalTerminationOverhead() {
         gasMeter.chargeFatalTerminationOverhead();
+    }
+
+    public void chargeTriggerEventBase() {
+        gasMeter.chargeTriggerEventBase();
+    }
+
+    public void chargeUpdateDocumentBase(int changesetLength) {
+        gasMeter.chargeUpdateDocumentBase(changesetLength);
+    }
+
+    public void chargeDocumentSnapshot(String absolutePointer, Node snapshot) {
+        gasMeter.chargeDocumentSnapshot(absolutePointer, snapshot);
+    }
+
+    public void chargeWasmGas(BigInteger wasmFuel) {
+        gasMeter.chargeWasmGas(wasmFuel);
+    }
+
+    public void chargeWasmGas(long wasmFuel) {
+        gasMeter.chargeWasmGas(wasmFuel);
     }
 
     public boolean isRunTerminated() {
