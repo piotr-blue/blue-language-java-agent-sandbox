@@ -462,31 +462,52 @@ public final class QuickJsExpressionUtils {
         if (body == null || body.indexOf(',') >= 0) {
             return null;
         }
-        Matcher numericMatcher = Pattern.compile("^(-?(?:0|[1-9][0-9]*))\\.\\.(-?(?:0|[1-9][0-9]*))$").matcher(body);
+        Matcher numericMatcher = Pattern.compile("^(-?(?:0|[1-9][0-9]*))\\.\\.(-?(?:0|[1-9][0-9]*))(?:\\.\\.(-?(?:0|[1-9][0-9]*)))?$").matcher(body);
         if (numericMatcher.matches()) {
             int left = Integer.parseInt(numericMatcher.group(1));
             int right = Integer.parseInt(numericMatcher.group(2));
-            int min = Math.min(left, right);
-            int max = Math.max(left, right);
+            int step = parseBraceRangeStep(numericMatcher.group(3));
+            if (step <= 0) {
+                return null;
+            }
+            int direction = left <= right ? 1 : -1;
             List<String> expanded = new ArrayList<>();
-            for (int value = min; value <= max; value++) {
+            for (int value = left;
+                 direction > 0 ? value <= right : value >= right;
+                 value += direction * step) {
                 expanded.add(String.valueOf(value));
             }
             return expanded;
         }
-        Matcher alphaMatcher = Pattern.compile("^([A-Za-z])\\.\\.([A-Za-z])$").matcher(body);
+        Matcher alphaMatcher = Pattern.compile("^([A-Za-z])\\.\\.([A-Za-z])(?:\\.\\.(-?(?:0|[1-9][0-9]*)))?$").matcher(body);
         if (alphaMatcher.matches()) {
             char left = alphaMatcher.group(1).charAt(0);
             char right = alphaMatcher.group(2).charAt(0);
-            char min = (char) Math.min(left, right);
-            char max = (char) Math.max(left, right);
+            int step = parseBraceRangeStep(alphaMatcher.group(3));
+            if (step <= 0) {
+                return null;
+            }
+            int direction = left <= right ? 1 : -1;
             List<String> expanded = new ArrayList<>();
-            for (char value = min; value <= max; value++) {
-                expanded.add(String.valueOf(value));
+            for (int value = left;
+                 direction > 0 ? value <= right : value >= right;
+                 value += direction * step) {
+                expanded.add(String.valueOf((char) value));
             }
             return expanded;
         }
         return null;
+    }
+
+    private static int parseBraceRangeStep(String rawStep) {
+        if (rawStep == null || rawStep.isEmpty()) {
+            return 1;
+        }
+        int parsed = Integer.parseInt(rawStep);
+        if (parsed == Integer.MIN_VALUE) {
+            return -1;
+        }
+        return Math.abs(parsed);
     }
 
     private static int findClosingParenthesis(String pattern, int openIndex) {

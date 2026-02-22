@@ -20,7 +20,7 @@ This document describes the Java QuickJS integration architecture used by the do
     - standalone expression detection `${...}`
     - template substitution with embedded expressions
     - expression evaluation wrapped as `return (<expr>);` for JS-equivalent object-literal semantics
-    - include/exclude pointer predicate matching
+    - include/exclude pointer predicate matching (brace expansion, extglob, character classes, and brace-range steps)
 
 ## Sidecar protocol
 
