@@ -271,6 +271,20 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsNegativeNumericBraceRangesWithStep() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/items/{-3..3..3}"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/items/-3", null));
+        assertTrue(predicate.test("/items/0", null));
+        assertTrue(predicate.test("/items/3", null));
+        assertFalse(predicate.test("/items/-2", null));
+        assertFalse(predicate.test("/items/1", null));
+    }
+
+    @Test
     void createPathPredicateTreatsNegativeBraceRangeStepAsAbsoluteValue() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/items/{1..7..-2}"),
