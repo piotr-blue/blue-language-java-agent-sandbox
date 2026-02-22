@@ -64,13 +64,21 @@ final class ContractLoader {
                 builder.addChannel(key, channel);
             } else if (contract instanceof HandlerContract) {
                 HandlerContract handler = (HandlerContract) contract;
-                if (!registry.lookupHandler(handler).isPresent()) {
+                @SuppressWarnings("unchecked")
+                HandlerProcessor<HandlerContract> handlerProcessor =
+                        (HandlerProcessor<HandlerContract>) registry.lookupHandler(handler).orElse(null);
+                if (handlerProcessor == null) {
                     throw new MustUnderstandFailureException(
                             "Unsupported contract type: " + handler.getClass().getName());
                 }
-                if (handler.getChannelKey() == null || handler.getChannelKey().isEmpty()) {
-                    throw new IllegalStateException("Handler " + key + " must declare channel");
+                String channelKey = handler.getChannelKey();
+                if (channelKey == null || channelKey.trim().isEmpty()) {
+                    channelKey = handlerProcessor.deriveChannel(handler);
                 }
+                if (channelKey == null || channelKey.trim().isEmpty()) {
+                    throw new IllegalStateException("Handler " + key + " must declare channel (or derive one)");
+                }
+                handler.setChannelKey(channelKey.trim());
                 builder.addHandler(key, handler);
             } else if (contract instanceof ProcessEmbedded) {
                 builder.setEmbedded((ProcessEmbedded) contract);

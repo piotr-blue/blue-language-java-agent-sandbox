@@ -96,4 +96,4 @@ Status legend:
 ## Next updates
 
 This checklist is updated after each parity feature group lands, with status transitions and Java test links.
-Current in-flight work: registry lookup and channel/handler API expansion are partially aligned, while default built-ins and full type-chain resolution remain.
+Current in-flight work: registry lookup and channel/handler API expansion are partially aligned (including handler derive-channel support), while default built-ins and full type-chain resolution remain.
