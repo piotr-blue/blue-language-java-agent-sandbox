@@ -44,6 +44,7 @@ class ParityFixturesTest {
         List<String> eventYamls = listOfStrings(fixture.get("events"));
         Map<String, Object> expected = mapValue(fixture.get("expected"));
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
+        Map<String, Object> expectedTriggeredPathValues = mapValue(expected.get("triggeredPathValues"));
         List<String> expectedPresentPaths = listOfStrings(expected.get("presentPaths"));
         List<String> expectedNotNullPaths = listOfStrings(expected.get("notNullPaths"));
         List<String> expectedTriggeredKinds = listOfStrings(expected.get("triggeredKinds"));
@@ -103,6 +104,28 @@ class ParityFixturesTest {
         assertEquals(expectedTriggeredEvents,
                 result.triggeredEvents().size(),
                 fixtureName + " unexpected triggered events count");
+        for (Map.Entry<String, Object> entry : expectedTriggeredPathValues.entrySet()) {
+            String key = entry.getKey();
+            int separator = key != null ? key.indexOf(':') : -1;
+            assertTrue(separator > 0,
+                    fixtureName + " invalid triggeredPathValues key format, expected '<index>:<pointer>': " + key);
+            int eventIndex;
+            try {
+                eventIndex = Integer.parseInt(key.substring(0, separator));
+            } catch (NumberFormatException ex) {
+                throw new AssertionError(fixtureName + " invalid triggeredPathValues event index: " + key, ex);
+            }
+            String pointer = key.substring(separator + 1);
+            assertTrue(eventIndex >= 0 && eventIndex < result.triggeredEvents().size(),
+                    fixtureName + " triggered event index out of range for key " + key);
+            Node triggeredNode = result.triggeredEvents().get(eventIndex);
+            Node actualNode = ProcessorEngine.nodeAt(triggeredNode, pointer);
+            assertNotNull(actualNode,
+                    fixtureName + " expected triggered node missing at " + key);
+            assertEquals(String.valueOf(entry.getValue()),
+                    String.valueOf(actualNode.getValue()),
+                    fixtureName + " triggered value mismatch at " + key);
+        }
         for (String expectedKind : expectedTriggeredKinds) {
             boolean present = false;
             for (Node emitted : result.triggeredEvents()) {
