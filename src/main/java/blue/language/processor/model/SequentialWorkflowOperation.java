@@ -7,7 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@TypeBlueId({"Conversation/Sequential Workflow Operation", "SequentialWorkflowOperation"})
+@TypeBlueId({
+        "Conversation/Sequential Workflow Operation",
+        "SequentialWorkflowOperation",
+        "Conversation/Change Workflow",
+        "ChangeWorkflow"
+})
 public class SequentialWorkflowOperation extends HandlerContract {
 
     private String operation;

@@ -12,6 +12,7 @@ import java.math.BigInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 
@@ -126,6 +127,30 @@ class SequentialWorkflowProcessorTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowOperationSupportsChangeWorkflowAliases() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(
+                null,
+                "ownerChannel",
+                "Conversation/Change Workflow",
+                "Conversation/Change Operation")).document();
+        String documentBlueId = storedDocumentBlueId(initialized);
+        Node event = operationRequestEvent(blue, "increment", 6, false, documentBlueId, "owner-42");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("6"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowOperationWithoutDeclaredOrDerivedChannelFailsInitialization() {
+        Blue blue = new Blue();
+        Node document = operationWorkflowDocument(null, null);
+
+        assertThrows(IllegalStateException.class, () -> blue.initializeDocument(document));
     }
 
     @Test
@@ -357,6 +382,17 @@ class SequentialWorkflowProcessorTest {
     }
 
     private Node operationWorkflowDocument(String handlerChannel, String operationChannel) {
+        return operationWorkflowDocument(
+                handlerChannel,
+                operationChannel,
+                "Conversation/Sequential Workflow Operation",
+                "Conversation/Operation");
+    }
+
+    private Node operationWorkflowDocument(String handlerChannel,
+                                           String operationChannel,
+                                           String handlerTypeBlueId,
+                                           String operationTypeBlueId) {
         String handlerChannelYaml = handlerChannel != null
                 ? "    channel: " + handlerChannel + "\n"
                 : "";
@@ -377,13 +413,13 @@ class SequentialWorkflowProcessorTest {
                 "    timelineId: other-42\n" +
                 "  increment:\n" +
                 "    type:\n" +
-                "      blueId: Conversation/Operation\n" +
+                "      blueId: " + operationTypeBlueId + "\n" +
                 operationChannelYaml +
                 "    request:\n" +
                 "      type: Integer\n" +
                 "  operationWorkflow:\n" +
                 "    type:\n" +
-                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "      blueId: " + handlerTypeBlueId + "\n" +
                 handlerChannelYaml +
                 "    operation: increment\n" +
                 "    steps:\n" +
