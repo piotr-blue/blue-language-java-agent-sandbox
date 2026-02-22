@@ -64,6 +64,17 @@ public final class PayNoteBuilderVNext {
         return this;
     }
 
+    public PayNoteBuilderVNext reserveAndCaptureImmediatelyOnInit() {
+        bootstrap.contracts(c -> {
+            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
+            c.onLifecycle("onInitReserveAndCapture", "initLifecycleChannel", steps -> steps
+                    .triggerEvent("ReserveAndCaptureImmediately",
+                            PayNoteEvents.reserveFundsAndCaptureImmediatelyRequested(new Node().value(
+                                    BlueDocDsl.expr("document('/amount/total')")))));
+        });
+        return this;
+    }
+
     public PayNoteBuilderVNext lockCardCaptureOnInit(String cardTransactionDetailsPath) {
         bootstrap.contracts(c -> {
             c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
@@ -149,6 +160,21 @@ public final class PayNoteBuilderVNext {
                 "Request full reservation release.",
                 steps -> steps.triggerEvent("RequestReservationRelease", PayNoteEvents.reservationReleaseRequested(
                         new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
+    }
+
+    public PayNoteBuilderVNext releaseOperation(String operationKey, String channelKey) {
+        return operation(operationKey,
+                channelKey,
+                "Release reservation.",
+                steps -> steps.triggerEvent("ReleaseReservation", PayNoteEvents.reservationReleaseRequested(
+                        new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
+    }
+
+    public PayNoteBuilderVNext requestCancellationOperation(String channelKey) {
+        return operation("requestCancellation",
+                channelKey,
+                "Request paynote cancellation.",
+                steps -> steps.replaceValue("SetCancellationRequested", "/status", "cancellation-requested"));
     }
 
     public PayNoteBuilderVNext issueChildPayNoteOnEvent(String workflowKey,
