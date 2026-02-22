@@ -13,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PayNoteOverlayTest {
 
     @Test
+    void overlayIsMarkedLegacyInFavorOfVNextFacade() {
+        assertTrue(PayNoteOverlay.class.isAnnotationPresent(Deprecated.class));
+    }
+
+    @Test
     void buildsTypedPayNotePoliciesWithoutStringlyEventConstruction() {
         Node payNote = PayNoteOverlay.payNote("Overlay Macro Test", 150, "EUR")
                 .abstractParticipants()

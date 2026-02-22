@@ -21,6 +21,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * Legacy overlay surface kept for backward-compatibility with earlier sample flows.
+ * <p>
+ * For new flows prefer {@code blue.language.samples.paynote.sdk.vnext.PayNotes}
+ * and {@code PayNoteBuilderVNext}.
+ */
+@Deprecated
 public final class PayNoteOverlay {
 
     private final Node document = BlueDocDsl.document(PayNoteV2Types.PayNoteDocument.class).build();
