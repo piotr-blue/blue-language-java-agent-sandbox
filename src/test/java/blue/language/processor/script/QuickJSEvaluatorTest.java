@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -186,6 +187,41 @@ class QuickJSEvaluatorTest {
                             BigInteger.valueOf(1000L)));
             assertTrue(error.getMessage().contains("Failed to evaluate code block"));
             assertTrue(error.code().contains("await"));
+        }
+    }
+
+    @Test
+    void exposesStructuredRuntimeErrorMetadataOnWrappedFailure() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            CodeBlockEvaluationError error = assertThrows(
+                    CodeBlockEvaluationError.class,
+                    () -> evaluator.evaluate(
+                            "throw new TypeError('bad input')",
+                            new LinkedHashMap<String, Object>(),
+                            BigInteger.valueOf(1000L)));
+            assertEquals("TypeError", error.runtimeErrorName());
+            assertEquals("bad input", error.runtimeErrorMessage());
+            assertTrue(error.runtimeStackAvailable());
+            assertNotNull(error.getCause());
+            assertTrue(error.getCause() instanceof ScriptRuntimeException);
+        }
+    }
+
+    @Test
+    void exposesOutOfGasMetadataOnWrappedTimeoutFailures() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            CodeBlockEvaluationError error = assertThrows(
+                    CodeBlockEvaluationError.class,
+                    () -> evaluator.evaluate(
+                            "while (true) {}",
+                            new LinkedHashMap<String, Object>(),
+                            BigInteger.ONE));
+            assertEquals("OutOfGasError", error.runtimeErrorName());
+            assertTrue(String.valueOf(error.runtimeErrorMessage()).contains("OutOfGas"));
         }
     }
 
