@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -349,6 +350,35 @@ class QuickJsExpressionUtilsTest {
                     null);
 
             assertEquals("${steps.answer}", resolved.getValue());
+        }
+    }
+
+    @Test
+    void resolveExpressionsInvokesShouldDescendWithRootPointer() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Node root = new Node().value("no expression");
+            AtomicReference<String> firstPointer = new AtomicReference<String>();
+            Node resolved = QuickJsExpressionUtils.resolveExpressions(
+                    root,
+                    evaluator,
+                    new LinkedHashMap<String, Object>(),
+                    null,
+                    QuickJsExpressionUtils.createPathPredicate(Arrays.asList("/**"), null),
+                    new QuickJsExpressionUtils.PointerPredicate() {
+                        @Override
+                        public boolean test(String pointer, Node node) {
+                            if (firstPointer.get() == null) {
+                                firstPointer.set(pointer);
+                            }
+                            return true;
+                        }
+                    },
+                    null);
+
+            assertEquals("no expression", resolved.getValue());
+            assertEquals("/", firstPointer.get());
         }
     }
 

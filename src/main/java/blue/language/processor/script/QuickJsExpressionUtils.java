@@ -145,7 +145,7 @@ public final class QuickJsExpressionUtils {
         if (node == null) {
             return null;
         }
-        return resolveRecursive(node, "", evaluator, bindings, context, shouldResolve, shouldDescend, wasmGasConsumer);
+        return resolveRecursive(node, "/", evaluator, bindings, context, shouldResolve, shouldDescend, wasmGasConsumer);
     }
 
     private static Node resolveRecursive(Node node,
@@ -182,7 +182,7 @@ public final class QuickJsExpressionUtils {
 
         if (cloned.getProperties() != null) {
             for (Map.Entry<String, Node> entry : cloned.getProperties().entrySet()) {
-                String childPointer = pointer + "/" + escapeSegment(entry.getKey());
+                String childPointer = appendPointerSegment(pointer, escapeSegment(entry.getKey()));
                 if (shouldDescend != null && !shouldDescend.test(childPointer, entry.getValue())) {
                     continue;
                 }
@@ -194,7 +194,7 @@ public final class QuickJsExpressionUtils {
             List<Node> items = cloned.getItems();
             for (int i = 0; i < items.size(); i++) {
                 Node child = items.get(i);
-                String childPointer = pointer + "/" + i;
+                String childPointer = appendPointerSegment(pointer, String.valueOf(i));
                 if (shouldDescend != null && !shouldDescend.test(childPointer, child)) {
                     updatedItems.add(child);
                     continue;
@@ -269,6 +269,14 @@ public final class QuickJsExpressionUtils {
 
     private static String escapeSegment(String segment) {
         return segment.replace("~", "~0").replace("/", "~1");
+    }
+
+    private static String appendPointerSegment(String pointer, String segment) {
+        String normalized = normalizePointer(pointer);
+        if ("/".equals(normalized)) {
+            return "/" + segment;
+        }
+        return normalized + "/" + segment;
     }
 
     private static boolean matchesPattern(String pointer, String pattern, PathMatchOptions options) {
