@@ -265,7 +265,10 @@ public final class QuickJsExpressionUtils {
             normalizedPattern = normalizedPattern.toLowerCase(java.util.Locale.ROOT);
             pointerToMatch = pointerToMatch.toLowerCase(java.util.Locale.ROOT);
         }
-        List<String> expandedPatterns = expandBraces(normalizedPattern);
+        List<String> expandedPatterns = new ArrayList<>();
+        for (String extglobExpanded : expandSimpleExtglobs(normalizedPattern)) {
+            expandedPatterns.addAll(expandBraces(extglobExpanded));
+        }
 
         for (String expandedPattern : expandedPatterns) {
             String effectivePattern = options.noglobstar()
@@ -382,6 +385,96 @@ public final class QuickJsExpressionUtils {
                 depth++;
             } else if (ch == '}' && depth > 0) {
                 depth--;
+            }
+            current.append(ch);
+        }
+        options.add(current.toString());
+        return options;
+    }
+
+    private static List<String> expandSimpleExtglobs(String pattern) {
+        if (pattern == null) {
+            return Collections.singletonList(null);
+        }
+        int markerIndex = -1;
+        char marker = 0;
+        for (int i = 0; i < pattern.length() - 1; i++) {
+            char ch = pattern.charAt(i);
+            if ((ch == '@' || ch == '?') && pattern.charAt(i + 1) == '(') {
+                markerIndex = i;
+                marker = ch;
+                break;
+            }
+        }
+        if (markerIndex < 0) {
+            return Collections.singletonList(pattern);
+        }
+
+        int close = findClosingParenthesis(pattern, markerIndex + 1);
+        if (close < 0) {
+            return Collections.singletonList(pattern);
+        }
+
+        String prefix = pattern.substring(0, markerIndex);
+        String body = pattern.substring(markerIndex + 2, close);
+        String suffix = pattern.substring(close + 1);
+        List<String> options = splitPipeOptions(body);
+        if (marker == '?') {
+            options.add(0, "");
+        }
+
+        List<String> expanded = new ArrayList<>();
+        for (String option : options) {
+            for (String tail : expandSimpleExtglobs(option + suffix)) {
+                expanded.add(prefix + tail);
+            }
+        }
+        return expanded;
+    }
+
+    private static int findClosingParenthesis(String pattern, int openIndex) {
+        int depth = 0;
+        for (int i = openIndex; i < pattern.length(); i++) {
+            char ch = pattern.charAt(i);
+            if (ch == '(') {
+                depth++;
+                continue;
+            }
+            if (ch == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static List<String> splitPipeOptions(String body) {
+        List<String> options = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        int parenDepth = 0;
+        int braceDepth = 0;
+        int bracketDepth = 0;
+        for (int i = 0; i < body.length(); i++) {
+            char ch = body.charAt(i);
+            if (ch == '|' && parenDepth == 0 && braceDepth == 0 && bracketDepth == 0) {
+                options.add(current.toString());
+                current.setLength(0);
+                continue;
+            }
+            if (ch == '(') {
+                parenDepth++;
+            } else if (ch == ')' && parenDepth > 0) {
+                parenDepth--;
+            } else if (ch == '{') {
+                braceDepth++;
+            } else if (ch == '}' && braceDepth > 0) {
+                braceDepth--;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']' && bracketDepth > 0) {
+                bracketDepth--;
             }
             current.append(ch);
         }
