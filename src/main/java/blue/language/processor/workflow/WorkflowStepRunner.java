@@ -107,7 +107,7 @@ public final class WorkflowStepRunner {
             if (nodeProvider != null) {
                 Node definition = fetchTypeDefinition(nodeProvider, blueId);
                 WorkflowStepExecutor viaProvider = resolveExecutor(
-                        definition != null ? definition.getType() : null,
+                        definition,
                         nodeProvider,
                         visitedBlueIds);
                 if (viaProvider != null) {

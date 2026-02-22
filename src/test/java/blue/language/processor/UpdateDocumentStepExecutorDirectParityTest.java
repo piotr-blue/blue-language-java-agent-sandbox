@@ -297,6 +297,96 @@ class UpdateDocumentStepExecutorDirectParityTest {
     }
 
     @Test
+    void acceptsProviderDerivedStepTypeBlueIdFromDefinitionValue() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Update Document".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().value("Conversation/Update Document");
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("counter", new Node().value(0)));
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Custom/Derived Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("REPLACE"))
+                                .properties("path", new Node().value("/counter"))
+                                .properties("val", new Node().value(5))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        assertEquals("5", String.valueOf(context.documentAt("/counter").getValue()));
+    }
+
+    @Test
+    void acceptsProviderDerivedStepTypeBlueIdFromDefinitionProperty() {
+        UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Update Document".equals(blueId)) {
+                return java.util.Collections.emptyList();
+            }
+            Node definition = new Node().properties("blueId", new Node().value("Conversation/Update Document"));
+            return java.util.Collections.singletonList(definition);
+        };
+
+        Blue blue = new Blue(provider);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("counter", new Node().value(0)));
+        execution.loadBundles("/");
+
+        Node event = new Node().type(new Node().blueId("TestEvent"));
+        Node step = new Node()
+                .name("Apply")
+                .type(new Node().blueId("Custom/Derived Update Document"))
+                .properties("changeset", new Node().items(
+                        new Node().properties("op", new Node().value("REPLACE"))
+                                .properties("path", new Node().value("/counter"))
+                                .properties("val", new Node().value(8))
+                ));
+
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+        StepExecutionArgs args = new StepExecutionArgs(
+                new SequentialWorkflow(),
+                step,
+                event,
+                context,
+                new LinkedHashMap<String, Object>(),
+                0);
+
+        executor.execute(args);
+
+        assertEquals("8", String.valueOf(context.documentAt("/counter").getValue()));
+    }
+
+    @Test
     void throwsFatalWhenStepSchemaIsInvalid() {
         UpdateDocumentStepExecutor executor = new UpdateDocumentStepExecutor();
 

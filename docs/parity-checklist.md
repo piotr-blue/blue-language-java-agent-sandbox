@@ -136,7 +136,7 @@ Current in-flight work:
   - expression-returned `changeset` array execution
   - path-expression evaluation failure surfacing as `CodeBlockEvaluationError`
   - fatal validation for non-string/empty patch paths
-  - provider-backed derived step-type acceptance in direct execution
+  - provider-backed derived step-type acceptance in direct execution (including provider definitions exposing parent step type via `type.blueId`, root `properties.blueId`, or scalar-string `value`)
   - base gas charging side-effect assertions
   - direct fatal error path for unsupported patch operations
   - direct fatal error path for invalid step schema/type payloads
@@ -249,7 +249,7 @@ Current in-flight work:
 - Sequential workflow operation request parity now also verifies handler-level event-filter matching against direct request event shape (`SequentialWorkflowProcessorTest#sequentialWorkflowOperationDirectRequestHonorsHandlerEventFilters`).
 - Sequential workflow operation request parity now also verifies operation-key mismatch gating against direct request event shape (`SequentialWorkflowProcessorTest#sequentialWorkflowOperationDirectRequestSkipsWhenOperationKeyDiffers`), matching timeline-envelope operation-key mismatch behavior.
 - Workflow-level event-filter matching now also supports provider-backed semantic subtype chains for both sequential workflow handlers and sequential workflow operations, covered by `WorkflowEventFilterProviderTypeChainIntegrationParityTest`.
-- Workflow step runner parity now resolves executors via derived step-type chains (inline and provider-backed) rather than direct `type.blueId` only, covered by `WorkflowStepRunnerTest` and provider-derived step fixtures.
+- Workflow step runner parity now resolves executors via derived step-type chains (inline and provider-backed) rather than direct `type.blueId` only, including provider definitions that expose ancestor step BlueIds via scalar node values when `type.blueId` is absent, covered by `WorkflowStepRunnerTest` and provider-derived step fixtures.
 - Workflow step runner parity now also forwards bound contract-node metadata into step execution args and QuickJS bindings (`currentContract`/`currentContractCanonical`) instead of relying only on workflow-key document lookups, with regression coverage in `WorkflowStepRunnerTest` and `JavaScriptCodeStepExecutorDirectParityTest`.
 - Workflow step runner unsupported-step fatal paths now prefer `step.type.name` when available (matching JS error messaging behavior rather than always reporting raw `blueId`), covered by `SequentialWorkflowProcessorTest`.
 - Golden fixture coverage now also includes provider-backed operation-request subtype-chain matching for both timeline-envelope and direct request event shapes (`provider-derived-operation-request-type-chain.yaml`, `provider-derived-direct-operation-request-type-chain.yaml`), plus direct-request provider definitions that surface ancestor BlueIds via scalar node values (`provider-derived-direct-operation-request-blueid-value-chain.yaml`), to lock parity in the fixture harness path (`ParityFixturesTest`).
@@ -259,4 +259,4 @@ Current in-flight work:
 - Golden fixture coverage now also includes provider-backed operation-workflow event-filter subtype matching for both timeline-envelope and direct request event shapes (`provider-derived-operation-event-filter-type-chain.yaml`, `provider-derived-direct-operation-event-filter-type-chain.yaml`) to lock provider-chain filtering parity for sequential workflow operations in the fixture harness path (`ParityFixturesTest`).
 - Golden fixture harness now supports optional gas assertions (`totalGas`, `totalGasMin`, `totalGasMax`) and uses them in migrated fixtures (e.g. `sequential-workflow-happy.yaml`) to validate runtime accounting in addition to document/event outcomes.
 - Golden fixtures now also cover initialization-time capability-failure parity for missing contract processors, including failure-reason and zero-gas assertions (`initialization-capability-failure-missing-processor.yaml`).
-- Golden fixtures now also cover provider-derived workflow step-type chains for Update Document / Trigger Event / JavaScript Code (`provider-derived-update-step-type-chain.yaml`, `provider-derived-trigger-step-type-chain.yaml`, `provider-derived-javascript-step-type-chain.yaml`).
+- Golden fixtures now also cover provider-derived workflow step-type chains for Update Document / Trigger Event / JavaScript Code (`provider-derived-update-step-type-chain.yaml`, `provider-derived-trigger-step-type-chain.yaml`, `provider-derived-javascript-step-type-chain.yaml`), plus Update Document provider-definition fallback via scalar value ancestry (`provider-derived-update-step-blueid-value-chain.yaml`).

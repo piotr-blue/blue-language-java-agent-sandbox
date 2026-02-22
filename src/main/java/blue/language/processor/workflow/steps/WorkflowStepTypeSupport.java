@@ -34,13 +34,14 @@ final class WorkflowStepTypeSupport {
             if (supportedBlueIds.contains(blueId)) {
                 return true;
             }
-            if (visitedBlueIds.add(blueId)) {
+            boolean newlyVisited = visitedBlueIds.add(blueId);
+            if (newlyVisited) {
                 foundUnvisitedBlueId = true;
-            }
-            if (nodeProvider != null) {
-                Node definition = fetchTypeDefinition(nodeProvider, blueId);
-                if (definition != null && hasSupportedType(definition.getType(), supportedBlueIds, nodeProvider, visitedBlueIds)) {
-                    return true;
+                if (nodeProvider != null) {
+                    Node definition = fetchTypeDefinition(nodeProvider, blueId);
+                    if (definition != null && hasSupportedType(definition, supportedBlueIds, nodeProvider, visitedBlueIds)) {
+                        return true;
+                    }
                 }
             }
         }
