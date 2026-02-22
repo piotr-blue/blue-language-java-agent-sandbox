@@ -75,6 +75,7 @@ final class ProcessorEngine {
 
     @SuppressWarnings("unchecked")
     static ChannelMatch evaluateChannel(DocumentProcessor owner,
+                                            String bindingKey,
                                             ChannelContract contract,
                                             ContractBundle bundle,
                                             String scopePath,
@@ -92,15 +93,18 @@ final class ProcessorEngine {
         @SuppressWarnings("unchecked")
         ChannelProcessor<ChannelContract> typed = (ChannelProcessor<ChannelContract>) processor;
         ChannelEvaluationContext context = new ChannelEvaluationContext(scopePath,
+                bindingKey,
                 clonedEvent,
                 eventObject,
-                bundle.markers());
+                bundle.markers(),
+                bundle,
+                owner.registry());
         ChannelProcessorEvaluation evaluation = typed.evaluate(contract, context);
         if (evaluation == null || !evaluation.matches()) {
             return ChannelMatch.noMatch();
         }
         Node eventNode = evaluation.eventNode() != null ? evaluation.eventNode() : context.event();
-        return new ChannelMatch(true, evaluation.eventId(), typed, context, eventNode);
+        return new ChannelMatch(true, evaluation.eventId(), typed, context, eventNode, evaluation.deliveries());
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
@@ -400,17 +404,20 @@ final class ProcessorEngine {
         final ChannelProcessor<ChannelContract> processor;
         final ChannelEvaluationContext context;
         final Node eventNode;
+        final List<ChannelProcessorEvaluation.ChannelDelivery> deliveries;
 
         ChannelMatch(boolean matches,
                      String eventId,
                      ChannelProcessor<ChannelContract> processor,
                      ChannelEvaluationContext context,
-                     Node eventNode) {
+                     Node eventNode,
+                     List<ChannelProcessorEvaluation.ChannelDelivery> deliveries) {
             this.matches = matches;
             this.eventId = eventId;
             this.processor = processor;
             this.context = context;
             this.eventNode = eventNode;
+            this.deliveries = deliveries;
         }
 
         Node eventNode() {
@@ -418,7 +425,7 @@ final class ProcessorEngine {
         }
 
         static ChannelMatch noMatch() {
-            return new ChannelMatch(false, null, null, null, null);
+            return new ChannelMatch(false, null, null, null, null, java.util.Collections.<ChannelProcessorEvaluation.ChannelDelivery>emptyList());
         }
     }
 

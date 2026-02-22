@@ -10,7 +10,9 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -35,13 +37,40 @@ public class TypeClassResolver {
     }
 
     private void registerClass(Class<?> clazz, TypeBlueId annotation) {
-        String blueId = BlueIdResolver.resolveBlueId(clazz);
-        if (blueId != null) {
-            if (blueIdMap.containsKey(blueId)) {
+        List<String> blueIds = resolveBlueIds(clazz, annotation);
+        for (String blueId : blueIds) {
+            Class<?> existing = blueIdMap.get(blueId);
+            if (existing != null && !existing.equals(clazz)) {
                 throw new IllegalStateException("Duplicate BlueId value: " + blueId);
             }
             blueIdMap.put(blueId, clazz);
         }
+    }
+
+    private List<String> resolveBlueIds(Class<?> clazz, TypeBlueId annotation) {
+        List<String> result = new ArrayList<>();
+        if (annotation == null) {
+            return result;
+        }
+
+        String[] values = annotation.value();
+        if (values != null) {
+            for (String value : values) {
+                if (value != null && !value.trim().isEmpty()) {
+                    result.add(value.trim());
+                }
+            }
+        }
+        if (!annotation.defaultValue().isEmpty()) {
+            result.add(annotation.defaultValue());
+        }
+        if (result.isEmpty()) {
+            String repositoryBlueId = BlueIdResolver.resolveBlueId(clazz);
+            if (repositoryBlueId != null && !repositoryBlueId.trim().isEmpty()) {
+                result.add(repositoryBlueId.trim());
+            }
+        }
+        return result;
     }
 
     public Class<?> resolveClass(Node node) {

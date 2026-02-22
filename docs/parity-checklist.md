@@ -28,13 +28,13 @@ Status legend:
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
 | Registry lookup by BlueId/type chain | `src/registry/contract-processor-registry.ts` | `processor/ContractProcessorRegistry.java` | IN_PROGRESS |
-| Default processor registration | `src/registry/contract-processor-registry-builder.ts` | `processor/ContractProcessorRegistryBuilder.java` | TODO |
-| Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | _missing_ | TODO |
-| Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | _missing_ | TODO |
-| MyOS timeline channel processor | `src/registry/processors/myos-timeline-channel-processor.ts` | _missing_ | TODO |
-| Sequential workflow handler processor | `src/registry/processors/sequential-workflow-processor.ts` | _missing_ | TODO |
-| Sequential workflow operation processor | `src/registry/processors/sequential-workflow-operation-processor.ts` | _missing_ | TODO |
-| Operation marker processor | `src/registry/processors/operation-marker-processor.ts` | _missing_ | TODO |
+| Default processor registration | `src/registry/contract-processor-registry-builder.ts` | `processor/ContractProcessorRegistryBuilder.java` | IN_PROGRESS |
+| Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | `processor/registry/processors/TimelineChannelProcessor.java` | IN_PROGRESS |
+| Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | `processor/registry/processors/CompositeTimelineChannelProcessor.java` | IN_PROGRESS |
+| MyOS timeline channel processor | `src/registry/processors/myos-timeline-channel-processor.ts` | `processor/registry/processors/MyOSTimelineChannelProcessor.java` | IN_PROGRESS |
+| Sequential workflow handler processor | `src/registry/processors/sequential-workflow-processor.ts` | `processor/registry/processors/SequentialWorkflowHandlerProcessor.java` | IN_PROGRESS |
+| Sequential workflow operation processor | `src/registry/processors/sequential-workflow-operation-processor.ts` | `processor/registry/processors/SequentialWorkflowOperationProcessor.java` | IN_PROGRESS |
+| Operation marker processor | `src/registry/processors/operation-marker-processor.ts` | `processor/registry/processors/OperationMarkerProcessor.java` | IN_PROGRESS |
 
 ## 3) Expression + QuickJS runtime
 

@@ -1,0 +1,40 @@
+package blue.language.processor.registry.processors;
+
+import blue.language.model.Node;
+import blue.language.processor.ChannelEvaluationContext;
+import blue.language.processor.ChannelProcessor;
+import blue.language.processor.model.MyOSTimelineChannel;
+
+public class MyOSTimelineChannelProcessor implements ChannelProcessor<MyOSTimelineChannel> {
+
+    @Override
+    public Class<MyOSTimelineChannel> contractType() {
+        return MyOSTimelineChannel.class;
+    }
+
+    @Override
+    public boolean matches(MyOSTimelineChannel contract, ChannelEvaluationContext context) {
+        String expectedTimelineId = contract.getTimelineId();
+        if (expectedTimelineId == null || expectedTimelineId.trim().isEmpty()) {
+            return false;
+        }
+        String eventTimelineId = TimelineEventSupport.timelineId(context.event());
+        return expectedTimelineId.trim().equals(eventTimelineId);
+    }
+
+    @Override
+    public Node channelize(MyOSTimelineChannel contract, ChannelEvaluationContext context) {
+        Node event = context.event();
+        return event != null ? event.clone() : null;
+    }
+
+    @Override
+    public String eventId(MyOSTimelineChannel contract, ChannelEvaluationContext context) {
+        return TimelineEventSupport.eventId(context.event());
+    }
+
+    @Override
+    public boolean isNewerEvent(MyOSTimelineChannel contract, ChannelEvaluationContext context, Node lastEvent) {
+        return TimelineEventSupport.isNewer(context.event(), lastEvent);
+    }
+}

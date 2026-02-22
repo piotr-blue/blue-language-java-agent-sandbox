@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.mapping.NodeToObjectConverter;
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelContract;
+import blue.language.processor.model.CompositeTimelineChannel;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
@@ -16,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
+import java.util.HashMap;
 
 /**
  * Parses contracts under a scope and produces a {@link ContractBundle}.
@@ -87,7 +90,9 @@ final class ContractLoader {
             }
         }
 
-        return builder.build();
+        ContractBundle bundle = builder.build();
+        validateCompositeTimelineChannels(bundle, scopePath);
+        return bundle;
     }
 
     private String normalizeContractKey(String key, String scopePath) {
@@ -143,5 +148,53 @@ final class ContractLoader {
             throw new IllegalStateException(contractType + " '" + key + "' at scope " + scopePath
                     + " has invalid " + fieldName + ": " + pointer, ex);
         }
+    }
+
+    private void validateCompositeTimelineChannels(ContractBundle bundle, String scopePath) {
+        Map<String, CompositeTimelineChannel> compositeChannels = new LinkedHashMap<>();
+        for (ContractBundle.ChannelBinding binding : bundle.channelsOfType(CompositeTimelineChannel.class)) {
+            compositeChannels.put(binding.key(), (CompositeTimelineChannel) binding.contract());
+        }
+        if (compositeChannels.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<String, CompositeTimelineChannel> entry : compositeChannels.entrySet()) {
+            for (String childKey : entry.getValue().getChannels()) {
+                if (bundle.channel(childKey) == null) {
+                    throw new IllegalStateException("Composite channel '" + entry.getKey()
+                            + "' references missing channel '" + childKey + "' at scope " + scopePath);
+                }
+            }
+        }
+
+        Map<String, Integer> visitState = new HashMap<>();
+        for (String key : compositeChannels.keySet()) {
+            detectCompositeCycle(key, compositeChannels, visitState);
+        }
+    }
+
+    private void detectCompositeCycle(String key,
+                                      Map<String, CompositeTimelineChannel> composites,
+                                      Map<String, Integer> visitState) {
+        Integer currentState = visitState.get(key);
+        if (currentState != null) {
+            if (currentState == 1) {
+                throw new IllegalStateException("Cyclic composite timeline channel dependency detected at '" + key + "'");
+            }
+            if (currentState == 2) {
+                return;
+            }
+        }
+        visitState.put(key, 1);
+        CompositeTimelineChannel composite = composites.get(key);
+        if (composite != null) {
+            for (String child : composite.getChannels()) {
+                if (composites.containsKey(child)) {
+                    detectCompositeCycle(child, composites, visitState);
+                }
+            }
+        }
+        visitState.put(key, 2);
     }
 }

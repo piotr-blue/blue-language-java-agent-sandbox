@@ -94,6 +94,21 @@ public final class ContractBundle {
         return sorted;
     }
 
+    public ChannelBinding channel(String key) {
+        if (key == null) {
+            return null;
+        }
+        String normalized = key.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        ChannelContract contract = channels.get(normalized);
+        if (contract == null) {
+            return null;
+        }
+        return new ChannelBinding(normalized, contract);
+    }
+
     public List<ChannelBinding> channelsOfType(Class<? extends ChannelContract> type) {
         List<ChannelBinding> result = new ArrayList<>();
         for (Map.Entry<String, ChannelContract> entry : channels.entrySet()) {

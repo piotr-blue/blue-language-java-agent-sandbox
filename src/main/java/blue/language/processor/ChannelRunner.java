@@ -38,31 +38,37 @@ final class ChannelRunner {
         }
         runtime.chargeChannelMatchAttempt();
         ChannelContract contract = channel.contract();
-        ProcessorEngine.ChannelMatch match = ProcessorEngine.evaluateChannel(owner, contract, bundle, scopePath, event);
+        ProcessorEngine.ChannelMatch match = ProcessorEngine.evaluateChannel(
+                owner,
+                channel.key(),
+                contract,
+                bundle,
+                scopePath,
+                event);
         if (!match.matches) {
             return;
         }
+        List<ChannelProcessorEvaluation.ChannelDelivery> deliveries = match.deliveries;
+        if (deliveries != null && !deliveries.isEmpty()) {
+            for (ChannelProcessorEvaluation.ChannelDelivery delivery : deliveries) {
+                if (delivery != null && Boolean.FALSE.equals(delivery.shouldProcess())) {
+                    continue;
+                }
+                String checkpointKey = delivery != null && delivery.checkpointKey() != null
+                        ? delivery.checkpointKey()
+                        : channel.key();
+                Node eventForHandlers = delivery != null && delivery.eventNode() != null
+                        ? delivery.eventNode()
+                        : (match.eventNode() != null ? match.eventNode() : event);
+                if (!processSingleDelivery(scopePath, bundle, channel.key(), checkpointKey, contract, match, eventForHandlers,
+                        delivery != null ? delivery.eventId() : null)) {
+                    continue;
+                }
+            }
+            return;
+        }
         Node eventForHandlers = match.eventNode() != null ? match.eventNode() : event;
-        checkpointManager.ensureCheckpointMarker(scopePath, bundle);
-        CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, channel.key());
-        String eventSignature = match.eventId != null
-                ? match.eventId
-                : ProcessorEngine.canonicalSignature(eventForHandlers);
-        if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
-            return;
-        }
-        if (checkpoint != null
-                && checkpoint.lastEventNode != null
-                && match.processor != null
-                && match.context != null
-                && !match.processor.isNewerEvent(contract, match.context, checkpoint.lastEventNode.clone())) {
-            return;
-        }
-        runHandlers(scopePath, bundle, channel.key(), eventForHandlers, false);
-        if (execution.isScopeInactive(scopePath)) {
-            return;
-        }
-        checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, eventForHandlers);
+        processSingleDelivery(scopePath, bundle, channel.key(), channel.key(), contract, match, eventForHandlers, match.eventId);
     }
 
     void runHandlers(String scopePath,
@@ -85,5 +91,39 @@ final class ChannelRunner {
                 break;
             }
         }
+    }
+
+    private boolean processSingleDelivery(String scopePath,
+                                          ContractBundle bundle,
+                                          String handlerChannelKey,
+                                          String checkpointChannelKey,
+                                          ChannelContract contract,
+                                          ProcessorEngine.ChannelMatch match,
+                                          Node eventForHandlers,
+                                          String explicitEventId) {
+        if (execution.isScopeInactive(scopePath)) {
+            return false;
+        }
+        checkpointManager.ensureCheckpointMarker(scopePath, bundle);
+        CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, checkpointChannelKey);
+        String eventSignature = explicitEventId != null
+                ? explicitEventId
+                : (match.eventId != null ? match.eventId : ProcessorEngine.canonicalSignature(eventForHandlers));
+        if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
+            return false;
+        }
+        if (checkpoint != null
+                && checkpoint.lastEventNode != null
+                && match.processor != null
+                && match.context != null
+                && !match.processor.isNewerEvent(contract, match.context, checkpoint.lastEventNode.clone())) {
+            return false;
+        }
+        runHandlers(scopePath, bundle, handlerChannelKey, eventForHandlers, false);
+        if (execution.isScopeInactive(scopePath)) {
+            return false;
+        }
+        checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, eventForHandlers);
+        return true;
     }
 }
