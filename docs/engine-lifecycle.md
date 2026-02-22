@@ -17,14 +17,14 @@ This document summarizes the Java document-processing lifecycle and key parity b
 
 Lifecycle event shape notes:
 
-- Initialization lifecycle event now carries both:
-  - legacy `type` property value: `"Document Processing Initiated"`
+- Initialization lifecycle event carries:
+  - `type` property value: `"Core/Document Processing Initiated"`
   - semantic root node type metadata: `type.blueId = "Core/Document Processing Initiated"`
-- Termination lifecycle event now carries both:
-  - legacy `type` property value: `"Document Processing Terminated"`
+- Termination lifecycle event carries:
+  - `type` property value: `"Core/Document Processing Terminated"`
   - semantic root node type metadata: `type.blueId = "Core/Document Processing Terminated"`
 
-This preserves existing value-based checks while enabling semantic event filters (`event.type.blueId`) during initialization/termination workflows.
+This keeps value-based checks aligned with JS fixture expectations while enabling semantic event filters (`event.type.blueId`) during initialization/termination workflows.
 
 ## External event flow
 

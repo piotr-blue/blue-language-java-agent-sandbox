@@ -111,7 +111,7 @@ final class ProcessorEngine {
         Node event = new Node()
                 .type(new Node().blueId("Core/Document Processing Initiated"))
                 .properties("type", new Node()
-                .value("Document Processing Initiated")
+                .value("Core/Document Processing Initiated")
                 .type(new Node().blueId("Core/Document Processing Initiated")));
         event.properties("documentId", new Node().value(documentId));
         return event;
