@@ -129,7 +129,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<HandlerProcessor<? extends HandlerContract>> lookupHandler(String blueId) {
-        return Optional.ofNullable(handlerProcessorsByBlueId.get(blueId));
+        return lookupByBlueId(blueId, handlerProcessorsByBlueId, nodeProvider);
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(Class<? extends ChannelContract> type) {
@@ -153,7 +153,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ChannelProcessor<? extends ChannelContract>> lookupChannel(String blueId) {
-        return Optional.ofNullable(channelProcessorsByBlueId.get(blueId));
+        return lookupByBlueId(blueId, channelProcessorsByBlueId, nodeProvider);
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(Class<? extends MarkerContract> type) {
@@ -177,7 +177,7 @@ public class ContractProcessorRegistry {
     }
 
     public Optional<ContractProcessor<? extends MarkerContract>> lookupMarker(String blueId) {
-        return Optional.ofNullable(markerProcessorsByBlueId.get(blueId));
+        return lookupByBlueId(blueId, markerProcessorsByBlueId, nodeProvider);
     }
 
     public Map<String, ContractProcessor<? extends Contract>> processors() {
@@ -308,6 +308,30 @@ public class ContractProcessorRegistry {
             P processor = processorsByBlueId.get(blueId);
             if (processor != null) {
                 return Optional.of(processor);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static <P> Optional<P> lookupByBlueId(String blueId,
+                                                  Map<String, P> processorsByBlueId,
+                                                  NodeProvider nodeProvider) {
+        if (blueId == null || processorsByBlueId == null || processorsByBlueId.isEmpty()) {
+            return Optional.empty();
+        }
+        String normalized = blueId.trim();
+        if (normalized.isEmpty()) {
+            return Optional.empty();
+        }
+        P direct = processorsByBlueId.get(normalized);
+        if (direct != null) {
+            return Optional.of(direct);
+        }
+        Node seed = new Node().blueId(normalized);
+        for (String derivedBlueId : resolveTypeChainBlueIds(seed, nodeProvider)) {
+            P providerDerived = processorsByBlueId.get(derivedBlueId);
+            if (providerDerived != null) {
+                return Optional.of(providerDerived);
             }
         }
         return Optional.empty();
