@@ -145,6 +145,38 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsNoCaseAndNoGlobstarOptions() {
+        QuickJsExpressionUtils.PointerPredicate nocasePredicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/include/**"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, true, false));
+        assertTrue(nocasePredicate.test("/Include/Path", null));
+
+        QuickJsExpressionUtils.PointerPredicate noGlobstarPredicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/include/**/item"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, true));
+        assertTrue(noGlobstarPredicate.test("/include/path/item", null));
+        assertFalse(noGlobstarPredicate.test("/include/path/deeper/item", null));
+    }
+
+    @Test
+    void createPathPredicateDotOptionControlsHiddenSegments() {
+        QuickJsExpressionUtils.PointerPredicate defaultPredicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/**"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+        assertTrue(defaultPredicate.test("/.hidden", null));
+
+        QuickJsExpressionUtils.PointerPredicate noDotPredicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/**"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(false, false, false));
+        assertFalse(noDotPredicate.test("/.hidden", null));
+        assertTrue(noDotPredicate.test("/visible", null));
+    }
+
+    @Test
     void resolveExpressionsHonorsShouldDescendPredicate() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 

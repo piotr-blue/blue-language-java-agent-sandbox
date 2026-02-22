@@ -21,6 +21,34 @@ public final class QuickJsExpressionUtils {
         boolean test(String pointer, Node node);
     }
 
+    public static final class PathMatchOptions {
+        private final boolean dot;
+        private final boolean nocase;
+        private final boolean noglobstar;
+
+        public PathMatchOptions() {
+            this(true, false, false);
+        }
+
+        public PathMatchOptions(boolean dot, boolean nocase, boolean noglobstar) {
+            this.dot = dot;
+            this.nocase = nocase;
+            this.noglobstar = noglobstar;
+        }
+
+        public boolean dot() {
+            return dot;
+        }
+
+        public boolean nocase() {
+            return nocase;
+        }
+
+        public boolean noglobstar() {
+            return noglobstar;
+        }
+    }
+
     private QuickJsExpressionUtils() {
     }
 
@@ -48,17 +76,24 @@ public final class QuickJsExpressionUtils {
     }
 
     public static PointerPredicate createPathPredicate(List<String> includePatterns, List<String> excludePatterns) {
+        return createPathPredicate(includePatterns, excludePatterns, new PathMatchOptions());
+    }
+
+    public static PointerPredicate createPathPredicate(List<String> includePatterns,
+                                                       List<String> excludePatterns,
+                                                       PathMatchOptions options) {
         final List<String> includes = includePatterns == null || includePatterns.isEmpty()
                 ? Collections.singletonList("/**")
                 : includePatterns;
         final List<String> excludes = excludePatterns == null ? Collections.<String>emptyList() : excludePatterns;
+        final PathMatchOptions effectiveOptions = options == null ? new PathMatchOptions() : options;
         return new PointerPredicate() {
             @Override
             public boolean test(String pointer, Node node) {
                 String normalized = normalizePointer(pointer);
                 boolean included = false;
                 for (String pattern : includes) {
-                    if (matchesPattern(normalized, pattern)) {
+                    if (matchesPattern(normalized, pattern, effectiveOptions)) {
                         included = true;
                         break;
                     }
@@ -67,7 +102,7 @@ public final class QuickJsExpressionUtils {
                     return false;
                 }
                 for (String pattern : excludes) {
-                    if (matchesPattern(normalized, pattern)) {
+                    if (matchesPattern(normalized, pattern, effectiveOptions)) {
                         return false;
                     }
                 }
@@ -223,26 +258,52 @@ public final class QuickJsExpressionUtils {
         return segment.replace("~", "~0").replace("/", "~1");
     }
 
-    private static boolean matchesPattern(String pointer, String pattern) {
+    private static boolean matchesPattern(String pointer, String pattern, PathMatchOptions options) {
         String normalizedPattern = normalizePointer(pattern);
-        String regex = normalizedPattern
-                .replace("\\", "\\\\")
-                .replace(".", "\\.")
-                .replace("[", "\\[")
-                .replace("]", "\\]")
-                .replace("{", "\\{")
-                .replace("}", "\\}")
-                .replace("(", "\\(")
-                .replace(")", "\\)")
-                .replace("+", "\\+")
-                .replace("?", "\\?")
-                .replace("^", "\\^")
-                .replace("$", "\\$")
-                .replace("|", "\\|")
-                .replace("**", "___DOUBLE_STAR___")
-                .replace("*", "[^/]*")
-                .replace("___DOUBLE_STAR___", ".*");
-        return pointer.matches(regex);
+        String pointerToMatch = pointer;
+        if (options.nocase()) {
+            normalizedPattern = normalizedPattern.toLowerCase(java.util.Locale.ROOT);
+            pointerToMatch = pointerToMatch.toLowerCase(java.util.Locale.ROOT);
+        }
+        if (options.noglobstar()) {
+            normalizedPattern = normalizedPattern.replace("**", "*");
+        }
+
+        StringBuilder regex = new StringBuilder();
+        regex.append("^");
+        for (int i = 0; i < normalizedPattern.length(); i++) {
+            char ch = normalizedPattern.charAt(i);
+            boolean segmentStart = i == 0 || normalizedPattern.charAt(i - 1) == '/';
+            if (ch == '*') {
+                boolean isDoubleStar = (i + 1 < normalizedPattern.length() && normalizedPattern.charAt(i + 1) == '*');
+                if (isDoubleStar && !options.noglobstar()) {
+                    regex.append(".*");
+                    i++;
+                    continue;
+                }
+                regex.append(segmentStart && !options.dot() ? "(?!\\.)[^/]*" : "[^/]*");
+                continue;
+            }
+            if (ch == '?') {
+                regex.append(segmentStart && !options.dot() ? "(?!\\.)[^/]" : "[^/]");
+                continue;
+            }
+            if ("\\.[]{}()+-^$|".indexOf(ch) >= 0) {
+                regex.append('\\');
+            }
+            regex.append(ch);
+        }
+        regex.append("$");
+        boolean matched = pointerToMatch.matches(regex.toString());
+        if (!matched) {
+            return false;
+        }
+        if (!options.dot()
+                && pointerToMatch.matches(".*(^|/)\\.[^/]+(/|$).*")
+                && !normalizedPattern.contains("/.")) {
+            return false;
+        }
+        return true;
     }
 
     private static String normalizePointer(String pointer) {
