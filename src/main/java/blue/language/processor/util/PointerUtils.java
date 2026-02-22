@@ -23,7 +23,43 @@ public final class PointerUtils {
         if (pointer == null || pointer.isEmpty()) {
             throw new IllegalArgumentException(argumentName + " must be a JSON pointer starting with '/': " + pointer);
         }
-        return normalizePointer(pointer);
+        if (pointer.charAt(0) != '/') {
+            throw new IllegalArgumentException(argumentName + " must be a JSON pointer starting with '/': " + pointer);
+        }
+        validatePointerEscapes(pointer);
+        return pointer;
+    }
+
+    public static String stripSlashes(String value) {
+        if (value == null) {
+            return "";
+        }
+        String stripped = value.trim();
+        if (stripped.isEmpty()) {
+            return "";
+        }
+        while (stripped.startsWith("/")) {
+            stripped = stripped.substring(1);
+        }
+        while (stripped.endsWith("/")) {
+            stripped = stripped.substring(0, stripped.length() - 1);
+        }
+        return stripped;
+    }
+
+    public static String joinRelativePointers(String base, String tail) {
+        String basePart = stripSlashes(base);
+        String tailPart = stripSlashes(tail);
+        if (basePart.isEmpty() && tailPart.isEmpty()) {
+            return "/";
+        }
+        if (basePart.isEmpty()) {
+            return "/" + tailPart;
+        }
+        if (tailPart.isEmpty()) {
+            return "/" + basePart;
+        }
+        return "/" + basePart + "/" + tailPart;
     }
 
     public static String[] splitPointerSegments(String pointer) {
@@ -247,10 +283,8 @@ public final class PointerUtils {
         if (pointer == null || pointer.isEmpty()) {
             return "/";
         }
-        if (pointer.charAt(0) != '/') {
-            throw new IllegalArgumentException("Invalid JSON pointer: " + pointer);
-        }
-        validatePointerEscapes(pointer);
-        return pointer;
+        String normalized = pointer.charAt(0) == '/' ? pointer : "/" + pointer;
+        validatePointerEscapes(normalized);
+        return normalized;
     }
 }

@@ -5,6 +5,7 @@ import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.EmbeddedNodeChannel;
 import blue.language.processor.model.LifecycleChannel;
 import blue.language.processor.model.TriggeredEventChannel;
+import blue.language.model.TypeBlueId;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,6 +21,16 @@ public final class ProcessorContractConstants {
     public static final String KEY_INITIALIZED = "initialized";
     public static final String KEY_TERMINATED = "terminated";
     public static final String KEY_CHECKPOINT = "checkpoint";
+
+    public static final String BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "DocumentUpdateChannel";
+    public static final String BLUE_ID_TRIGGERED_EVENT_CHANNEL = "TriggeredEventChannel";
+    public static final String BLUE_ID_LIFECYCLE_CHANNEL = "LifecycleChannel";
+    public static final String BLUE_ID_EMBEDDED_NODE_CHANNEL = "EmbeddedNodeChannel";
+
+    public static final String CORE_BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "Core/Document Update Channel";
+    public static final String CORE_BLUE_ID_TRIGGERED_EVENT_CHANNEL = "Core/Triggered Event Channel";
+    public static final String CORE_BLUE_ID_LIFECYCLE_CHANNEL = "Core/Lifecycle Event Channel";
+    public static final String CORE_BLUE_ID_EMBEDDED_NODE_CHANNEL = "Core/Embedded Node Channel";
 
     public static final Set<String> RESERVED_CONTRACT_KEYS =
             Collections.unmodifiableSet(new LinkedHashSet<String>(Arrays.asList(
@@ -37,6 +48,18 @@ public final class ProcessorContractConstants {
                     EmbeddedNodeChannel.class
             )));
 
+    public static final Set<String> PROCESSOR_MANAGED_CHANNEL_BLUE_IDS =
+            Collections.unmodifiableSet(new LinkedHashSet<String>(Arrays.asList(
+                    BLUE_ID_DOCUMENT_UPDATE_CHANNEL,
+                    BLUE_ID_TRIGGERED_EVENT_CHANNEL,
+                    BLUE_ID_LIFECYCLE_CHANNEL,
+                    BLUE_ID_EMBEDDED_NODE_CHANNEL,
+                    CORE_BLUE_ID_DOCUMENT_UPDATE_CHANNEL,
+                    CORE_BLUE_ID_TRIGGERED_EVENT_CHANNEL,
+                    CORE_BLUE_ID_LIFECYCLE_CHANNEL,
+                    CORE_BLUE_ID_EMBEDDED_NODE_CHANNEL
+            )));
+
     private ProcessorContractConstants() {
     }
 
@@ -44,9 +67,17 @@ public final class ProcessorContractConstants {
         return key != null && RESERVED_CONTRACT_KEYS.contains(key);
     }
 
+    public static boolean isProcessorManagedChannelBlueId(String blueId) {
+        return blueId != null && PROCESSOR_MANAGED_CHANNEL_BLUE_IDS.contains(blueId);
+    }
+
     public static boolean isProcessorManagedChannel(ChannelContract contract) {
         if (contract == null) {
             return false;
+        }
+        String blueId = resolveContractBlueId(contract);
+        if (isProcessorManagedChannelBlueId(blueId)) {
+            return true;
         }
         for (Class<? extends ChannelContract> type : PROCESSOR_MANAGED_CHANNEL_TYPES) {
             if (type.isInstance(contract)) {
@@ -54,5 +85,18 @@ public final class ProcessorContractConstants {
             }
         }
         return false;
+    }
+
+    private static String resolveContractBlueId(ChannelContract contract) {
+        TypeBlueId typeBlueId = contract.getClass().getAnnotation(TypeBlueId.class);
+        if (typeBlueId == null) {
+            return null;
+        }
+        String[] values = typeBlueId.value();
+        if (values != null && values.length > 0) {
+            return values[0];
+        }
+        String defaultValue = typeBlueId.defaultValue();
+        return defaultValue != null && !defaultValue.isEmpty() ? defaultValue : null;
     }
 }
