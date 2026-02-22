@@ -2,9 +2,12 @@ package blue.language.processor;
 
 import blue.language.Blue;
 import blue.language.NodeProvider;
+import blue.language.blueid.BlueIdCalculator;
 import blue.language.model.Node;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.SequentialWorkflowOperation;
+import blue.language.processor.registry.processors.SequentialWorkflowOperationProcessor;
 import blue.language.processor.model.TestEvent;
 import blue.language.utils.Properties;
 import org.junit.jupiter.api.Test;
@@ -325,6 +328,40 @@ class SequentialWorkflowProcessorTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowOperationFallsBackToComputedDocumentIdWhenMarkerIdMissing() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        Node withoutMarkerDocumentId = initialized.clone();
+        Node initializedMarker = withoutMarkerDocumentId.getProperties()
+                .get("contracts")
+                .getProperties()
+                .get("initialized");
+        assertNotNull(initializedMarker);
+        assertNotNull(initializedMarker.getProperties());
+        initializedMarker.getProperties().remove("documentId");
+
+        SequentialWorkflowOperation contract = new SequentialWorkflowOperation();
+        contract.setOperation("increment");
+        contract.setChannelKey("ownerChannel");
+
+        String pinnedBlueId = BlueIdCalculator.calculateSemanticBlueId(withoutMarkerDocumentId.clone());
+        Node matchingEvent = operationRequestEvent(blue, "increment", 5, false, pinnedBlueId, "owner-42");
+
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, withoutMarkerDocumentId);
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                matchingEvent,
+                false,
+                false);
+
+        SequentialWorkflowOperationProcessor processor = new SequentialWorkflowOperationProcessor();
+        assertTrue(processor.matches(contract, context));
     }
 
     @Test
