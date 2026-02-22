@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -997,6 +998,116 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void updateDocumentStepSupportsTemplateExpressionsInPath() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Update Path Template Doc\n" +
+                "entries:\n" +
+                "  - first\n" +
+                "  - second\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: \"/entries/${event.payload.index}\"\n" +
+                "            val: selected\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-path-template\n" +
+                "kind: TestEvent\n" +
+                "payload:\n" +
+                "  index: 1\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node first = ProcessorEngine.nodeAt(result.document(), "/entries/0");
+        Node second = ProcessorEngine.nodeAt(result.document(), "/entries/1");
+        assertNotNull(first);
+        assertNotNull(second);
+        assertEquals("first", first.getValue());
+        assertEquals("selected", second.getValue());
+    }
+
+    @Test
+    void updateDocumentStepSupportsExpressionChangesetArrays() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Update Changeset Expression Doc\n" +
+                "flag: nope\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset: \"${[{ op: 'REPLACE', path: '/flag', val: event.payload.flag }]}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-changeset-expression\n" +
+                "kind: TestEvent\n" +
+                "payload:\n" +
+                "  flag: yep\n");
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals("yep", result.document().getProperties().get("flag").getValue());
+    }
+
+    @Test
+    void updateDocumentStepUnsupportedOperationBecomesFatalTermination() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Update Unsupported Op Doc\n" +
+                "value: base\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: UPSERT\n" +
+                "            path: /value\n" +
+                "            val: nope\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-unsupported-op").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertTrue(String.valueOf(terminated.getProperties().get("reason").getValue())
+                .contains("Unsupported Update Document operation"));
+    }
+
+    @Test
     void triggerEventStepResolvesEventExpressions() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -1032,6 +1143,83 @@ class SequentialWorkflowProcessorTest {
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
         assertEquals(new BigInteger("1"), result.document().getProperties().get("triggerResolved").getValue());
+    }
+
+    @Test
+    void triggerEventStepEmitsProvidedPayload() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Trigger Event Payload Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Trigger Event\n" +
+                "        event:\n" +
+                "          type:\n" +
+                "            blueId: Conversation/Chat Message\n" +
+                "          message: Hello World\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-trigger-payload").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertTrue(result.triggeredEvents().stream().anyMatch(emitted -> {
+            if (emitted == null || emitted.getProperties() == null) {
+                return false;
+            }
+            Node message = emitted.getProperties().get("message");
+            if (message == null || !"Hello World".equals(String.valueOf(message.getValue()))) {
+                return false;
+            }
+            Node type = emitted.getProperties().get("type");
+            if (type == null) {
+                return true;
+            }
+            if ("Conversation/Chat Message".equals(String.valueOf(type.getValue()))) {
+                return true;
+            }
+            return type.getProperties() != null
+                    && type.getProperties().get("blueId") != null
+                    && "Conversation/Chat Message".equals(String.valueOf(type.getProperties().get("blueId").getValue()));
+        }));
+    }
+
+    @Test
+    void triggerEventStepMissingPayloadBecomesFatalTermination() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Trigger Missing Payload Doc\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  workflow:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Trigger Event\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.objectToNode(new TestEvent().eventId("evt-trigger-missing").kind("TestEvent"));
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        Node terminated = result.document()
+                .getProperties().get("contracts")
+                .getProperties().get("terminated");
+        assertNotNull(terminated);
+        assertEquals("fatal", String.valueOf(terminated.getProperties().get("cause").getValue()));
+        assertNotNull(terminated.getProperties().get("reason"));
     }
 
     private Node operationWorkflowDocument(String handlerChannel, String operationChannel) {

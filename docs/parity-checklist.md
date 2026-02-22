@@ -113,6 +113,11 @@ Current in-flight work:
   - previous-step result access from `steps.<name>.*`
   - deterministic rejection of async/await and runaway-loop fatal termination behavior in workflow processing
   (`SequentialWorkflowProcessorTest`).
+- Update/Trigger step parity coverage now also includes:
+  - template-path and expression-array `changeset` evaluation in Update Document steps
+  - unsupported Update Document operation fatal termination behavior
+  - Trigger Event payload emission assertions and missing-payload fatal termination behavior
+  (`SequentialWorkflowProcessorTest` additions aligned with JS step-executor test scenarios).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - QuickJS fuel calibration migration now has dedicated deterministic baseline coverage (`QuickJsFuelCalibrationTest`) for representative script complexity trends and repeated-run stability.
