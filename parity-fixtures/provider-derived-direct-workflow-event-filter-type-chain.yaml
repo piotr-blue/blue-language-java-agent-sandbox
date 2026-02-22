@@ -24,7 +24,7 @@ document: |
           changeset:
             - op: REPLACE
               path: /observed
-              val: 7
+              val: "${event.payload}"
 event: |
   type:
     blueId: TestEvent
@@ -33,7 +33,7 @@ event: |
   payload:
     type:
       blueId: Custom/Derived Message
-    value: ignored
+    value: 7
 expected:
   paths:
     /observed: 7
