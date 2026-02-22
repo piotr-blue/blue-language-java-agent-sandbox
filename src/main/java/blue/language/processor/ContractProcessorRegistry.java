@@ -304,7 +304,7 @@ public class ContractProcessorRegistry {
         if (contractNode == null || processorsByBlueId == null || processorsByBlueId.isEmpty()) {
             return Optional.empty();
         }
-        for (String blueId : resolveTypeChainBlueIds(contractNode.getType(), nodeProvider)) {
+        for (String blueId : resolveTypeChainBlueIds(contractNode, nodeProvider)) {
             P processor = processorsByBlueId.get(blueId);
             if (processor != null) {
                 return Optional.of(processor);
@@ -313,14 +313,15 @@ public class ContractProcessorRegistry {
         return Optional.empty();
     }
 
-    private static List<String> resolveTypeChainBlueIds(Node typeNode, NodeProvider nodeProvider) {
+    private static List<String> resolveTypeChainBlueIds(Node contractNode, NodeProvider nodeProvider) {
         List<String> blueIds = new ArrayList<>();
-        if (typeNode == null) {
+        if (contractNode == null) {
             return blueIds;
         }
         Set<Node> visitedNodes = Collections.newSetFromMap(new IdentityHashMap<Node, Boolean>());
         Set<String> visitedProviderBlueIds = new LinkedHashSet<>();
-        collectBlueIds(typeNode, nodeProvider, blueIds, visitedNodes, visitedProviderBlueIds);
+        collectBlueIds(contractNode.getType(), nodeProvider, blueIds, visitedNodes, visitedProviderBlueIds);
+        collectBlueIds(contractNode, nodeProvider, blueIds, visitedNodes, visitedProviderBlueIds);
         return blueIds;
     }
 

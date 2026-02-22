@@ -101,6 +101,29 @@ class ContractProcessorRegistryTest {
     }
 
     @Test
+    void lookupByNodeBlueIdFieldSupportsDirectAndProviderDerivedLookups() {
+        NodeProvider provider = new NodeProvider() {
+            @Override
+            public java.util.List<Node> fetchByBlueId(String blueId) {
+                if (!"Derived/Handler".equals(blueId)) {
+                    return Collections.emptyList();
+                }
+                Node definition = new Node().type(new Node().blueId("BaseHandler"));
+                return Collections.singletonList(definition);
+            }
+        };
+        ContractProcessorRegistry registry = new ContractProcessorRegistry(provider);
+        BaseHandlerProcessor handlerProcessor = new BaseHandlerProcessor();
+        registry.registerHandler(handlerProcessor);
+
+        Node directBlueIdNode = new Node().properties("blueId", new Node().value("BaseHandler"));
+        Node providerDerivedNode = new Node().properties("blueId", new Node().value("Derived/Handler"));
+
+        assertSame(handlerProcessor, registry.lookupHandler(directBlueIdNode).orElse(null));
+        assertSame(handlerProcessor, registry.lookupHandler(providerDerivedNode).orElse(null));
+    }
+
+    @Test
     void lookupMarkerByNodeSupportsProviderDerivedMarkerTypes() {
         NodeProvider provider = new NodeProvider() {
             @Override
