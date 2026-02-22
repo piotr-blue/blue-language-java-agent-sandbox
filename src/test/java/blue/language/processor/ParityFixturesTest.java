@@ -20,6 +20,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ParityFixturesTest {
 
@@ -43,12 +45,25 @@ class ParityFixturesTest {
         Map<String, Object> expectedPaths = mapValue(expected.get("paths"));
         int expectedTriggeredEvents = intValue(expected.get("triggeredEventsCount"), 0);
         boolean expectedCapabilityFailure = boolValue(expected.get("capabilityFailure"), false);
+        boolean expectedInitFailure = boolValue(expected.get("initFailure"), false);
+        String initFailureMessageContains = stringValue(expected.get("initFailureMessageContains"), null);
 
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
         blue.registerContractProcessor(new SetPropertyOnEventContractProcessor());
 
         Node document = blue.yamlToNode(documentYaml);
+        if (expectedInitFailure) {
+            Throwable thrown = assertThrows(RuntimeException.class, () -> blue.initializeDocument(document));
+            if (initFailureMessageContains != null && !initFailureMessageContains.trim().isEmpty()) {
+                String actualMessage = thrown.getMessage() != null ? thrown.getMessage() : String.valueOf(thrown);
+                assertTrue(actualMessage.contains(initFailureMessageContains),
+                        fixtureName + " expected init failure containing: " + initFailureMessageContains
+                                + " but got: " + actualMessage);
+            }
+            return;
+        }
+
         DocumentProcessingResult initialized = blue.initializeDocument(document);
         DocumentProcessingResult result = initialized;
         if (eventYaml != null && !eventYaml.trim().isEmpty()) {
