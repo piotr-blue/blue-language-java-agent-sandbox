@@ -4,6 +4,8 @@ import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
 import blue.language.samples.paynote.dsl.ChannelKey;
 import blue.language.samples.paynote.dsl.DocPath;
+import blue.language.samples.paynote.dsl.DocTemplate;
+import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.DocumentBuilder;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
@@ -342,6 +344,10 @@ public final class PayNoteBuilderVNext {
 
     public Node build() {
         return bootstrap.build();
+    }
+
+    public DocTemplate template() {
+        return DocTemplates.template(build());
     }
 
     public static List<String> signals(String... values) {
