@@ -90,6 +90,27 @@ class DocumentProcessorApiParityTest {
         assertEquals(originalJson, blue.nodeToJson(result.document()));
     }
 
+    @Test
+    void returnsCapabilityFailureForUnknownContractTypeBlueId() {
+        Blue blue = new Blue();
+        DocumentProcessor processor = new DocumentProcessor();
+        String yaml = "name: Unknown Contract Type Doc\n" +
+                "contracts:\n" +
+                "  mysteryChannel:\n" +
+                "    type:\n" +
+                "      blueId: UnknownChannelType\n";
+
+        Node original = blue.yamlToNode(yaml);
+        String originalJson = blue.nodeToJson(original.clone());
+        DocumentProcessingResult result = processor.initializeDocument(original);
+
+        assertTrue(result.capabilityFailure());
+        assertTrue(String.valueOf(result.failureReason()).contains("Unsupported contract type"));
+        assertEquals("0", String.valueOf(result.totalGas()));
+        assertEquals(0, result.triggeredEvents().size());
+        assertEquals(originalJson, blue.nodeToJson(result.document()));
+    }
+
     private String documentWithLifecycleAndEventHandlers() {
         return "name: API Parity Doc\n" +
                 "contracts:\n" +
