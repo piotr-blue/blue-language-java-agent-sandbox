@@ -44,7 +44,7 @@ Status legend:
 | Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | `processor/script/QuickJsExpressionUtils.java` | IN_PROGRESS |
 | QuickJS config exports | `src/util/expression/quickjs-config.ts` | `processor/script/QuickJsConfig.java` | DONE |
 | Script runtime integration | JS runtime usage in evaluator/steps | `processor/script/*`, `tools/quickjs-sidecar/index.js` | IN_PROGRESS |
-| JavaScript Code step | `src/registry/processors/steps/javascript-code-step-executor.ts` | `processor/workflow/steps/JavaScriptCodeStepExecutor.java` | IN_PROGRESS |
+| JavaScript Code step | `src/registry/processors/steps/javascript-code-step-executor.ts` | `processor/workflow/steps/JavaScriptCodeStepExecutor.java` | DONE |
 
 ## 4) Workflow step runtime
 
@@ -120,6 +120,7 @@ Current in-flight work:
   - explicit `null` step-result propagation across JS steps while preserving skip semantics for `undefined` returns
   - deterministic rejection of async/await and runaway-loop fatal termination behavior in workflow processing
   (`SequentialWorkflowProcessorTest`).
+- JavaScript Code step row in section 3 is now tracked as `DONE` based on direct and integration parity suites (`JavaScriptCodeStepExecutorDirectParityTest`, `JavaScriptCodeStepExecutorIntegrationParityTest`, `SequentialWorkflowProcessorTest`).
 - Update/Trigger step parity coverage now also includes:
   - template-path and expression-array `changeset` evaluation in Update Document steps
   - unsupported Update Document operation fatal termination behavior
