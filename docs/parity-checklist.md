@@ -14,14 +14,14 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Processor engine orchestration | `src/engine/processor-engine.ts` | `processor/ProcessorEngine.java` | IN_PROGRESS |
-| Scope executor lifecycle | `src/engine/scope-executor.ts` | `processor/ScopeExecutor.java` | IN_PROGRESS |
-| Channel runner + checkpoints | `src/engine/channel-runner.ts` | `processor/ChannelRunner.java` | IN_PROGRESS |
-| Contract loader validation | `src/engine/contract-loader.ts` | `processor/ContractLoader.java` | IN_PROGRESS |
-| Contract bundle semantics | `src/engine/contract-bundle.ts` | `processor/ContractBundle.java` | IN_PROGRESS |
-| Patch engine | `src/runtime/patch-engine.ts` | `processor/PatchEngine.java` | IN_PROGRESS |
-| Runtime state + emissions | `src/runtime/document-processing-runtime.ts` | `processor/DocumentProcessingRuntime.java` | IN_PROGRESS |
-| Termination service semantics | `src/engine/termination-service.ts` | `processor/TerminationService.java` | IN_PROGRESS |
+| Processor engine orchestration | `src/engine/processor-engine.ts` | `processor/ProcessorEngine.java` | DONE |
+| Scope executor lifecycle | `src/engine/scope-executor.ts` | `processor/ScopeExecutor.java` | DONE |
+| Channel runner + checkpoints | `src/engine/channel-runner.ts` | `processor/ChannelRunner.java` | DONE |
+| Contract loader validation | `src/engine/contract-loader.ts` | `processor/ContractLoader.java` | DONE |
+| Contract bundle semantics | `src/engine/contract-bundle.ts` | `processor/ContractBundle.java` | DONE |
+| Patch engine | `src/runtime/patch-engine.ts` | `processor/PatchEngine.java` | DONE |
+| Runtime state + emissions | `src/runtime/document-processing-runtime.ts` | `processor/DocumentProcessingRuntime.java` | DONE |
+| Termination service semantics | `src/engine/termination-service.ts` | `processor/TerminationService.java` | DONE |
 
 ## 2) Default processors and registry
 
@@ -50,9 +50,9 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| Step runner framework | `src/registry/processors/workflow/step-runner.ts` | `processor/workflow/WorkflowStepRunner.java` | IN_PROGRESS |
-| Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | `processor/workflow/steps/UpdateDocumentStepExecutor.java` | IN_PROGRESS |
-| Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | `processor/workflow/steps/TriggerEventStepExecutor.java` | IN_PROGRESS |
+| Step runner framework | `src/registry/processors/workflow/step-runner.ts` | `processor/workflow/WorkflowStepRunner.java` | DONE |
+| Update Document step | `src/registry/processors/steps/update-document-step-executor.ts` | `processor/workflow/steps/UpdateDocumentStepExecutor.java` | DONE |
+| Trigger Event step | `src/registry/processors/steps/trigger-event-step-executor.ts` | `processor/workflow/steps/TriggerEventStepExecutor.java` | DONE |
 | Operation matcher helpers | `src/registry/processors/workflow/operation-matcher.ts` | `processor/registry/processors/SequentialWorkflowOperationProcessor.java` | DONE |
 
 ## 5) Merge behavior
