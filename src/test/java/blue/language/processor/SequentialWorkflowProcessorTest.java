@@ -373,6 +373,31 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationAcceptsTimelineMessageTypeAlias() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-alias-message-type\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request: 4\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("4"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationAcceptsProviderDerivedTimelineMessageOperationRequestType() {
         NodeProvider provider = blueId -> {
             if (!"Custom/Derived Operation Request".equals(blueId)) {
