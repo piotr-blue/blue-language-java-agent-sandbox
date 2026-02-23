@@ -65,7 +65,10 @@ class ContractLoaderParityTest {
                 "    type:\n" +
                 "      blueId: Custom.Channel\n");
 
-        assertThrows(MustUnderstandFailureException.class, () -> loader.load(scope, "/"));
+        MustUnderstandFailureException error = assertThrows(
+                MustUnderstandFailureException.class,
+                () -> loader.load(scope, "/"));
+        assertTrue(String.valueOf(error.getMessage()).contains("Custom.Channel"));
     }
 
     @Test
