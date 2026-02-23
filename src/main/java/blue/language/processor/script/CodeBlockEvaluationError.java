@@ -7,6 +7,7 @@ public class CodeBlockEvaluationError extends RuntimeException {
     private final String runtimeErrorName;
     private final String runtimeErrorMessage;
     private final boolean runtimeStackAvailable;
+    private final String runtimeStack;
 
     public CodeBlockEvaluationError(String code, Throwable cause) {
         super("Failed to evaluate code block: " + truncate(code), cause);
@@ -16,10 +17,12 @@ public class CodeBlockEvaluationError extends RuntimeException {
             this.runtimeErrorName = runtimeException.errorName();
             this.runtimeErrorMessage = runtimeException.runtimeMessage();
             this.runtimeStackAvailable = runtimeException.stackAvailable();
+            this.runtimeStack = runtimeException.runtimeStack();
         } else {
             this.runtimeErrorName = null;
             this.runtimeErrorMessage = null;
             this.runtimeStackAvailable = false;
+            this.runtimeStack = null;
         }
     }
 
@@ -37,6 +40,10 @@ public class CodeBlockEvaluationError extends RuntimeException {
 
     public boolean runtimeStackAvailable() {
         return runtimeStackAvailable;
+    }
+
+    public String runtimeStack() {
+        return runtimeStack;
     }
 
     private static String truncate(String code) {

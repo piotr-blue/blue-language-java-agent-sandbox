@@ -73,7 +73,8 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
                         "QuickJS sidecar evaluation failed: " + details.formattedMessage(),
                         details.name(),
                         details.message(),
-                        details.stackAvailable());
+                        details.stackAvailable(),
+                        details.stack());
             }
             boolean valueDefined = response.containsKey("result");
             if (response.get("resultDefined") instanceof Boolean) {
@@ -147,7 +148,7 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
     private static RuntimeErrorDetails describeError(Object payload) {
         if (!(payload instanceof Map)) {
             String fallback = String.valueOf(payload);
-            return new RuntimeErrorDetails(null, fallback, false, fallback);
+            return new RuntimeErrorDetails(null, fallback, false, null, fallback);
         }
         @SuppressWarnings("unchecked")
         Map<Object, Object> map = (Map<Object, Object>) payload;
@@ -172,22 +173,29 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
             builder.append(String.valueOf(payload));
         }
         boolean stackAvailable = stack != null && String.valueOf(stack).trim().length() > 0;
+        String normalizedStack = stackAvailable ? String.valueOf(stack) : null;
         if (stackAvailable) {
             builder.append(" [stack available]");
         }
-        return new RuntimeErrorDetails(normalizedName, normalizedMessage, stackAvailable, builder.toString());
+        return new RuntimeErrorDetails(normalizedName, normalizedMessage, stackAvailable, normalizedStack, builder.toString());
     }
 
     private static final class RuntimeErrorDetails {
         private final String name;
         private final String message;
         private final boolean stackAvailable;
+        private final String stack;
         private final String formattedMessage;
 
-        RuntimeErrorDetails(String name, String message, boolean stackAvailable, String formattedMessage) {
+        RuntimeErrorDetails(String name,
+                            String message,
+                            boolean stackAvailable,
+                            String stack,
+                            String formattedMessage) {
             this.name = name;
             this.message = message;
             this.stackAvailable = stackAvailable;
+            this.stack = stack;
             this.formattedMessage = formattedMessage;
         }
 
@@ -201,6 +209,10 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
 
         boolean stackAvailable() {
             return stackAvailable;
+        }
+
+        String stack() {
+            return stack;
         }
 
         String formattedMessage() {

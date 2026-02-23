@@ -40,12 +40,14 @@ class CodeBlockEvaluationErrorTest {
                 "runtime failed",
                 "TypeError",
                 "bad input",
-                true);
+                true,
+                "TypeError: bad input\n    at <eval>");
         CodeBlockEvaluationError error = new CodeBlockEvaluationError("throw new TypeError('bad input')", cause);
 
         assertEquals("TypeError", error.runtimeErrorName());
         assertEquals("bad input", error.runtimeErrorMessage());
         assertTrue(error.runtimeStackAvailable());
+        assertTrue(String.valueOf(error.runtimeStack()).contains("TypeError: bad input"));
     }
 
     @Test
@@ -55,5 +57,6 @@ class CodeBlockEvaluationErrorTest {
         assertNull(error.runtimeErrorName());
         assertNull(error.runtimeErrorMessage());
         assertFalse(error.runtimeStackAvailable());
+        assertNull(error.runtimeStack());
     }
 }

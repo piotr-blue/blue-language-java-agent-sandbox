@@ -111,6 +111,7 @@ class QuickJsSidecarRuntimeTest {
             assertEquals("TypeError", typeError.errorName());
             assertEquals("bad input", typeError.runtimeMessage());
             assertTrue(typeError.stackAvailable());
+            assertTrue(String.valueOf(typeError.runtimeStack()).contains("TypeError: bad input"));
             assertTrue(typeError.getMessage().contains("TypeError: bad input"));
 
             ScriptRuntimeException outOfGas = assertThrows(

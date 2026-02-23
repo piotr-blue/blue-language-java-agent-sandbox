@@ -206,6 +206,7 @@ class QuickJSEvaluatorTest {
             assertEquals("TypeError", error.runtimeErrorName());
             assertEquals("bad input", error.runtimeErrorMessage());
             assertTrue(error.runtimeStackAvailable());
+            assertTrue(String.valueOf(error.runtimeStack()).contains("TypeError: bad input"));
             assertNotNull(error.getCause());
             assertTrue(error.getCause() instanceof ScriptRuntimeException);
         }
