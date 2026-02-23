@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContractLoaderCompositeTimelineTest {
 
@@ -20,7 +21,8 @@ class ContractLoaderCompositeTimelineTest {
                 "    channels:\n" +
                 "      - missingChild\n");
 
-        assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        assertTrue(String.valueOf(error.getMessage()).contains("missing channel 'missingChild'"));
     }
 
     @Test
@@ -34,7 +36,8 @@ class ContractLoaderCompositeTimelineTest {
                 "    channels:\n" +
                 "      - compositeA\n");
 
-        assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        assertTrue(String.valueOf(error.getMessage()).toLowerCase().contains("cyclic"));
     }
 
     @Test
@@ -53,7 +56,8 @@ class ContractLoaderCompositeTimelineTest {
                 "    channels:\n" +
                 "      - compositeA\n");
 
-        assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+        assertTrue(String.valueOf(error.getMessage()).toLowerCase().contains("cyclic"));
     }
 
     @Test
