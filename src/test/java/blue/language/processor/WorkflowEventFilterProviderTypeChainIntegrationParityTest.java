@@ -61,6 +61,92 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
     }
 
     @Test
+    void sequentialWorkflowEventFilterSupportsProviderDerivedMessagePropertyBlueIdChains() {
+        Blue blue = new Blue(providerWithTypeChains(
+                propertyChain("Custom/Derived Message", "Custom/Base Message")));
+
+        Node document = blue.yamlToNode("name: Provider Derived Workflow Event Filter Property BlueId Doc\n" +
+                "count: 0\n" +
+                "contracts:\n" +
+                "  ownerChannel:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Timeline Channel\n" +
+                "    timelineId: owner-42\n" +
+                "  workflow:\n" +
+                "    channel: ownerChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    event:\n" +
+                "      message:\n" +
+                "        type:\n" +
+                "          blueId: Custom/Base Message\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /count\n" +
+                "            val: 1\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-provider-derived-message-property-blueid\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Custom/Derived Message\n" +
+                "  text: hello\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        assertEquals(new BigInteger("1"), result.document().getProperties().get("count").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowEventFilterSupportsProviderDerivedMessageValueBlueIdChains() {
+        Blue blue = new Blue(providerWithTypeChains(
+                valueChain("Custom/Derived Message", "Custom/Base Message")));
+
+        Node document = blue.yamlToNode("name: Provider Derived Workflow Event Filter Value BlueId Doc\n" +
+                "count: 0\n" +
+                "contracts:\n" +
+                "  ownerChannel:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Timeline Channel\n" +
+                "    timelineId: owner-42\n" +
+                "  workflow:\n" +
+                "    channel: ownerChannel\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow\n" +
+                "    event:\n" +
+                "      message:\n" +
+                "        type:\n" +
+                "          blueId: Custom/Base Message\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /count\n" +
+                "            val: 1\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-provider-derived-message-value-blueid\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Custom/Derived Message\n" +
+                "  text: hello\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        assertEquals(new BigInteger("1"), result.document().getProperties().get("count").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationEventFilterSupportsProviderDerivedRequestTypeChains() {
         Blue blue = new Blue(providerWithTypeChains(
                 typeChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
