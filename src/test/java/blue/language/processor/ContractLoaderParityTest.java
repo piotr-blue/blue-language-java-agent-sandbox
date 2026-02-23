@@ -44,6 +44,8 @@ class ContractLoaderParityTest {
 
         ContractBundle bundle = loader.load(scope, "/");
 
+        assertEquals(1, bundle.channelsOfType("Core/Document Update Channel").size());
+        assertEquals("update", bundle.channelsOfType("Core/Document Update Channel").get(0).key());
         ContractBundle.ChannelBinding channelBinding = bundle.channel("update");
         assertNotNull(channelBinding);
         assertTrue(channelBinding.contract() instanceof DocumentUpdateChannel);

@@ -24,6 +24,7 @@ class DocumentProcessorApiParityTest {
 
         Node original = blue.yamlToNode(documentWithLifecycleAndEventHandlers());
         DocumentProcessingResult init = processor.initializeDocument(original);
+        assertFalse(init.capabilityFailure());
         assertTrue(processor.isInitialized(init.document()));
         assertEquals(1, init.triggeredEvents().size());
         assertEquals("Core/Document Processing Initiated",
@@ -34,7 +35,9 @@ class DocumentProcessorApiParityTest {
                 "  blueId: TestEvent\n" +
                 "eventId: evt-1\n");
         DocumentProcessingResult processed = processor.processDocument(init.document(), event);
+        assertFalse(processed.capabilityFailure());
         assertEquals(new BigInteger("5"), processed.document().getProperties().get("processed").getValue());
+        assertEquals(0, processed.triggeredEvents().size());
     }
 
     @Test
