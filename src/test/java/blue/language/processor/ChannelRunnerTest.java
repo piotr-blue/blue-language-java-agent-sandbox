@@ -8,6 +8,7 @@ import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
+import blue.language.processor.contracts.RecencyTestChannelProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.StaleBlockingTestEventChannelProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -21,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static blue.language.processor.registry.processors.CompositeTimelineChannelProcessor.compositeCheckpointKey;
 
 /**
  * Verifies checkpoint behaviour for the {@link ChannelRunner} in isolation.
@@ -275,6 +278,76 @@ final class ChannelRunnerTest {
         Node counterNode = execution.runtime().document().getProperties().get("counter");
         assertNotNull(counterNode);
         assertEquals(BigInteger.ONE, counterNode.getValue());
+    }
+
+    @Test
+    void deliversCompositeChannelPerChildAndHonorsChildRecencyCheckpoints() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new RecencyTestChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  childA:\n" +
+                "    type:\n" +
+                "      blueId: RecencyTestChannel\n" +
+                "    minDelta: 0\n" +
+                "  childB:\n" +
+                "    type:\n" +
+                "      blueId: RecencyTestChannel\n" +
+                "    minDelta: 5\n" +
+                "  compositeChannel:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Composite Timeline Channel\n" +
+                "    channels: [childA, childB]\n" +
+                "  increment:\n" +
+                "    channel: compositeChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding compositeBinding = bundle.channel("compositeChannel");
+        assertNotNull(compositeBinding);
+        ContractBundle.ChannelBinding childA = bundle.channel("childA");
+        ContractBundle.ChannelBinding childB = bundle.channel("childB");
+        assertNotNull(childA);
+        assertNotNull(childB);
+        assertSame(blue.language.processor.model.RecencyTestChannel.class, childA.contract().getClass());
+        assertSame(blue.language.processor.model.RecencyTestChannel.class, childB.contract().getClass());
+
+        runner.runExternalChannel("/", bundle, compositeBinding,
+                blue.yamlToNode("type:\n  blueId: TestEvent\nvalue: 5\n"));
+        Node counterAfterFirst = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterAfterFirst);
+        assertEquals(new BigInteger("2"), counterAfterFirst.getValue());
+
+        runner.runExternalChannel("/", bundle, compositeBinding,
+                blue.yamlToNode("type:\n  blueId: TestEvent\nvalue: 8\n"));
+        Node counterAfterSecond = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterAfterSecond);
+        assertEquals(new BigInteger("3"), counterAfterSecond.getValue());
+
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        Node storedA = checkpoint.lastEvent(compositeCheckpointKey("compositeChannel", "childA"));
+        Node storedB = checkpoint.lastEvent(compositeCheckpointKey("compositeChannel", "childB"));
+        assertNotNull(storedA);
+        assertNotNull(storedB);
+        Node storedAValueNode = storedA.getProperties() != null && storedA.getProperties().get("value") != null
+                ? storedA.getProperties().get("value")
+                : storedA;
+        Node storedBValueNode = storedB.getProperties() != null && storedB.getProperties().get("value") != null
+                ? storedB.getProperties().get("value")
+                : storedB;
+        assertEquals(new BigInteger("8"), storedAValueNode.getValue());
+        assertEquals(new BigInteger("5"), storedBValueNode.getValue());
     }
 
     @Test
