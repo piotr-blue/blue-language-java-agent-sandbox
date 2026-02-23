@@ -676,6 +676,54 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationMatchesProviderDefinitionPropertyAndScalarTypeChainsInRequestSchema() {
+        NodeProvider provider = blueId -> {
+            if ("Custom/Derived Payload".equals(blueId)) {
+                return Collections.singletonList(new Node()
+                        .properties("blueId", new Node().value("Custom/Base Payload")));
+            }
+            if ("Custom/Derived Item".equals(blueId)) {
+                return Collections.singletonList(new Node().value("Custom/Base Item"));
+            }
+            return Collections.emptyList();
+        };
+        Blue blue = new Blue(provider);
+        Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
+                null,
+                "ownerChannel",
+                "Conversation/Sequential Workflow Operation",
+                "Conversation/Operation",
+                "type: Dictionary\nentries:\n  payload:\n    type:\n      blueId: Custom/Base Payload\n  items:\n    type: List\n    itemType:\n      type:\n        blueId: Custom/Base Item",
+                null,
+                "${event.message.request.payload.value + event.message.request.items[0].value}")).document();
+
+        String storedBlueId = storedDocumentBlueId(initialized);
+        Node requestPayload = new Node()
+                .type(new Node().blueId("Custom/Derived Payload"))
+                .properties("value", new Node().value(4));
+        Node requestItems = new Node().items(
+                new Node()
+                        .type(new Node().blueId("Custom/Derived Item"))
+                        .properties("value", new Node().value(3)));
+        Node request = new Node()
+                .properties("payload", requestPayload)
+                .properties("items", requestItems);
+        Node event = new Node()
+                .type(new Node().blueId("Conversation/Timeline Entry"))
+                .properties("eventId", new Node().value("evt-op-provider-request-chain"))
+                .properties("timeline", new Node().properties("timelineId", new Node().value("owner-42")))
+                .properties("message", new Node()
+                        .type(new Node().blueId("Conversation/Operation Request"))
+                        .properties("operation", new Node().value("increment"))
+                        .properties("allowNewerVersion", new Node().value(false))
+                        .properties("document", new Node().properties("blueId", new Node().value(storedBlueId)))
+                        .properties("request", request));
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        assertEquals(new BigInteger("7"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationExecutesDerivedChangeWorkflow() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocumentAdvanced(
