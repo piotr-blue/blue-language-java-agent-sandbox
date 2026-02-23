@@ -5,18 +5,16 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.erdtman.jcs.JsonCanonicalizer;
 
 final class ProcessorEngine {
 
@@ -118,16 +116,7 @@ final class ProcessorEngine {
     }
 
     static String canonicalSignature(Node node) {
-        if (node == null) {
-            return null;
-        }
-        Object canonical = NodeToMapListOrValue.get(node);
-        try {
-            String json = UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(canonical);
-            return new JsonCanonicalizer(json).getEncodedString();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to canonicalize node for checkpoint comparison", ex);
-        }
+        return NodeCanonicalizer.canonicalSignature(node);
     }
 
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
