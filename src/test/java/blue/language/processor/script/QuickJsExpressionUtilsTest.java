@@ -131,6 +131,40 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void resolveExpressionsChargesWasmGasFromEvaluatorUsage() {
+        QuickJSEvaluator evaluator = new QuickJSEvaluator(new ScriptRuntime() {
+            @Override
+            public ScriptRuntimeResult evaluate(ScriptRuntimeRequest request) {
+                return new ScriptRuntimeResult(7, BigInteger.valueOf(123L), BigInteger.ZERO, true);
+            }
+
+            @Override
+            public void close() {
+                // no-op
+            }
+        });
+        try {
+            Node root = new Node().properties("value", new Node().value("${steps.answer}"));
+            List<BigInteger> gasCharges = new ArrayList<>();
+
+            Node resolved = QuickJsExpressionUtils.resolveExpressions(
+                    root,
+                    evaluator,
+                    new LinkedHashMap<String, Object>(),
+                    null,
+                    QuickJsExpressionUtils.createPathPredicate(Arrays.asList("/**"), null),
+                    null,
+                    gasCharges::add);
+
+            assertEquals(new BigInteger("7"), resolved.getProperties().get("value").getValue());
+            assertEquals(1, gasCharges.size());
+            assertEquals(new BigInteger("123"), gasCharges.get(0));
+        } finally {
+            evaluator.close();
+        }
+    }
+
+    @Test
     void wrapsEvaluationFailuresInCodeBlockEvaluationError() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs expression tests");
 
