@@ -97,6 +97,28 @@ class WorkflowContractSupportTest {
     }
 
     @Test
+    void matchesTypeRequirementSupportsRequirementTypeNodesUsingPropertyBlueId() {
+        Node candidate = new Node().type(new Node().blueId("Custom/Base Payload")).value("ok");
+        Node requirement = new Node()
+                .type(new Node().properties("blueId", new Node().value("Custom/Base Payload")));
+        Node mismatched = new Node().type(new Node().blueId("Custom/Other Payload")).value("ok");
+
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(mismatched, requirement));
+    }
+
+    @Test
+    void matchesTypeRequirementSupportsRequirementTypeNodesUsingScalarValue() {
+        Node candidate = new Node().type(new Node().blueId("Custom/Base Payload")).value("ok");
+        Node requirement = new Node()
+                .type(new Node().value("Custom/Base Payload"));
+        Node mismatched = new Node().type(new Node().blueId("Custom/Other Payload")).value("ok");
+
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(mismatched, requirement));
+    }
+
+    @Test
     void matchesTypeRequirementResolvesProviderDefinitionPropertyBlueIdChainsForEntries() {
         Node candidate = new Node().properties("payload",
                 new Node().type(new Node().blueId("Custom/Derived Payload")).value("ok"));

@@ -205,24 +205,30 @@ final class WorkflowContractSupport {
         if (expectedType == null) {
             return true;
         }
-        String expectedBlueId = expectedType.getBlueId();
-        if (expectedBlueId == null || expectedBlueId.trim().isEmpty()) {
+        List<String> expectedBlueIds = extractBlueIds(expectedType);
+        if (expectedBlueIds.isEmpty()) {
             return true;
         }
 
         Node candidateType = candidate.getType();
         if (candidateType != null) {
-            for (String candidateBlueId : extractBlueIds(candidateType)) {
-                if (expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId)) {
-                    return true;
+            List<String> candidateBlueIds = extractBlueIds(candidateType);
+            for (String expectedBlueId : expectedBlueIds) {
+                for (String candidateBlueId : candidateBlueIds) {
+                    if (expectedBlueId.equals(candidateBlueId)
+                            || equivalentCoreType(expectedBlueId, candidateBlueId)) {
+                        return true;
+                    }
                 }
             }
-            if (hasTypeInChain(candidateType,
-                    expectedBlueId,
-                    nodeProvider,
-                    new LinkedHashSet<String>(),
-                    new LinkedHashSet<String>())) {
-                return true;
+            for (String expectedBlueId : expectedBlueIds) {
+                if (hasTypeInChain(candidateType,
+                        expectedBlueId,
+                        nodeProvider,
+                        new LinkedHashSet<String>(),
+                        new LinkedHashSet<String>())) {
+                    return true;
+                }
             }
         }
 
@@ -230,7 +236,13 @@ final class WorkflowContractSupport {
         if (inferredCandidateType == null) {
             return false;
         }
-        return expectedBlueId.equals(inferredCandidateType) || equivalentCoreType(expectedBlueId, inferredCandidateType);
+        for (String expectedBlueId : expectedBlueIds) {
+            if (expectedBlueId.equals(inferredCandidateType)
+                    || equivalentCoreType(expectedBlueId, inferredCandidateType)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean hasTypeInChain(Node candidateType,
