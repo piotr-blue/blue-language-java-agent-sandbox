@@ -156,6 +156,47 @@ final class ChannelRunnerTest {
     }
 
     @Test
+    void usesOriginalPayloadForCheckpointSignatureWhenChannelizedEventDiffers() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    channel: testChannel\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().kind("alpha")));
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().kind("beta")));
+
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterNode);
+        assertEquals(new BigInteger("2"), counterNode.getValue(),
+                "Distinct external payloads must not be collapsed by channelized checkpoint signatures");
+
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        Node storedEvent = checkpoint.lastEvent(channelBinding.key());
+        assertNotNull(storedEvent);
+        assertEquals("beta", String.valueOf(storedEvent.getProperties().get("kind").getValue()));
+    }
+
+    @Test
     void deliversChannelizedEventToHandlersAndCheckpoint() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new NormalizingTestEventChannelProcessor());
