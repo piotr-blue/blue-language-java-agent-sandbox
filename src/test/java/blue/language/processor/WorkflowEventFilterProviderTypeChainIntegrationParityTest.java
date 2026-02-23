@@ -299,6 +299,106 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
         assertEquals(new BigInteger("11"), result.document().getProperties().get("counter").getValue());
     }
 
+    @Test
+    void sequentialWorkflowOperationDirectEventFilterSupportsProviderDerivedRequestPropertyBlueIdChains() {
+        Blue blue = new Blue(providerWithTypeChains(
+                propertyChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Provider Derived Direct Operation Event Filter Property BlueId Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Operation\n" +
+                "    channel: testChannel\n" +
+                "    request:\n" +
+                "      type:\n" +
+                "        blueId: Custom/Base Operation Request\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    event:\n" +
+                "      request:\n" +
+                "        type:\n" +
+                "          blueId: Custom/Base Operation Request\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.request.payload}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-provider-derived-direct-op-message-property-blueid\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "request:\n" +
+                "  type:\n" +
+                "    blueId: Custom/Derived Operation Request\n" +
+                "  payload: 14\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        assertEquals(new BigInteger("14"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
+    void sequentialWorkflowOperationDirectEventFilterSupportsProviderDerivedRequestValueBlueIdChains() {
+        Blue blue = new Blue(providerWithTypeChains(
+                valueChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Provider Derived Direct Operation Event Filter Value BlueId Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Operation\n" +
+                "    channel: testChannel\n" +
+                "    request:\n" +
+                "      type:\n" +
+                "        blueId: Custom/Base Operation Request\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    operation: increment\n" +
+                "    event:\n" +
+                "      request:\n" +
+                "        type:\n" +
+                "          blueId: Custom/Base Operation Request\n" +
+                "    steps:\n" +
+                "      - type:\n" +
+                "          blueId: Conversation/Update Document\n" +
+                "        changeset:\n" +
+                "          - op: REPLACE\n" +
+                "            path: /counter\n" +
+                "            val: \"${event.request.payload}\"\n");
+
+        Node initialized = blue.initializeDocument(document).document();
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-provider-derived-direct-op-message-value-blueid\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "request:\n" +
+                "  type:\n" +
+                "    blueId: Custom/Derived Operation Request\n" +
+                "  payload: 15\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+        assertEquals(new BigInteger("15"), result.document().getProperties().get("counter").getValue());
+    }
+
     private static NodeProvider providerWithTypeChains(final Map<String, Node> definitions) {
         return new NodeProvider() {
             @Override
