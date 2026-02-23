@@ -125,6 +125,21 @@ class QuickJsSidecarRuntimeTest {
         }
     }
 
+    @Test
+    void exposesStructuredErrorDetailsForSyntaxFailures() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for sidecar tests");
+
+        try (QuickJsSidecarRuntime runtime = new QuickJsSidecarRuntime()) {
+            ScriptRuntimeException syntaxError = assertThrows(
+                    ScriptRuntimeException.class,
+                    () -> runtime.evaluate(ScriptRuntimeRequest.of("const value = ;")));
+            assertEquals("SyntaxError", syntaxError.errorName());
+            assertTrue(syntaxError.runtimeMessage() != null && !syntaxError.runtimeMessage().trim().isEmpty());
+            assertTrue(syntaxError.stackAvailable());
+            assertTrue(String.valueOf(syntaxError.runtimeStack()).contains("SyntaxError"));
+        }
+    }
+
     private boolean nodeAvailable() throws IOException, InterruptedException {
         Process process = new ProcessBuilder("node", "--version").start();
         int exit = process.waitFor();

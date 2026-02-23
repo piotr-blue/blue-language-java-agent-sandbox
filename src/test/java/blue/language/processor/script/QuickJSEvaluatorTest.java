@@ -189,6 +189,10 @@ class QuickJSEvaluatorTest {
                             BigInteger.valueOf(1000L)));
             assertTrue(error.getMessage().contains("Failed to evaluate code block"));
             assertTrue(error.code().contains("await"));
+            assertEquals("SyntaxError", error.runtimeErrorName());
+            assertTrue(error.runtimeErrorMessage() != null && error.runtimeErrorMessage().contains("await"));
+            assertTrue(error.runtimeStackAvailable());
+            assertTrue(String.valueOf(error.runtimeStack()).contains("SyntaxError"));
         }
     }
 
