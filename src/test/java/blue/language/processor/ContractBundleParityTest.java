@@ -101,12 +101,14 @@ class ContractBundleParityTest {
     void validatesCheckpointMarkersForReservedKey() {
         ContractBundle.Builder builder = ContractBundle.builder();
 
-        assertThrows(IllegalStateException.class,
+        IllegalStateException wrongKey = assertThrows(IllegalStateException.class,
                 () -> builder.addMarker("custom", new ChannelEventCheckpoint()));
+        assertTrue(String.valueOf(wrongKey.getMessage()).contains("reserved key 'checkpoint'"));
 
         builder.addMarker(ProcessorContractConstants.KEY_CHECKPOINT, new ChannelEventCheckpoint());
-        assertThrows(IllegalStateException.class,
+        IllegalStateException duplicate = assertThrows(IllegalStateException.class,
                 () -> builder.addMarker(ProcessorContractConstants.KEY_CHECKPOINT, new ChannelEventCheckpoint()));
+        assertTrue(String.valueOf(duplicate.getMessage()).contains("Duplicate Channel Event Checkpoint"));
 
         ContractBundle bundle = builder.build();
         assertTrue(bundle.hasCheckpoint());
@@ -120,5 +122,9 @@ class ContractBundleParityTest {
 
         assertTrue(bundle.hasCheckpoint());
         assertNotNull(bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT));
+        IllegalStateException duplicate = assertThrows(
+                IllegalStateException.class,
+                () -> bundle.registerCheckpointMarker(new ChannelEventCheckpoint()));
+        assertTrue(String.valueOf(duplicate.getMessage()).contains("Duplicate Channel Event Checkpoint"));
     }
 }

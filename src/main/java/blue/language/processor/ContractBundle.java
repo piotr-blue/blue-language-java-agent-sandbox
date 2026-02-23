@@ -243,11 +243,6 @@ public final class ContractBundle {
 
         public Builder addMarker(String key, MarkerContract contract) {
             String normalizedKey = validateContractKey(key, "Marker");
-            ensureUniqueContractKey(normalizedKey);
-            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey) && !(contract instanceof ChannelEventCheckpoint)) {
-                throw new IllegalStateException(
-                        "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
-            }
             if (contract instanceof ChannelEventCheckpoint) {
                 if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
                     throw new IllegalStateException(
@@ -256,6 +251,12 @@ public final class ContractBundle {
                 if (checkpointDeclared) {
                     throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
+            } else if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
+                throw new IllegalStateException(
+                        "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
+            }
+            ensureUniqueContractKey(normalizedKey);
+            if (contract instanceof ChannelEventCheckpoint) {
                 checkpointDeclared = true;
             }
             markers.put(normalizedKey, contract);
