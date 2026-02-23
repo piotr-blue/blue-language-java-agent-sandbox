@@ -15,6 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EmissionRegistryTest {
 
     @Test
+    void createsAndReusesScopeRuntimeContexts() {
+        EmissionRegistry registry = new EmissionRegistry();
+
+        ScopeRuntimeContext contextA = registry.scope("/root");
+        ScopeRuntimeContext contextB = registry.scope("/root");
+
+        assertSame(contextA, contextB);
+        assertNull(registry.existingScope("/missing"));
+    }
+
+    @Test
     void scopeTreatsNullAndEmptyAsRoot() {
         EmissionRegistry registry = new EmissionRegistry();
         ScopeRuntimeContext root = registry.scope("/");
