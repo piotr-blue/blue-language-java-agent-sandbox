@@ -50,7 +50,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         }
         NodeProvider nodeProvider = context.nodeProvider();
 
-        Node requestNode = extractOperationRequestNode(eventNode, nodeProvider);
+        Node requestNode = extractOperationRequestNode(eventNode);
         if (requestNode == null) {
             return false;
         }
@@ -105,7 +105,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         return channel != null && !channel.trim().isEmpty() ? channel.trim() : null;
     }
 
-    private Node extractOperationRequestNode(Node eventNode, NodeProvider nodeProvider) {
+    private Node extractOperationRequestNode(Node eventNode) {
         if (isOperationRequestNode(eventNode)) {
             return eventNode;
         }
@@ -116,7 +116,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
             return null;
         }
         Node message = eventNode.getProperties().get("message");
-        if (isOperationRequestNode(message) && isTypedOperationRequestNode(message, nodeProvider)) {
+        if (isOperationRequestNode(message)) {
             return message;
         }
         return null;
@@ -151,7 +151,47 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (!operationKey.equals(requestOperation)) {
             return false;
         }
-        return WorkflowContractSupport.matchesEventFilter(eventNode, contract.getEvent(), nodeProvider);
+        if (!WorkflowContractSupport.matchesEventFilter(eventNode, contract.getEvent(), nodeProvider)) {
+            return false;
+        }
+        if (!requiresOperationRequestTypeGate(eventNode, requestNode)) {
+            return true;
+        }
+        if (contract.getEvent() != null) {
+            return true;
+        }
+        return isTypedOperationRequestNode(requestNode, nodeProvider);
+    }
+
+    private boolean requiresOperationRequestTypeGate(Node eventNode, Node requestNode) {
+        if (eventNode == null || requestNode == null) {
+            return false;
+        }
+        if (eventNode == requestNode) {
+            return false;
+        }
+        if (requestNode.getType() != null && requestNode.getType().getBlueId() != null
+                && !requestNode.getType().getBlueId().trim().isEmpty()) {
+            return true;
+        }
+        if (requestNode.getProperties() == null) {
+            return false;
+        }
+        Node typeNode = requestNode.getProperties().get("type");
+        if (typeNode == null) {
+            return false;
+        }
+        if (typeNode.getBlueId() != null && !typeNode.getBlueId().trim().isEmpty()) {
+            return true;
+        }
+        if (typeNode.getProperties() != null && typeNode.getProperties().get("blueId") != null) {
+            Node blueIdNode = typeNode.getProperties().get("blueId");
+            if (blueIdNode != null && blueIdNode.getValue() instanceof String
+                    && !((String) blueIdNode.getValue()).trim().isEmpty()) {
+                return true;
+            }
+        }
+        return typeNode.getValue() instanceof String && !((String) typeNode.getValue()).trim().isEmpty();
     }
 
     private Node loadOperationNode(SequentialWorkflowOperation contract, ProcessorExecutionContext context) {
