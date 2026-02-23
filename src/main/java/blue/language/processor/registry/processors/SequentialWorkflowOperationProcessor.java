@@ -164,34 +164,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
     }
 
     private boolean requiresOperationRequestTypeGate(Node eventNode, Node requestNode) {
-        if (eventNode == null || requestNode == null) {
-            return false;
-        }
-        if (eventNode == requestNode) {
-            return false;
-        }
-        if (requestNode.getType() != null && requestNode.getType().getBlueId() != null
-                && !requestNode.getType().getBlueId().trim().isEmpty()) {
-            return true;
-        }
-        if (requestNode.getProperties() == null) {
-            return false;
-        }
-        Node typeNode = requestNode.getProperties().get("type");
-        if (typeNode == null) {
-            return false;
-        }
-        if (typeNode.getBlueId() != null && !typeNode.getBlueId().trim().isEmpty()) {
-            return true;
-        }
-        if (typeNode.getProperties() != null && typeNode.getProperties().get("blueId") != null) {
-            Node blueIdNode = typeNode.getProperties().get("blueId");
-            if (blueIdNode != null && blueIdNode.getValue() instanceof String
-                    && !((String) blueIdNode.getValue()).trim().isEmpty()) {
-                return true;
-            }
-        }
-        return typeNode.getValue() instanceof String && !((String) typeNode.getValue()).trim().isEmpty();
+        return eventNode != null && requestNode != null && eventNode != requestNode;
     }
 
     private Node loadOperationNode(SequentialWorkflowOperation contract, ProcessorExecutionContext context) {
