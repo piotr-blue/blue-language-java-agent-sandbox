@@ -360,11 +360,9 @@ public class QuickJSEvaluator implements AutoCloseable {
             return null;
         }
         Map<String, Object> pointerValues = new LinkedHashMap<String, Object>();
-        if (referencesRootDocument(code, canonical)) {
-            Object rootValue = safeRead(reader, "/");
-            if (rootValue != null) {
-                pointerValues.put("/", rootValue);
-            }
+        Object rootValue = safeRead(reader, "/");
+        if (rootValue != null) {
+            pointerValues.put("/", rootValue);
         }
         collectPointerValues(pointerValues, code, canonical ? DOCUMENT_CANONICAL_PATTERN : DOCUMENT_CALL_PATTERN, reader);
         collectPointerValues(pointerValues, code, canonical ? DOCUMENT_GET_CANONICAL_PATTERN : DOCUMENT_GET_PATTERN, reader);
@@ -393,14 +391,6 @@ public class QuickJSEvaluator implements AutoCloseable {
                 pointerValues.put(normalized, value);
             }
         }
-    }
-
-    private boolean referencesRootDocument(String code, boolean canonical) {
-        String source = code == null ? "" : code;
-        if (canonical) {
-            return source.contains("document.canonical()") || source.contains("document.getCanonical()");
-        }
-        return source.contains("document()") || source.contains("document.get()");
     }
 
     private Object safeRead(Function<String, Object> reader, String pointer) {

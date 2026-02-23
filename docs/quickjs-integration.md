@@ -124,6 +124,7 @@ Document callback behavior (direct evaluator usage):
   - `document` as `Function<Object, Object>` (simple callback), or
   - `QuickJSEvaluator.DocumentBinding` (simple + canonical callbacks).
 - for literal pointer calls in script code (`document('/...')`, `document.get('/...')`, `document.canonical('/...')`, `document.getCanonical('/...')`), evaluator materializes pointer snapshots from callback reads and feeds them into prelude document helpers.
+- evaluator now also attempts root snapshot reads at `/`; when callbacks provide root data, dynamic pointer expressions (e.g. `document(pointerVar)`) resolve through the preloaded snapshot model.
 - existing workflow-step path (`QuickJSStepBindings` with `__documentDataSimple` / `__documentDataCanonical`) remains the default and is unchanged.
 
 Document snapshots are charged via `chargeDocumentSnapshot`.

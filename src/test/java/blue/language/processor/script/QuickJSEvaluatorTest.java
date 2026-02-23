@@ -428,6 +428,49 @@ class QuickJSEvaluatorTest {
     }
 
     @Test
+    void supportsFunctionDocumentBindingForDynamicPointerExpressionsWhenRootSnapshotAvailable() throws IOException, InterruptedException {
+        assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
+
+        try (QuickJSEvaluator evaluator = new QuickJSEvaluator()) {
+            Map<String, Object> bindings = new LinkedHashMap<String, Object>();
+            bindings.put("document", new QuickJSEvaluator.DocumentBinding() {
+                @Override
+                public Object get(String pointer) {
+                    if ("/".equals(pointer)) {
+                        return new LinkedHashMap<String, Object>() {{
+                            put("total", 41);
+                        }};
+                    }
+                    return null;
+                }
+
+                @Override
+                public Object getCanonical(String pointer) {
+                    if ("/".equals(pointer)) {
+                        return new LinkedHashMap<String, Object>() {{
+                            put("total", new LinkedHashMap<String, Object>() {{
+                                put("value", 41);
+                            }});
+                        }};
+                    }
+                    return null;
+                }
+            });
+
+            ScriptRuntimeResult result = evaluator.evaluate(
+                    "const pointer = '/total'; return ({ plain: document(pointer), canonical: document.getCanonical(pointer).value });",
+                    bindings,
+                    BigInteger.valueOf(1000L));
+
+            assertTrue(result.value() instanceof Map);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) result.value();
+            assertEquals("41", String.valueOf(payload.get("plain")));
+            assertEquals("41", String.valueOf(payload.get("canonical")));
+        }
+    }
+
+    @Test
     void resolvesRelativeDocumentPointersUsingScopePathBinding() throws IOException, InterruptedException {
         assumeTrue(nodeAvailable(), "Node.js binary is required for quickjs evaluator tests");
 
