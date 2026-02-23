@@ -327,6 +327,28 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationSkipsNonTimelineEventsEvenWhenMessageLooksLikeOperationRequest() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: RandomEvent\n" +
+                "eventId: evt-op-non-timeline-envelope\n" +
+                "message:\n" +
+                "  type: Conversation/Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request: 9\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationAcceptsTimelineMessageTypeDeclaredAsScalarValue() {
         Blue blue = new Blue();
         Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
