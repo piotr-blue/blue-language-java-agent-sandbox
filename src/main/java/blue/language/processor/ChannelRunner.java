@@ -61,14 +61,14 @@ final class ChannelRunner {
                         ? delivery.eventNode()
                         : (match.eventNode() != null ? match.eventNode() : event);
                 if (!processSingleDelivery(scopePath, bundle, channel.key(), checkpointKey, contract, match, eventForHandlers,
-                        delivery != null ? delivery.eventId() : null)) {
+                        delivery != null ? delivery.eventId() : null, event)) {
                     continue;
                 }
             }
             return;
         }
         Node eventForHandlers = match.eventNode() != null ? match.eventNode() : event;
-        processSingleDelivery(scopePath, bundle, channel.key(), channel.key(), contract, match, eventForHandlers, match.eventId);
+        processSingleDelivery(scopePath, bundle, channel.key(), channel.key(), contract, match, eventForHandlers, match.eventId, event);
     }
 
     void runHandlers(String scopePath,
@@ -108,7 +108,8 @@ final class ChannelRunner {
                                           ChannelContract contract,
                                           ProcessorEngine.ChannelMatch match,
                                           Node eventForHandlers,
-                                          String explicitEventId) {
+                                          String explicitEventId,
+                                          Node originalEventNode) {
         if (execution.isScopeInactive(scopePath)) {
             return false;
         }
@@ -116,7 +117,8 @@ final class ChannelRunner {
         CheckpointManager.CheckpointRecord checkpoint = checkpointManager.findCheckpoint(bundle, checkpointChannelKey);
         String eventSignature = explicitEventId != null
                 ? explicitEventId
-                : (match.eventId != null ? match.eventId : ProcessorEngine.canonicalSignature(eventForHandlers));
+                : (match.eventId != null ? match.eventId : ProcessorEngine.canonicalSignature(
+                        originalEventNode != null ? originalEventNode : eventForHandlers));
         if (checkpointManager.isDuplicate(checkpoint, eventSignature)) {
             return false;
         }
@@ -131,7 +133,8 @@ final class ChannelRunner {
         if (execution.isScopeInactive(scopePath)) {
             return false;
         }
-        checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature, eventForHandlers);
+        checkpointManager.persist(scopePath, bundle, checkpoint, eventSignature,
+                originalEventNode != null ? originalEventNode : eventForHandlers);
         return true;
     }
 }

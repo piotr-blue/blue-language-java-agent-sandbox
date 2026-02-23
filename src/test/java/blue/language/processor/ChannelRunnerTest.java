@@ -199,7 +199,7 @@ final class ChannelRunnerTest {
         assertNotNull(storedEvent);
         Node kindNode = storedEvent.getProperties().get("kind");
         assertNotNull(kindNode);
-        assertEquals(NormalizingTestEventChannelProcessor.NORMALIZED_KIND, kindNode.getValue());
+        assertEquals("original", kindNode.getValue());
     }
 
     @Test
