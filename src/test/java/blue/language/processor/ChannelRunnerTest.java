@@ -125,6 +125,48 @@ final class ChannelRunnerTest {
     }
 
     @Test
+    void duplicateSignaturesSkipAllHandlersAcrossMultiHandlerChannels() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  incrementA:\n" +
+                "    channel: testChannel\n" +
+                "    order: 0\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n" +
+                "  incrementB:\n" +
+                "    channel: testChannel\n" +
+                "    order: 1\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-dup")));
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-dup")));
+
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNotNull(counterNode);
+        assertEquals(new BigInteger("2"), counterNode.getValue(),
+                "Duplicate delivery should skip all handlers after first successful run");
+    }
+
+    @Test
     void skipsDuplicateEventsByEventIdEvenIfPayloadChanges() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
