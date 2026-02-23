@@ -147,7 +147,7 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
     }
 
     @Test
-    void sequentialWorkflowOperationEventFilterSupportsProviderDerivedRequestTypeChains() {
+    void sequentialWorkflowOperationEventFilterSkipsProviderDerivedRequestTypeChainsWhenEnvelopeTypeIsNotOperationRequest() {
         Blue blue = new Blue(providerWithTypeChains(
                 typeChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -194,11 +194,11 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
                 "  request: 9\n");
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
-        assertEquals(new BigInteger("9"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
-    void sequentialWorkflowOperationEventFilterSupportsProviderDerivedRequestPropertyBlueIdChains() {
+    void sequentialWorkflowOperationEventFilterSkipsProviderDerivedRequestPropertyBlueIdChainsWhenEnvelopeTypeIsNotOperationRequest() {
         Blue blue = new Blue(providerWithTypeChains(
                 propertyChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -245,11 +245,11 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
                 "  request: 10\n");
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
-        assertEquals(new BigInteger("10"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
-    void sequentialWorkflowOperationEventFilterSupportsProviderDerivedRequestValueBlueIdChains() {
+    void sequentialWorkflowOperationEventFilterSkipsProviderDerivedRequestValueBlueIdChainsWhenEnvelopeTypeIsNotOperationRequest() {
         Blue blue = new Blue(providerWithTypeChains(
                 valueChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -296,11 +296,11 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
                 "  request: 11\n");
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
-        assertEquals(new BigInteger("11"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
-    void sequentialWorkflowOperationDirectEventFilterSupportsProviderDerivedRequestPropertyBlueIdChains() {
+    void sequentialWorkflowOperationDirectEventFilterSkipsProviderDerivedRequestPropertyBlueIdChainsByDefault() {
         Blue blue = new Blue(providerWithTypeChains(
                 propertyChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -346,11 +346,11 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
                 "  payload: 14\n");
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
-        assertEquals(new BigInteger("14"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
-    void sequentialWorkflowOperationDirectEventFilterSupportsProviderDerivedRequestValueBlueIdChains() {
+    void sequentialWorkflowOperationDirectEventFilterSkipsProviderDerivedRequestValueBlueIdChainsByDefault() {
         Blue blue = new Blue(providerWithTypeChains(
                 valueChain("Custom/Derived Operation Request", "Custom/Base Operation Request")));
         blue.registerContractProcessor(new TestEventChannelProcessor());
@@ -396,7 +396,7 @@ class WorkflowEventFilterProviderTypeChainIntegrationParityTest {
                 "  payload: 15\n");
 
         DocumentProcessingResult result = blue.processDocument(initialized, event);
-        assertEquals(new BigInteger("15"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     private static NodeProvider providerWithTypeChains(final Map<String, Node> definitions) {

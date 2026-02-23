@@ -35,6 +35,6 @@ event: |
   request: 4
 expected:
   paths:
-    /counter: 4
+    /counter: 0
   triggeredEventsCount: 0
   capabilityFailure: false

@@ -6,18 +6,20 @@ Pinned JS target:
 - Commit: `bf9e1cfd200d35801d8237f7080895372c1572c6`
 - Package: `libs/document-processor`
 
-This document tracks the remaining high-risk parity gaps and the implementation decision for each area.
+This document tracks the high-risk parity gaps and their current resolution status.
 
 ---
 
 ## 1) Runtime JSON patch pointer semantics
 
+- **Status**: ✅ Resolved
+
 - **JS references**
   - `src/__tests__/DocumentProcessingRuntimeJsonPatchTest.test.ts`
   - `src/runtime/patch-engine.ts`
-- **Current Java behavior**
-  - Patch paths go through strict JSON Pointer escape validation/unescape in runtime patch traversal.
-  - Additional strict mixed object/array path rules beyond JS patch runtime behavior.
+- **Implemented Java behavior**
+  - Patch runtime now uses JS-style patch-path traversal semantics (literal `~` segments, raw token splitting, JS-style array segment handling).
+  - Pointer utility strictness remains available for non-patch utility APIs.
 - **Target behavior**
   - Match JS runtime patch engine semantics for patch-path token handling and traversal.
   - Keep pointer utility strictness for non-patch APIs unless explicitly required otherwise.
@@ -29,12 +31,15 @@ This document tracks the remaining high-risk parity gaps and the implementation 
 
 ## 2) Sequential workflow operation request matching
 
+- **Status**: ✅ Resolved
+
 - **JS references**
   - `src/registry/__tests__/sequential-workflow-operation-processor.test.ts`
   - `src/registry/processors/sequential-workflow-operation-processor.ts`
   - `src/registry/processors/workflow/operation-matcher.ts`
-- **Current Java behavior**
-  - Matcher accepts broader direct event shape when `operation` and `request` properties are present.
+- **Implemented Java behavior**
+  - Default matcher now requires timeline-envelope operation request typing (JS-strict behavior).
+  - Direct-shape matching is disabled by default.
 - **Target behavior**
   - JS-strict request gating by default (timeline/envelope/type rules).
 - **Resolution**
@@ -46,11 +51,14 @@ This document tracks the remaining high-risk parity gaps and the implementation 
 
 ## 3) Result helper API
 
+- **Status**: ✅ Resolved
+
 - **JS references**
   - `src/types/result.ts`
   - `src/types/__tests__/result.test.ts`
-- **Current Java behavior**
-  - `DocumentProcessingResult` provides immutable run-result factories/accessors only.
+- **Implemented Java behavior**
+  - Added generic functional `Result<T,E>` helper API in Java with JS-equivalent operations:
+    - `ok`, `err`, `isOk`, `isErr`, `map`, `mapErr`, `andThen`, `unwrapOr`, `unwrapOrElse`, `match`.
 - **Target behavior**
   - Provide full functional helpers equivalent to JS result helpers:
     - `ok`, `err`, `isOk`, `isErr`, `map`, `mapErr`, `andThen`, `unwrapOr`, `unwrapOrElse`, `match`.
@@ -62,12 +70,15 @@ This document tracks the remaining high-risk parity gaps and the implementation 
 
 ## 4) Node canonicalizer parity suite
 
+- **Status**: ✅ Resolved
+
 - **JS references**
   - `src/util/node-canonicalizer.ts`
   - `src/util/__tests__/node-canonicalizer.test.ts`
-- **Current Java behavior**
-  - Canonical size exists and is used in gas accounting.
-  - No dedicated 1:1 canonicalizer parity suite; canonical signature logic duplicated in engine.
+- **Implemented Java behavior**
+  - Added dedicated canonicalizer parity test suite.
+  - Canonical signature and size now share the same utility implementation.
+  - `ProcessorEngine` canonical signature flow delegates to `NodeCanonicalizer`.
 - **Target behavior**
   - Dedicated Java canonicalizer parity tests for signature/size semantics.
   - Single canonicalizer utility for signature and size.
@@ -80,13 +91,18 @@ This document tracks the remaining high-risk parity gaps and the implementation 
 
 ## 5) QuickJS runtime architecture
 
+- **Status**: ✅ Resolved
+
 - **JS references**
   - `src/util/expression/quickjs-evaluator.ts`
   - `src/util/expression/quickjs-expression-utils.ts`
   - `src/registry/processors/steps/javascript-code-step-executor.ts`
   - JS QuickJS tests under `src/util/expression/__tests__/*` and step executor tests.
-- **Current Java behavior**
-  - Sidecar uses Node `vm` execution with timeout-based interruption and heuristic gas estimation.
+- **Implemented Java behavior**
+  - Sidecar now executes scripts with `@blue-quickjs/quickjs-runtime`.
+  - Runtime fuel reporting is sourced from quickjs runtime (`gasUsed` / `gasRemaining`) and passed through protocol.
+  - Sidecar protocol preserves `undefined` vs `null` result semantics and emit-envelope behavior.
+  - Java evaluator/runtime integration is aligned with new protocol and covered by parity suites.
 - **Target behavior**
   - Sidecar executes with `@blue-quickjs/quickjs-runtime` (same runtime family as JS).
   - Align error classification, fuel accounting, and result protocol shape with JS expectations.

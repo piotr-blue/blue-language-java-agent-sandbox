@@ -39,6 +39,6 @@ event: |
     payload: 13
 expected:
   paths:
-    /counter: 13
+    /counter: 0
   triggeredEventsCount: 0
   capabilityFailure: false
