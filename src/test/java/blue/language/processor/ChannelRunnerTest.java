@@ -12,6 +12,7 @@ import blue.language.processor.contracts.RecencyTestChannelProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.StaleBlockingTestEventChannelProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.contracts.TerminateScopeContractProcessor;
 import blue.language.processor.model.SetProperty;
 import java.math.BigInteger;
 import java.util.List;
@@ -384,6 +385,50 @@ final class ChannelRunnerTest {
         Node counterNode = execution.runtime().document().getProperties().get("counter");
         assertNotNull(counterNode);
         assertEquals(BigInteger.ONE, counterNode.getValue());
+    }
+
+    @Test
+    void stopsProcessingHandlersWhenScopeBecomesInactiveMidRun() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new TerminateScopeContractProcessor());
+        blue.registerContractProcessor(new IncrementPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  terminateFirst:\n" +
+                "    channel: testChannel\n" +
+                "    order: 0\n" +
+                "    type:\n" +
+                "      blueId: TerminateScope\n" +
+                "    mode: graceful\n" +
+                "    reason: stop now\n" +
+                "  incrementSecond:\n" +
+                "    channel: testChannel\n" +
+                "    order: 1\n" +
+                "    type:\n" +
+                "      blueId: IncrementProperty\n" +
+                "    propertyKey: /counter\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-stop")));
+
+        Node counterNode = execution.runtime().document().getProperties().get("counter");
+        assertNull(counterNode, "Second handler must not run once scope becomes inactive");
+        Node terminatedMarker = ProcessorEngine.nodeAt(execution.runtime().document(), "/contracts/terminated");
+        assertNotNull(terminatedMarker);
+        assertEquals("graceful", String.valueOf(ProcessorEngine.nodeAt(execution.runtime().document(), "/contracts/terminated/cause").getValue()));
     }
 
     @Test
