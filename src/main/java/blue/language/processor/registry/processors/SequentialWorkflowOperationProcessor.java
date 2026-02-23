@@ -16,6 +16,9 @@ import java.util.List;
 
 public class SequentialWorkflowOperationProcessor implements HandlerProcessor<SequentialWorkflowOperation> {
 
+    private static final String CONVERSATION_OPERATION_REQUEST_BLUE_ID = "Conversation/Operation Request";
+    private static final String OPERATION_REQUEST_BLUE_ID = "Operation Request";
+
     private final WorkflowStepRunner stepRunner;
 
     public SequentialWorkflowOperationProcessor() {
@@ -45,12 +48,12 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (eventNode == null) {
             return false;
         }
+        NodeProvider nodeProvider = context.nodeProvider();
 
-        Node requestNode = extractOperationRequestNode(eventNode);
+        Node requestNode = extractOperationRequestNode(eventNode, nodeProvider);
         if (requestNode == null) {
             return false;
         }
-        NodeProvider nodeProvider = context.nodeProvider();
         if (!isOperationRequestForContract(contract, eventNode, requestNode, nodeProvider)) {
             return false;
         }
@@ -102,15 +105,18 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         return channel != null && !channel.trim().isEmpty() ? channel.trim() : null;
     }
 
-    private Node extractOperationRequestNode(Node eventNode) {
+    private Node extractOperationRequestNode(Node eventNode, NodeProvider nodeProvider) {
         if (isOperationRequestNode(eventNode)) {
             return eventNode;
+        }
+        if (!TimelineEventSupport.isConversationOrMyOSTimelineEntry(eventNode)) {
+            return null;
         }
         if (eventNode.getProperties() == null) {
             return null;
         }
         Node message = eventNode.getProperties().get("message");
-        if (isOperationRequestNode(message)) {
+        if (isOperationRequestNode(message) && isTypedOperationRequestNode(message, nodeProvider)) {
             return message;
         }
         return null;
@@ -121,6 +127,16 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
                 && node.getProperties() != null
                 && node.getProperties().containsKey("operation")
                 && node.getProperties().containsKey("request");
+    }
+
+    private boolean isTypedOperationRequestNode(Node node, NodeProvider nodeProvider) {
+        return matchesOperationRequestType(node, CONVERSATION_OPERATION_REQUEST_BLUE_ID, nodeProvider)
+                || matchesOperationRequestType(node, OPERATION_REQUEST_BLUE_ID, nodeProvider);
+    }
+
+    private boolean matchesOperationRequestType(Node node, String expectedBlueId, NodeProvider nodeProvider) {
+        Node requirement = new Node().type(new Node().blueId(expectedBlueId));
+        return WorkflowContractSupport.matchesTypeRequirement(node, requirement, nodeProvider);
     }
 
     private boolean isOperationRequestForContract(SequentialWorkflowOperation contract,

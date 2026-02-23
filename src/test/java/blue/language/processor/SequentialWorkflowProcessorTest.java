@@ -279,6 +279,31 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationSkipsWhenTimelineMessageTypeIsNotOperationRequest() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-non-request-message\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Conversation/Chat Message\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request: 9\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationSupportsDirectOperationRequestEventShape() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
