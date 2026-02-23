@@ -755,11 +755,23 @@ public final class QuickJsExpressionUtils {
         if ("blank".equals(tokenName)) {
             return " \\t";
         }
+        if ("cntrl".equals(tokenName)) {
+            return "\\x00-\\x1F\\x7F";
+        }
         if ("digit".equals(tokenName)) {
             return "0-9";
         }
+        if ("graph".equals(tokenName)) {
+            return "!-~";
+        }
         if ("lower".equals(tokenName)) {
             return "a-z";
+        }
+        if ("print".equals(tokenName)) {
+            return " -~";
+        }
+        if ("punct".equals(tokenName)) {
+            return "!-/:-@\\[-`\\{-~";
         }
         if ("space".equals(tokenName)) {
             return "\\s";

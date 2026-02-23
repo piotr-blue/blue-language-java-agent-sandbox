@@ -551,6 +551,56 @@ class QuickJsExpressionUtilsTest {
     }
 
     @Test
+    void createPathPredicateSupportsPosixCntrlCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:cntrl:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/\n/value", null));
+        assertTrue(predicate.test("/contracts/\t/value", null));
+        assertFalse(predicate.test("/contracts/a/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixGraphCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:graph:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/A/value", null));
+        assertTrue(predicate.test("/contracts/9/value", null));
+        assertTrue(predicate.test("/contracts/!/value", null));
+        assertFalse(predicate.test("/contracts/ /value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixPrintCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:print:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/ /value", null));
+        assertTrue(predicate.test("/contracts/A/value", null));
+        assertTrue(predicate.test("/contracts/!/value", null));
+        assertFalse(predicate.test("/contracts/\n/value", null));
+    }
+
+    @Test
+    void createPathPredicateSupportsPosixPunctCharacterClassPatterns() {
+        QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
+                Arrays.asList("/contracts/[[:punct:]]/value"),
+                null,
+                new QuickJsExpressionUtils.PathMatchOptions(true, false, false));
+
+        assertTrue(predicate.test("/contracts/!/value", null));
+        assertTrue(predicate.test("/contracts/_/value", null));
+        assertFalse(predicate.test("/contracts/A/value", null));
+    }
+
+    @Test
     void createPathPredicateSupportsNegatedPosixLowerCharacterClassPatterns() {
         QuickJsExpressionUtils.PointerPredicate predicate = QuickJsExpressionUtils.createPathPredicate(
                 Arrays.asList("/contracts/[![:lower:]]/value"),
