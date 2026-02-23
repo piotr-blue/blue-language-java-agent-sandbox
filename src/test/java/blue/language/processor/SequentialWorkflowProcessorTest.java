@@ -304,6 +304,39 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationAcceptsProviderDerivedTimelineMessageOperationRequestType() {
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Operation Request".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node()
+                    .properties("blueId", new Node().value("Conversation/Operation Request"));
+            return Collections.singletonList(definition);
+        };
+        Blue blue = new Blue(provider);
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-provider-message-type\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type:\n" +
+                "    blueId: Custom/Derived Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request: 5\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("5"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationSupportsDirectOperationRequestEventShape() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
