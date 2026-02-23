@@ -322,6 +322,8 @@ final class ChannelRunnerTest {
 
         runner.runExternalChannel("/", bundle, channelBinding, event);
 
+        assertEquals("original", String.valueOf(event.getProperties().get("kind").getValue()),
+                "Channelized delivery must not mutate caller-owned external event node");
         Node flagNode = execution.runtime().document().getProperties().get("flag");
         assertNotNull(flagNode);
         assertEquals(7, ((Number) flagNode.getValue()).intValue());
