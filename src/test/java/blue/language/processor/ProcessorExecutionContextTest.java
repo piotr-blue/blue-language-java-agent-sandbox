@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -192,14 +191,14 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void documentHelpersRejectMalformedEscapedPointers() {
+    void documentHelpersReturnNullOrFalseForMalformedEscapedPointers() {
         DocumentProcessor owner = new DocumentProcessor();
         ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, new Node().properties("x", new Node().value("y")));
         execution.loadBundles("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
-        assertThrows(IllegalArgumentException.class, () -> context.documentAt("/x~"));
-        assertThrows(IllegalArgumentException.class, () -> context.documentContains("/x~2"));
+        assertNull(context.documentAt("/x~"));
+        assertFalse(context.documentContains("/x~2"));
     }
 
     @Test
@@ -264,7 +263,7 @@ final class ProcessorExecutionContextTest {
     }
 
     @Test
-    void documentHelpersTreatEmptyPointerAsRoot() {
+    void documentHelpersTreatEmptyPointerAsMissingPath() {
         Node document = new Node()
                 .properties("value", new Node().value(1));
 
@@ -273,12 +272,12 @@ final class ProcessorExecutionContextTest {
         execution.loadBundles("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
-        assertNotNull(context.documentAt(""));
-        assertTrue(context.documentContains(""));
+        assertNull(context.documentAt(""));
+        assertFalse(context.documentContains(""));
     }
 
     @Test
-    void documentHelpersTreatNullPointerAsRoot() {
+    void documentHelpersTreatNullPointerAsMissingPath() {
         Node document = new Node()
                 .properties("value", new Node().value(1));
 
@@ -287,8 +286,8 @@ final class ProcessorExecutionContextTest {
         execution.loadBundles("/");
         ProcessorExecutionContext context = execution.createContext("/", execution.bundleForScope("/"), new Node(), false, false);
 
-        assertNotNull(context.documentAt(null));
-        assertTrue(context.documentContains(null));
+        assertNull(context.documentAt(null));
+        assertFalse(context.documentContains(null));
     }
 
     @Test

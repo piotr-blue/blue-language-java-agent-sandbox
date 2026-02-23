@@ -105,15 +105,29 @@ public final class ProcessorExecutionContext {
     }
 
     public Node documentAt(String absolutePointer) {
-        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
-        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
-        return node != null ? node.clone() : null;
+        if (absolutePointer == null || absolutePointer.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+            Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
+            return node != null ? node.clone() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     public boolean documentContains(String absolutePointer) {
-        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
-        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
-        return node != null;
+        if (absolutePointer == null || absolutePointer.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+            Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
+            return node != null;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     public void terminateGracefully(String reason) {
