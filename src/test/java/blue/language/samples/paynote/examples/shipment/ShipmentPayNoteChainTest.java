@@ -16,7 +16,7 @@ class ShipmentPayNoteChainTest {
         Node specialized = DHLShipmentPayNote.template("2026-02-23T10:00:00Z").build();
         Node finalInstance = AliceBobShipmentPayNote.build("2026-02-23T10:00:00Z");
 
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_PAYNOTE, baseTemplate.getAsText("/document/type/value"));
+        assertEquals(PayNoteAliases.PAYNOTE, baseTemplate.getAsText("/document/type/value"));
         assertEquals(80000, baseTemplate.getAsInteger("/document/amount/total/value").intValue());
         assertThrows(IllegalArgumentException.class,
                 () -> baseTemplate.getAsText("/channelBindings/payerChannel/email/value"));

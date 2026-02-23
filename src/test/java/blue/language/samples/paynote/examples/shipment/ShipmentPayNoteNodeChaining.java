@@ -2,7 +2,7 @@ package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.DocTemplates;
-import blue.language.samples.paynote.sdk.vnext.PayNoteRole;
+import blue.language.samples.paynote.sdk.PayNoteRole;
 
 public final class ShipmentPayNoteNodeChaining {
 

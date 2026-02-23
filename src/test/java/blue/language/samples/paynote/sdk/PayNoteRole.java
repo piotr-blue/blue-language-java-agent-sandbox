@@ -1,4 +1,4 @@
-package blue.language.samples.paynote.sdk.vnext;
+package blue.language.samples.paynote.sdk;
 
 import blue.language.samples.paynote.dsl.ChannelKey;
 

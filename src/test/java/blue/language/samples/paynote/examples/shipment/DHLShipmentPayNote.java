@@ -1,7 +1,7 @@
 package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.samples.paynote.dsl.DocTemplate;
-import blue.language.samples.paynote.sdk.vnext.PayNoteRole;
+import blue.language.samples.paynote.sdk.PayNoteRole;
 
 public final class DHLShipmentPayNote {
 
