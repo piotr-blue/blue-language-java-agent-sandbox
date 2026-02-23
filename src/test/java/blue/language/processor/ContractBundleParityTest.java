@@ -3,6 +3,7 @@ package blue.language.processor;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.LifecycleChannel;
+import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.SetProperty;
 import blue.language.processor.util.ProcessorContractConstants;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,22 @@ class ContractBundleParityTest {
         assertEquals(Arrays.asList("h1", "h2"),
                 Arrays.asList(bundle.handlersFor("channel-1").get(0).key(), bundle.handlersFor("channel-1").get(1).key()));
         assertEquals("h3", bundle.handlersFor("channel-2").get(0).key());
+    }
+
+    @Test
+    void tracksEmbeddedPathsAndPreventsDuplicates() {
+        ContractBundle.Builder builder = ContractBundle.builder();
+        ProcessEmbedded embedded = new ProcessEmbedded();
+        embedded.setPaths(Arrays.asList("/child"));
+        builder.setEmbedded(embedded);
+
+        ContractBundle bundle = builder.build();
+        assertEquals(Arrays.asList("/child"), bundle.embeddedPaths());
+
+        ProcessEmbedded duplicate = new ProcessEmbedded();
+        duplicate.setPaths(Arrays.asList("/other"));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> builder.setEmbedded(duplicate));
+        assertTrue(error.getMessage().contains("Multiple Process Embedded markers"));
     }
 
     @Test
