@@ -57,6 +57,50 @@ class WorkflowContractSupportTest {
     }
 
     @Test
+    void matchesTypeRequirementResolvesProviderDefinitionPropertyBlueIdChainsForEntries() {
+        Node candidate = new Node().properties("payload",
+                new Node().type(new Node().blueId("Custom/Derived Payload")).value("ok"));
+        Node requirement = new Node()
+                .type(new Node().blueId("Dictionary"))
+                .properties("entries",
+                        new Node().properties("payload",
+                                new Node().type(new Node().blueId("Custom/Base Payload"))));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node()
+                    .properties("blueId", new Node().value("Custom/Base Payload"));
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement, provider));
+    }
+
+    @Test
+    void matchesTypeRequirementResolvesProviderDefinitionScalarBlueIdChainsForItemType() {
+        Node candidate = new Node().items(
+                new Node().type(new Node().blueId("Custom/Derived Item")).value("first"),
+                new Node().type(new Node().blueId("Custom/Derived Item")).value("second"));
+        Node requirement = new Node()
+                .type(new Node().blueId("List"))
+                .properties("itemType", new Node().type(new Node().blueId("Custom/Base Item")));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Item".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node().value("Custom/Base Item");
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement, provider));
+    }
+
+    @Test
     void matchesEventFilterResolvesProviderBackedBlueIdPropertyChains() {
         Node event = new Node().properties("payload", new Node().blueId("Custom/Derived Payload"));
         Node filter = new Node().properties("payload",
