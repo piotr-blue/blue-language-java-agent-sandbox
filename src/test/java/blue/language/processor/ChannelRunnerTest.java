@@ -9,6 +9,7 @@ import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.contracts.IncrementPropertyContractProcessor;
 import blue.language.processor.contracts.NormalizingTestEventChannelProcessor;
 import blue.language.processor.contracts.RecencyTestChannelProcessor;
+import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.SetPropertyOnEventContractProcessor;
 import blue.language.processor.contracts.StaleBlockingTestEventChannelProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
@@ -76,6 +77,51 @@ final class ChannelRunnerTest {
         runner.runExternalChannel("/", bundle, channelBinding, secondEvent);
         BigInteger afterNewEvent = (BigInteger) execution.runtime().document().getProperties().get("counter").getValue();
         assertEquals(new BigInteger("2"), afterNewEvent);
+    }
+
+    @Test
+    void runsHandlersInOrderAndPersistsCheckpointOnFirstDelivery() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+
+        String yaml = "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  setA:\n" +
+                "    channel: testChannel\n" +
+                "    order: 0\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /a\n" +
+                "    propertyValue: 1\n" +
+                "  setB:\n" +
+                "    channel: testChannel\n" +
+                "    order: 1\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    propertyKey: /b\n" +
+                "    propertyValue: 2\n";
+
+        Node document = blue.yamlToNode(yaml);
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, document.clone());
+        execution.loadBundles("/");
+        ContractBundle bundle = execution.bundleForScope("/");
+
+        CheckpointManager checkpointManager = new CheckpointManager(execution.runtime(), ProcessorEngine::canonicalSignature);
+        ChannelRunner runner = new ChannelRunner(owner, execution, execution.runtime(), checkpointManager);
+        ContractBundle.ChannelBinding channelBinding = bundle.channelsOfType(ChannelContract.class).get(0);
+
+        runner.runExternalChannel("/", bundle, channelBinding, blue.objectToNode(new TestEvent().eventId("evt-first").kind("alpha")));
+
+        assertEquals(new BigInteger("1"), execution.runtime().document().getProperties().get("a").getValue());
+        assertEquals(new BigInteger("2"), execution.runtime().document().getProperties().get("b").getValue());
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        assertEquals("evt-first", checkpoint.lastSignature(channelBinding.key()));
+        assertNotNull(checkpoint.lastEvent(channelBinding.key()));
     }
 
     @Test
