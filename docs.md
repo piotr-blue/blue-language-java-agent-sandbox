@@ -14,13 +14,15 @@ Use `BlueDoc`:
 Example shape:
 
 ```java
-Node doc = BlueDoc.doc()
+Node doc = BlueDoc.name("Counter #1")
   .type("MyCompany/Counter")
-  .name("Counter #1")
+  .description("Demo counter")
   .participants("owner", "observer")
+  .set("/count", 0)
   .operation("increment")
     .channel("owner")
-    .steps(steps -> steps.replaceExpression("Inc", "/value", "document('/value') + 1"))
+    .requestType(Integer.class)
+    .steps(steps -> steps.replaceExpression("Inc", "/count", "document('/count') + event.message.request"))
     .done()
   .buildDocument();
 ```
@@ -36,7 +38,7 @@ Node bootstrap = MyOsDsl.bootstrap(doc)
 
 ---
 
-## PayNote SDK (transaction-agnostic entry point)
+## PayNote SDK (capture-first, rail-agnostic)
 
 Use:
 
@@ -47,14 +49,23 @@ Use:
 ### Key DX features
 
 - `PayNotes.payNote("...")` is primary.
-- Rails are attached optionally: `attach(CardTransaction.at(...))`.
 - Currency is enum: `IsoCurrency`.
 - Amount ergonomics:
   - `amountTotalMinor(long)`
   - `amountTotalMajor(BigDecimal/String)` with strict scale validation.
 - Payer/Payee/Guarantor are implicit.
-- Card-capture helpers live under `cardCapture()`.
+- Participants are channel keys:
+  - `participant("shipmentCompanyChannel")`
+  - `participant("shipmentCompanyChannel", "Shipment company")`
+  - `participant("shipmentCompanyChannel", "Shipment company", myOsChannelNode)`
+  - `participants("a", "b", "c")`
+- Capture helpers use capture terminology only:
+  - `capture().lockOnInit()`
+  - `capture().unlockWhenEventArrives(...)`
+  - `capture().unlockOnOperation(...)`
+  - atomic one-liners like `captureLockedUntilOperation(...)`.
 - Document authoring is separate from bootstrap bindings.
+- Lock plans fail fast if no unlock path is configured.
 
 ---
 
@@ -67,9 +78,14 @@ See:
 
 ### Step 1 — tiny useful paynotes (5–10 lines)
 
-- `simpleCardLock()`
-- `simpleReserveAndCapture()`
-- `simpleRefundOperation()`
+- `tinyCaptureAfterShipmentOp()`
+- `tinyCaptureAfterBuyerApprovalOp()`
+- `tinyCaptureAfterTrackingChange()`
+- `tinyCaptureAfterEvent()`
+- `tinyReserveThenCaptureOnEvent()`
+- `tinyRefundOperation()`
+- `tinyReleaseOperation()`
+- `tinyCancellationOperation()`
 
 ### Step 2 — medium paynote with custom operations
 
@@ -105,6 +121,6 @@ Shipment chain examples:
 
 This demonstrates:
 
-1. Base template (abstract roles/channels + core behavior),
+1. Base template (abstract channels + core behavior),
 2. Specialization (EUR 200 from CHF + DHL),
 3. Final instance bindings (Alice/Bob/guarantor) plus extension.

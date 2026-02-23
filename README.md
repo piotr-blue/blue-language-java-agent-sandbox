@@ -1,61 +1,51 @@
-# Blue Language Java — vNext Sample Authoring Guide
+# Blue Language Java — Latest Authoring Surface
 
 This repository contains the Blue Language Java runtime plus sample DSL authoring for MyOS + PayNote flows.
 
-## vNext sample authoring principles
+## Authoring principles
 
-- Author bootstrap documents via `MyOsDsl.bootstrap()` + `DocumentBuilder`.
+- Author documents with `MyOsDsl.bootstrap()` + `DocumentBuilder` (or wrappers built on top of it).
 - Keep channels abstract in contracts; bind concrete identities in `channelBindings`.
-- Use typed event classes (`TypeRef` mapping) by default.
-- Use structured JS builders (`JsProgram`, `JsOutputBuilder`, `JsPatchBuilder`, `JsArrayBuilder`, `JsObjectBuilder`, `JsCommon`) instead of large hand-written string blobs.
-- Build PayNote flows with the vNext facade (`PayNotes` + `PayNoteBuilderVNext`) and fall back to generic DSL only when needed.
+- Use typed event classes by default.
+- Use structured JS builders (`JsProgram`, `JsOutputBuilder`, `JsPatchBuilder`, `JsArrayBuilder`, `JsObjectBuilder`, `JsCommon`) for deterministic JavaScript steps.
+- Keep one latest API surface (no versioned authoring packages).
 
-## Key vNext capabilities
+## Generic docs
 
-### 1) Generic DSL
+Use `BlueDoc` for any document type:
 
-- document properties (scalar/object)
-- contracts: channels, operations, workflows, lifecycle and triggered handlers
-- policies: contracts change policy, changeset allow-lists, operation rate-limits
+- `name/type/description`
+- `participant(...)`, `participants(...)`
+- `operation(...).channel(...).requestType(...).steps(...).done()`
+- `participantsUnion(...)`
+- build document separately from bootstrap bindings
 
-### 2) Channel hierarchy + bindings
+## PayNotes
 
-- bulk abstract channels: `timelineChannels(...)`
-- composite channels: `compositeTimelineChannel(...)`
-- source binding contracts: `channelSourceBinding(...)`
-- role bindings: `bindRole(...)`, `bindRoleAccount(...)`, `bindRoleEmail(...)`
+Use `PayNotes.payNote(name)` as the primary entry point.
 
-### 3) Template specialize / instantiate pipeline
+Key behavior:
 
-- immutable template wrapper: `DocTemplate`
-- specialization: `.specialize(...)`
-- instantiation: `.instantiate(...)`
+- implicit `payerChannel`, `payeeChannel`, `guarantorChannel`
+- participant-first API (channel-key based; no role framework required)
+- capture-first API:
+  - `capture().lockOnInit()`
+  - `capture().unlockWhenEventArrives(...)`
+  - `capture().unlockOnOperation(...)`
+  - atomic helpers: `captureLockedUntilOperation(...)`, `captureLockedUntilEvent(...)`, `captureLockedUntilDocPathChanges(...)`
+- money ergonomics:
+  - `currency(IsoCurrency)`
+  - `amountTotalMinor(long)`
+  - `amountTotalMajor(BigDecimal/String)` with strict scale validation
+- fail-fast validation: locked capture must have at least one unlock path
 
-This supports production-style flow:
+## Examples
 
-template → specialization (e.g. EUR200/CHF + DHL) → final participant bindings (e.g. Alice/Bob/Bank).
+- Complexity ladder (tiny → medium → huge JS):
+  - `src/test/java/blue/language/samples/paynote/examples/PayNoteComplexityLadderExamples.java`
+- Class extension flow (`MyPayNote`):
+  - `src/test/java/blue/language/samples/paynote/examples/MyPayNote.java`
+- Template → specialize → instantiate shipment chain:
+  - `src/test/java/blue/language/samples/paynote/examples/shipment/`
 
-### 4) PayNote SDK facade
-
-`PayNoteBuilderVNext` exposes high-level methods for:
-
-- reserve/capture/refund/release/cancel
-- card lock/unlock workflows
-- child issuance on events
-- lifecycle hooks (`onFundsReserved`, `onCaptureRequested`, `onFundsCaptured`, `onReleased`)
-- once/barrier helpers
-
-## vNext examples
-
-See `src/test/java/blue/language/samples/paynote/examples/vnext` for:
-
-- iPhone shipment escrow
-- shipment template chain
-- subscription paynote
-- marketplace split paynote
-- agent budget paynote
-- milestone contractor paynote
-- reverse payment voucher paynote
-- recruitment classifier vNext
-
-All examples include tests asserting key type/channel/workflow structure and critical generated JS fragments.
+Each example has tests asserting document type/name, contracts/workflows, and key JS fragments.

@@ -21,12 +21,16 @@ public final class BlueDoc {
         return new BlueDoc();
     }
 
+    public static BlueDoc name(String name) {
+        return doc().withName(name);
+    }
+
     public BlueDoc type(String documentTypeAlias) {
         bootstrap.documentType(documentTypeAlias);
         return this;
     }
 
-    public BlueDoc name(String name) {
+    public BlueDoc withName(String name) {
         bootstrap.documentName(name);
         return this;
     }
@@ -49,6 +53,17 @@ public final class BlueDoc {
         return this;
     }
 
+    public BlueDoc participant(String channelKey, String label, Node channel) {
+        if (channel == null) {
+            return participant(channelKey, label);
+        }
+        bootstrap.contracts(c -> c.putRaw(channelKey, channel));
+        if (label != null && !label.trim().isEmpty()) {
+            bootstrap.putDocumentObject("participantLabels", labels -> labels.put(channelKey, label));
+        }
+        return this;
+    }
+
     public BlueDoc participants(String... channelKeys) {
         if (channelKeys == null) {
             return this;
@@ -59,12 +74,44 @@ public final class BlueDoc {
         return this;
     }
 
+    public BlueDoc participantsUnion(String compositeChannelKey, String... channelKeys) {
+        bootstrap.contracts(c -> c.compositeTimelineChannel(compositeChannelKey, channelKeys));
+        return this;
+    }
+
+    public BlueDoc set(String pointer, Object value) {
+        if (pointer == null || !pointer.startsWith("/")) {
+            throw new IllegalArgumentException("pointer must start with '/'");
+        }
+        String[] segments = pointer.substring(1).split("/");
+        if (segments.length == 0 || segments[0].trim().isEmpty()) {
+            throw new IllegalArgumentException("pointer cannot target root");
+        }
+        if (segments.length > 1) {
+            throw new IllegalArgumentException("BlueDoc.set currently supports root document paths only, got: " + pointer);
+        }
+        bootstrap.putDocumentValue(segments[0], value);
+        return this;
+    }
+
     public BlueDoc operation(String key,
                              String channelKey,
                              String description,
                              Consumer<StepsBuilder> implementation) {
         bootstrap.contracts(c -> {
             c.operation(key, channelKey, description);
+            c.implementOperation(key + "Impl", key, implementation);
+        });
+        return this;
+    }
+
+    public BlueDoc operation(String key,
+                             String channelKey,
+                             Class<?> requestTypeClass,
+                             String description,
+                             Consumer<StepsBuilder> implementation) {
+        bootstrap.contracts(c -> {
+            c.operation(key, channelKey, requestTypeClass, description);
             c.implementOperation(key + "Impl", key, implementation);
         });
         return this;
@@ -91,6 +138,7 @@ public final class BlueDoc {
         private final String key;
         private String channelKey;
         private String description;
+        private Class<?> requestTypeClass;
         private Consumer<StepsBuilder> implementation;
 
         private OperationBuilder(BlueDoc parent, String key) {
@@ -113,6 +161,11 @@ public final class BlueDoc {
             return this;
         }
 
+        public OperationBuilder requestType(Class<?> requestTypeClass) {
+            this.requestTypeClass = requestTypeClass;
+            return this;
+        }
+
         public OperationBuilder steps(Consumer<StepsBuilder> implementation) {
             this.implementation = implementation;
             return this;
@@ -124,6 +177,9 @@ public final class BlueDoc {
             }
             if (implementation == null) {
                 throw new IllegalStateException("Operation steps must be configured for: " + key);
+            }
+            if (requestTypeClass != null) {
+                return parent.operation(key, channelKey, requestTypeClass, description, implementation);
             }
             return parent.operation(key, channelKey, description, implementation);
         }

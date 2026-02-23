@@ -4,7 +4,6 @@ import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
 import blue.language.samples.paynote.dsl.BlueDocumentBuilder;
 import blue.language.samples.paynote.dsl.ChannelKey;
-import blue.language.samples.paynote.dsl.DocPath;
 import blue.language.samples.paynote.dsl.DocTemplate;
 import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
@@ -21,40 +20,27 @@ import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public final class PayNoteBuilder {
 
     private final BlueDocumentBuilder document;
-    private DocPath cardTransactionDetailsPath;
+    private final Map<String, String> participantTypeByKey = new LinkedHashMap<String, String>();
     private IsoCurrency configuredCurrency;
+    private boolean captureLockedOnInit;
+    private int captureUnlockPaths;
 
     private PayNoteBuilder(String name) {
         this.document = BlueDocDsl.document(PayNoteV2Types.PayNoteDocument.class)
-                .name(name)
-                .putNode("amount", new Node().properties("total", new Node().value(0)));
+                .name(name);
         ensureImplicitParticipants();
     }
 
     public static PayNoteBuilder payNote(String name) {
         return new PayNoteBuilder(name);
-    }
-
-    public PayNoteBuilder attach(CardTransaction rail) {
-        if (rail == null) {
-            throw new IllegalArgumentException("card transaction rail is required");
-        }
-        this.cardTransactionDetailsPath = rail.detailsPath();
-        return this;
-    }
-
-    public PayNoteBuilder attach(BankTransfer rail) {
-        if (rail == null) {
-            throw new IllegalArgumentException("bank transfer rail is required");
-        }
-        document.putValue("bankTransferDetailsPath", rail.detailsPath().pointer());
-        return this;
     }
 
     public PayNoteBuilder currency(IsoCurrency currency) {
@@ -84,61 +70,121 @@ public final class PayNoteBuilder {
         return amountTotalMinor(money.minor());
     }
 
-    public PayNoteBuilder participant(PayNoteRole role) {
-        if (role == null) {
+    public PayNoteBuilder referenceTransactionPath(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            throw new IllegalArgumentException("reference transaction path is required");
+        }
+        document.putValue("referenceTransactionPath", path);
+        return this;
+    }
+
+    public PayNoteBuilder referenceTransaction(Node referenceTransaction) {
+        if (referenceTransaction == null) {
+            throw new IllegalArgumentException("reference transaction node is required");
+        }
+        document.putNode("referenceTransaction", referenceTransaction);
+        return this;
+    }
+
+    public PayNoteBuilder participant(String channelKey) {
+        return participant(channelKey, null, null);
+    }
+
+    public PayNoteBuilder participant(String channelKey, String description) {
+        return participant(channelKey, description, null);
+    }
+
+    public PayNoteBuilder participant(String channelKey, String description, Node channel) {
+        if (channelKey == null || channelKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("participant channel key is required");
+        }
+        String nextTypeAlias = channel == null
+                ? TypeAliases.CONVERSATION_TIMELINE_CHANNEL
+                : channel.getAsText("/type/value");
+        String existingTypeAlias = participantTypeByKey.get(channelKey);
+        if (existingTypeAlias != null && !isTypeCompatible(existingTypeAlias, nextTypeAlias)) {
+            throw new IllegalArgumentException("Participant override is not type-compatible for channel: " + channelKey
+                    + " (" + existingTypeAlias + " -> " + nextTypeAlias + ")");
+        }
+
+        if (channel == null) {
+            document.contracts(c -> c.timelineChannel(channelKey));
+        } else {
+            document.contracts(c -> c.putRaw(channelKey, channel));
+        }
+        participantTypeByKey.put(channelKey, nextTypeAlias);
+        if (description != null && !description.trim().isEmpty()) {
+            document.putNode("participantLabels", new Node().properties(channelKey, new Node().value(description)));
+        }
+        return this;
+    }
+
+    public PayNoteBuilder participants(String... channelKeys) {
+        if (channelKeys == null) {
             return this;
         }
-        document.contracts(c -> c.timelineChannel(role.channelKey().value()));
-        return this;
-    }
-
-    public PayNoteBuilder participants(Consumer<ParticipantsBuilder> customizer) {
-        customizer.accept(new ParticipantsBuilder(this));
-        return this;
-    }
-
-    public PayNoteBuilder participantsUnion(String compositeChannelKey, PayNoteRole... roles) {
-        return participantsUnion(ChannelKey.of(compositeChannelKey), roles);
-    }
-
-    public PayNoteBuilder participantsUnion(ChannelKey compositeChannelKey, PayNoteRole... roles) {
-        List<String> channels = new ArrayList<String>();
-        if (roles != null) {
-            for (PayNoteRole role : roles) {
-                if (role != null) {
-                    channels.add(role.channelKey().value());
-                }
-            }
+        for (String key : channelKeys) {
+            participant(key);
         }
-        document.contracts(c -> c.compositeTimelineChannel(
-                compositeChannelKey.value(),
-                channels.toArray(new String[0])));
         return this;
     }
 
-    public CardCaptureBuilder cardCapture() {
-        return new CardCaptureBuilder(this);
+    public PayNoteBuilder participantsUnion(String compositeChannelKey, String... channelKeys) {
+        return participantsUnion(ChannelKey.of(compositeChannelKey), channelKeys);
+    }
+
+    public PayNoteBuilder participantsUnion(ChannelKey compositeChannelKey, String... channelKeys) {
+        document.contracts(c -> c.compositeTimelineChannel(compositeChannelKey.value(), channelKeys));
+        return this;
+    }
+
+    public CaptureBuilder capture() {
+        return new CaptureBuilder(this);
+    }
+
+    public PayNoteBuilder captureLockedUntilOperation(String operationKey,
+                                                      String channelKey,
+                                                      String description,
+                                                      Class<?> emittedEventType) {
+        return capture()
+                .lockOnInit()
+                .unlockOnOperation(operationKey, op -> op
+                        .channel(channelKey)
+                        .description(description)
+                        .steps(steps -> {
+                            if (emittedEventType != null) {
+                                steps.emitType("EmitUnlockSignal", emittedEventType, null);
+                            }
+                        }))
+                .done();
+    }
+
+    public PayNoteBuilder captureLockedUntilEvent(Class<?> eventTypeClass) {
+        return capture()
+                .lockOnInit()
+                .unlockWhenEventArrives(eventTypeClass)
+                .done();
+    }
+
+    public PayNoteBuilder captureLockedUntilDocPathChanges(String path) {
+        return capture()
+                .lockOnInit()
+                .unlockWhenDocPathChanges(path)
+                .done();
     }
 
     public PayNoteBuilder reserveOnInit() {
-        document.contracts(c -> {
-            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
-            c.onLifecycle("onInitReserve", "initLifecycleChannel", steps -> steps
-                    .triggerEvent("ReserveFundsRequested",
-                            PayNoteEvents.reserveFundsRequested(new Node().value(
-                                    BlueDocDsl.expr("document('/amount/total')")))));
-        });
+        onInit("onInitReserve", steps -> steps.triggerEvent("ReserveFundsRequested",
+                PayNoteEvents.reserveFundsRequested(new Node().value(
+                        BlueDocDsl.expr("document('/amount/total')")))));
         return this;
     }
 
     public PayNoteBuilder reserveAndCaptureImmediatelyOnInit() {
-        document.contracts(c -> {
-            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
-            c.onLifecycle("onInitReserveAndCapture", "initLifecycleChannel", steps -> steps
-                    .triggerEvent("ReserveAndCaptureImmediately",
-                            PayNoteEvents.reserveFundsAndCaptureImmediatelyRequested(new Node().value(
-                                    BlueDocDsl.expr("document('/amount/total')")))));
-        });
+        onInit("onInitReserveAndCapture", steps -> steps
+                .triggerEvent("ReserveAndCaptureImmediately",
+                        PayNoteEvents.reserveFundsAndCaptureImmediatelyRequested(new Node().value(
+                                BlueDocDsl.expr("document('/amount/total')")))));
         return this;
     }
 
@@ -146,8 +192,20 @@ public final class PayNoteBuilder {
                                     String channelKey,
                                     String description,
                                     Consumer<StepsBuilder> implementation) {
+        return operation(key, channelKey, null, description, implementation);
+    }
+
+    public PayNoteBuilder operation(String key,
+                                    String channelKey,
+                                    Class<?> requestTypeClass,
+                                    String description,
+                                    Consumer<StepsBuilder> implementation) {
         document.contracts(c -> {
-            c.operation(key, channelKey, description);
+            if (requestTypeClass != null) {
+                c.operation(key, channelKey, requestTypeClass, description);
+            } else {
+                c.operation(key, channelKey, description);
+            }
             c.implementOperation(key + "Impl", key, implementation);
         });
         return this;
@@ -175,11 +233,11 @@ public final class PayNoteBuilder {
         return this;
     }
 
-    public PayNoteBuilder directChangeWithAllowList(String operationName,
-                                                    PayNoteRole role,
-                                                    String description,
-                                                    String... allowedPaths) {
-        return directChangeWithAllowList(operationName, role.channelKey().value(), description, allowedPaths);
+    public PayNoteBuilder allowListDirectChange(String operationName,
+                                                String channelKey,
+                                                String description,
+                                                String... allowedPaths) {
+        return directChangeWithAllowList(operationName, channelKey, description, allowedPaths);
     }
 
     public PayNoteBuilder captureOnEvent(Class<?> triggerEventType, String workflowKey) {
@@ -189,13 +247,12 @@ public final class PayNoteBuilder {
     public PayNoteBuilder captureOnEvent(Class<?> triggerEventType,
                                          String workflowKey,
                                          Consumer<StepsBuilder> captureHook) {
-        document.contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> {
-            steps.triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(
-                    new Node().value(BlueDocDsl.expr("document('/amount/total')"))));
+        onEvent(workflowKey, triggerEventType, steps -> {
+            steps.capture().requestNow();
             if (captureHook != null) {
                 captureHook.accept(steps);
             }
-        }));
+        });
         return this;
     }
 
@@ -203,15 +260,20 @@ public final class PayNoteBuilder {
         return operation("refundFull",
                 channelKey,
                 "Request full reservation release.",
-                steps -> steps.triggerEvent("RequestReservationRelease", PayNoteEvents.reservationReleaseRequested(
-                        new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
+                steps -> steps.capture().refundFull());
     }
 
-    public PayNoteBuilder refundFullOperation(PayNoteRole role) {
-        return refundFullOperation(role.channelKey().value());
+    public PayNoteBuilder refundPartialOperation(String operationKey,
+                                                 String channelKey,
+                                                 String amountExpression) {
+        return operation(operationKey,
+                channelKey,
+                "Request partial refund.",
+                steps -> steps.triggerEvent("RequestPartialRefund",
+                        PayNoteEvents.reservationReleaseRequested(new Node().value(BlueDocDsl.expr(amountExpression)))));
     }
 
-    public PayNoteBuilder releaseOperation(String operationKey, String channelKey) {
+    public PayNoteBuilder releaseReservationOperation(String operationKey, String channelKey) {
         return operation(operationKey,
                 channelKey,
                 "Release reservation.",
@@ -219,8 +281,8 @@ public final class PayNoteBuilder {
                         new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
     }
 
-    public PayNoteBuilder releaseOperation(String operationKey, PayNoteRole role) {
-        return releaseOperation(operationKey, role.channelKey().value());
+    public PayNoteBuilder releaseOperation(String operationKey, String channelKey) {
+        return releaseReservationOperation(operationKey, channelKey);
     }
 
     public PayNoteBuilder requestCancellationOperation(String channelKey) {
@@ -230,8 +292,8 @@ public final class PayNoteBuilder {
                 steps -> steps.replaceValue("SetCancellationRequested", "/status", "cancellation-requested"));
     }
 
-    public PayNoteBuilder requestCancellationOperation(PayNoteRole role) {
-        return requestCancellationOperation(role.channelKey().value());
+    public PayNoteBuilder cancelOperation(String channelKey) {
+        return requestCancellationOperation(channelKey);
     }
 
     public PayNoteBuilder issueChildPayNoteOnEvent(String workflowKey,
@@ -260,6 +322,35 @@ public final class PayNoteBuilder {
 
     public PayNoteBuilder onReleased(String workflowKey, Consumer<StepsBuilder> customizer) {
         document.contracts(c -> c.onTriggered(workflowKey, PayNoteTypes.ReservationReleased.class, customizer));
+        return this;
+    }
+
+    public PayNoteBuilder onRefunded(String workflowKey, Consumer<StepsBuilder> customizer) {
+        return onReleased(workflowKey, customizer);
+    }
+
+    public PayNoteBuilder onInit(String workflowKey, Consumer<StepsBuilder> customizer) {
+        document.contracts(c -> {
+            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
+            c.onLifecycle(workflowKey, "initLifecycleChannel", customizer);
+        });
+        return this;
+    }
+
+    public PayNoteBuilder onEvent(String workflowKey, Class<?> eventTypeClass, Consumer<StepsBuilder> customizer) {
+        document.contracts(c -> c.onTriggered(workflowKey, eventTypeClass, customizer));
+        return this;
+    }
+
+    public PayNoteBuilder onDocChange(String workflowKey, String path, Consumer<StepsBuilder> customizer) {
+        String channelKey = workflowKey + "Channel";
+        document.contracts(c -> {
+            c.documentUpdateChannel(channelKey, path);
+            c.sequentialWorkflow(workflowKey,
+                    channelKey,
+                    new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE),
+                    customizer);
+        });
         return this;
     }
 
@@ -314,7 +405,32 @@ public final class PayNoteBuilder {
         return this;
     }
 
+    public PayNoteBuilder withGuarantorStateOps() {
+        operation("guarantorUpdateReserved",
+                "guarantorChannel",
+                Integer.class,
+                "Guarantor updates reserved amount.",
+                steps -> steps.replaceExpression("UpdateReserved", "/amount/reserved", "event.message.request"));
+        operation("guarantorUpdateCaptured",
+                "guarantorChannel",
+                Integer.class,
+                "Guarantor updates captured amount.",
+                steps -> steps.replaceExpression("UpdateCaptured", "/amount/captured", "event.message.request"));
+        operation("guarantorUpdateRefunded",
+                "guarantorChannel",
+                Integer.class,
+                "Guarantor updates refunded amount.",
+                steps -> steps.replaceExpression("UpdateRefunded", "/amount/refunded", "event.message.request"));
+        operation("guarantorUpdateStatus",
+                "guarantorChannel",
+                String.class,
+                "Guarantor updates paynote status.",
+                steps -> steps.replaceExpression("UpdateStatus", "/status", "event.message.request"));
+        return this;
+    }
+
     public Node buildDocument() {
+        validateCapturePlan();
         return document.build();
     }
 
@@ -340,99 +456,93 @@ public final class PayNoteBuilder {
         return out;
     }
 
-    private PayNoteBuilder lockCardCaptureOnInit(DocPath cardDetailsPath) {
-        document.contracts(c -> {
-            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
-            c.onLifecycle("onInitLockCardCapture", "initLifecycleChannel", steps -> steps
-                    .emitType("RequestCaptureLock", PayNoteTypes.CardTransactionCaptureLockRequested.class,
-                            payload -> payload.putExpression("cardTransactionDetails",
-                                    "document('" + cardDetailsPath.pointer() + "')")));
-        });
-        return this;
-    }
-
-    private PayNoteBuilder unlockCardCaptureWhen(Class<?> eventTypeClass, DocPath cardDetailsPath) {
-        document.contracts(c -> c.onTriggered("unlockCardCaptureWhenEvent", eventTypeClass, steps -> steps
-                .emitType("RequestCaptureUnlock", PayNoteTypes.CardTransactionCaptureUnlockRequested.class,
-                        payload -> payload.putExpression("cardTransactionDetails",
-                                "document('" + cardDetailsPath.pointer() + "')"))));
-        return this;
-    }
-
-    private PayNoteBuilder guarantorConfirmCaptureLockedOp() {
-        return operation("confirmCardTransactionCaptureLocked",
-                PayNoteRole.GUARANTOR.channelKey().value(),
-                "Confirm card transaction capture lock.",
-                steps -> steps.emitType("ConfirmCaptureLocked", PayNoteTypes.CardTransactionCaptureLocked.class, null));
-    }
-
-    private PayNoteBuilder guarantorConfirmCaptureUnlockedOp() {
-        return operation("confirmCardTransactionCaptureUnlocked",
-                PayNoteRole.GUARANTOR.channelKey().value(),
-                "Confirm card transaction capture unlock.",
-                steps -> steps.emitType("ConfirmCaptureUnlocked", PayNoteTypes.CardTransactionCaptureUnlocked.class, null));
-    }
-
     private void ensureImplicitParticipants() {
         document.contracts(c -> c.timelineChannels(
-                PayNoteRole.PAYER.channelKey().value(),
-                PayNoteRole.PAYEE.channelKey().value(),
-                PayNoteRole.GUARANTOR.channelKey().value()));
+                "payerChannel",
+                "payeeChannel",
+                "guarantorChannel"));
+        participantTypeByKey.put("payerChannel", TypeAliases.CONVERSATION_TIMELINE_CHANNEL);
+        participantTypeByKey.put("payeeChannel", TypeAliases.CONVERSATION_TIMELINE_CHANNEL);
+        participantTypeByKey.put("guarantorChannel", TypeAliases.CONVERSATION_TIMELINE_CHANNEL);
     }
 
-    private DocPath requireAttachedCardPath() {
-        if (cardTransactionDetailsPath == null) {
-            throw new IllegalStateException("No card transaction rail attached. Use attach(CardTransaction.at(...)) first.");
+    private void validateCapturePlan() {
+        if (captureLockedOnInit && captureUnlockPaths == 0) {
+            throw new IllegalStateException("Capture is locked but no unlock path is configured.");
         }
-        return cardTransactionDetailsPath;
     }
 
-    public static final class ParticipantsBuilder {
+    private static String sanitizeKey(String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return "Default";
+        }
+        return key.replaceAll("[^a-zA-Z0-9]", "");
+    }
+
+    private boolean isTypeCompatible(String existingAlias, String nextAlias) {
+        if (existingAlias == null || nextAlias == null) {
+            return false;
+        }
+        if (existingAlias.equals(nextAlias)) {
+            return true;
+        }
+        if (TypeAliases.CORE_CHANNEL.equals(existingAlias)) {
+            return TypeAliases.CONVERSATION_TIMELINE_CHANNEL.equals(nextAlias)
+                    || TypeAliases.MYOS_TIMELINE_CHANNEL.equals(nextAlias);
+        }
+        if (TypeAliases.CONVERSATION_TIMELINE_CHANNEL.equals(existingAlias)) {
+            return TypeAliases.MYOS_TIMELINE_CHANNEL.equals(nextAlias);
+        }
+        return false;
+    }
+
+    public static final class CaptureBuilder {
         private final PayNoteBuilder parent;
 
-        private ParticipantsBuilder(PayNoteBuilder parent) {
+        private CaptureBuilder(PayNoteBuilder parent) {
             this.parent = parent;
         }
 
-        public ParticipantsBuilder add(PayNoteRole role) {
-            parent.participant(role);
+        public CaptureBuilder lockOnInit() {
+            parent.captureLockedOnInit = true;
+            parent.onInit("onInitCaptureLock", steps -> steps.capture().lock());
             return this;
         }
 
-        public ParticipantsBuilder shipper() {
-            return add(PayNoteRole.SHIPPER);
-        }
-    }
-
-    public static final class CardCaptureBuilder {
-        private final PayNoteBuilder parent;
-
-        private CardCaptureBuilder(PayNoteBuilder parent) {
-            this.parent = parent;
+        public CaptureBuilder unlockWhenEventArrives(Class<?> eventTypeClass) {
+            parent.captureUnlockPaths++;
+            parent.onEvent("unlockCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
+                    eventTypeClass,
+                    steps -> steps.capture().unlock());
+            return this;
         }
 
-        public PayNoteBuilder lockOnInit() {
-            return parent.lockCardCaptureOnInit(parent.requireAttachedCardPath());
+        public CaptureBuilder unlockWhenDocPathChanges(String path) {
+            parent.captureUnlockPaths++;
+            parent.onDocChange("unlockCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().unlock());
+            return this;
         }
 
-        public PayNoteBuilder lockOnInit(DocPath path) {
-            return parent.lockCardCaptureOnInit(path);
+        public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            parent.captureUnlockPaths++;
+            CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
+            customizer.accept(operationBuilder);
+            operationBuilder.doneWithMandatoryUnlock();
+            return this;
         }
 
-        public PayNoteBuilder unlockWhen(Class<?> eventTypeClass) {
-            return parent.unlockCardCaptureWhen(eventTypeClass, parent.requireAttachedCardPath());
+        public CaptureBuilder requestNow() {
+            parent.onInit("onInitCaptureRequest", steps -> steps.capture().requestNow());
+            return this;
         }
 
-        public PayNoteBuilder unlockWhen(Class<?> eventTypeClass, DocPath path) {
-            return parent.unlockCardCaptureWhen(eventTypeClass, path);
+        public CaptureBuilder requestPartial(String amountExpression) {
+            parent.onInit("onInitCapturePartialRequest", steps -> steps.capture().requestPartial(amountExpression));
+            return this;
         }
 
-        public PayNoteBuilder guarantorConfirmCaptureLockedOp() {
-            return parent.guarantorConfirmCaptureLockedOp();
-        }
-
-        public PayNoteBuilder guarantorConfirmCaptureUnlockedOp() {
-            return parent.guarantorConfirmCaptureUnlockedOp();
+        public PayNoteBuilder done() {
+            return parent;
         }
     }
 
@@ -441,6 +551,7 @@ public final class PayNoteBuilder {
         private final String key;
         private String channelKey;
         private String description;
+        private Class<?> requestTypeClass;
         private Consumer<StepsBuilder> implementation;
 
         private OperationBuilder(PayNoteBuilder parent, String key) {
@@ -458,13 +569,13 @@ public final class PayNoteBuilder {
             return this;
         }
 
-        public OperationBuilder channel(PayNoteRole role) {
-            this.channelKey = role.channelKey().value();
+        public OperationBuilder description(String description) {
+            this.description = description;
             return this;
         }
 
-        public OperationBuilder description(String description) {
-            this.description = description;
+        public OperationBuilder requestType(Class<?> requestTypeClass) {
+            this.requestTypeClass = requestTypeClass;
             return this;
         }
 
@@ -480,7 +591,54 @@ public final class PayNoteBuilder {
             if (implementation == null) {
                 throw new IllegalStateException("Operation steps must be configured for: " + key);
             }
-            return parent.operation(key, channelKey, description, implementation);
+            return parent.operation(key, channelKey, requestTypeClass, description, implementation);
+        }
+    }
+
+    public static final class CaptureOperationBuilder {
+        private final PayNoteBuilder parent;
+        private final String key;
+        private String channelKey;
+        private String description;
+        private Class<?> requestTypeClass;
+        private Consumer<StepsBuilder> implementation;
+
+        private CaptureOperationBuilder(PayNoteBuilder parent, String key) {
+            this.parent = parent;
+            this.key = key;
+        }
+
+        public CaptureOperationBuilder channel(String channelKey) {
+            this.channelKey = channelKey;
+            return this;
+        }
+
+        public CaptureOperationBuilder description(String description) {
+            this.description = description;
+            return this;
+        }
+
+        public CaptureOperationBuilder requestType(Class<?> requestTypeClass) {
+            this.requestTypeClass = requestTypeClass;
+            return this;
+        }
+
+        public CaptureOperationBuilder steps(Consumer<StepsBuilder> implementation) {
+            this.implementation = implementation;
+            return this;
+        }
+
+        private PayNoteBuilder doneWithMandatoryUnlock() {
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                throw new IllegalStateException("Operation channel must be configured for: " + key);
+            }
+            Consumer<StepsBuilder> withUnlock = steps -> {
+                if (implementation != null) {
+                    implementation.accept(steps);
+                }
+                steps.capture().unlock();
+            };
+            return parent.operation(key, channelKey, requestTypeClass, description, withUnlock);
         }
     }
 }

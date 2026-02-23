@@ -1,7 +1,6 @@
 package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.samples.paynote.dsl.DocTemplate;
-import blue.language.samples.paynote.sdk.PayNoteRole;
 
 public final class DHLShipmentPayNote {
 
@@ -15,6 +14,6 @@ public final class DHLShipmentPayNote {
                         .setCurrency("EUR")
                         .setAmountTotal(20000)
                         .set(PayNotePaths.FUNDING_SOURCE_CURRENCY.pointer(), "CHF")
-                        .bindRole(PayNoteRole.SHIPPER.roleKey()).accountId("acc_dhl_001"));
+                        .bindChannel("shipmentCompanyChannel").accountId("acc_dhl_001"));
     }
 }

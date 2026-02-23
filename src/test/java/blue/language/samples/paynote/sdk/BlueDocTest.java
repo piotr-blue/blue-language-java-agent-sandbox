@@ -11,28 +11,29 @@ class BlueDocTest {
 
     @Test
     void buildsGenericDocumentAndBootstrapsBindingsSeparately() {
-        Node document = BlueDoc.doc()
+        Node document = BlueDoc.name("Counter #1")
                 .type("MyCompany/Counter")
-                .name("Counter #1")
                 .description("A simple counter")
                 .participants("owner", "observer")
+                .set("/count", 0)
                 .operation("increment")
                     .channel("owner")
                     .description("Increment counter")
+                    .requestType(Integer.class)
                     .steps(steps -> steps
-                            .replaceExpression("IncrementValue", "/value", "document('/value') + 1")
+                            .replaceExpression("IncrementValue", "/count", "document('/count') + event.message.request")
                             .emitType("CounterChanged", CommonTypes.NamedEvent.class,
                                     payload -> payload.put("name", "CounterChanged")))
                     .done()
                 .buildDocument();
 
         assertEquals("MyCompany/Counter", document.getAsText("/type/value"));
+        assertEquals(0, document.getAsInteger("/count/value").intValue());
         assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL, document.getAsText("/contracts/owner/type/value"));
         assertEquals(TypeAliases.CONVERSATION_OPERATION, document.getAsText("/contracts/increment/type/value"));
 
-        Node bootstrap = BlueDoc.doc()
+        Node bootstrap = BlueDoc.name("Counter #1")
                 .type("MyCompany/Counter")
-                .name("Counter #1")
                 .participants("owner", "observer")
                 .buildDocument();
         bootstrap = blue.language.samples.paynote.dsl.MyOsDsl.bootstrap(bootstrap)

@@ -2,7 +2,7 @@ package blue.language.samples.paynote.sdk;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.ChannelKey;
-import blue.language.samples.paynote.dsl.DocPath;
+import blue.language.samples.paynote.dsl.MyOsTimeline;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
@@ -40,22 +40,20 @@ class PayNoteBuilderTest {
     @Test
     void keepsPayNoteTransactionAgnosticAndImplicitCoreParticipants() {
         Node document = PayNotes.payNote("iPhone Purchase")
-                .attach(CardTransaction.defaultRef())
                 .currency(IsoCurrency.USD)
                 .amountTotalMinor(80000)
-                .participants(p -> p.shipper())
+                .participant("shipmentCompanyChannel", "Shipment company")
                 .participantsUnion(ChannelKey.of("allParticipantsChannel"),
-                        PayNoteRole.PAYER, PayNoteRole.PAYEE, PayNoteRole.GUARANTOR, PayNoteRole.SHIPPER)
-                .cardCapture().lockOnInit()
-                .operation("confirmShipment")
-                    .channel(PayNoteRole.SHIPPER)
-                    .description("Confirm shipment")
-                    .steps(steps -> steps.emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
-                            payload -> payload.put("source", PayNoteRole.SHIPPER.channelKey().value())))
+                        "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
+                .capture()
+                    .lockOnInit()
+                    .unlockOnOperation("confirmShipment", op -> op
+                            .channel("shipmentCompanyChannel")
+                            .description("Confirm shipment")
+                            .requestType(String.class)
+                            .steps(steps -> steps.emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                    payload -> payload.put("source", "shipmentCompanyChannel"))))
                     .done()
-                .cardCapture().unlockWhen(ShippingEvents.ShipmentConfirmed.class)
-                .cardCapture().guarantorConfirmCaptureLockedOp()
-                .cardCapture().guarantorConfirmCaptureUnlockedOp()
                 .buildDocument();
 
         assertEquals(PayNoteAliases.PAYNOTE, document.getAsText("/type/value"));
@@ -69,28 +67,30 @@ class PayNoteBuilderTest {
                 document.getAsText("/contracts/shipmentCompanyChannel/type/value"));
         assertEquals(TypeAliases.CONVERSATION_COMPOSITE_TIMELINE_CHANNEL,
                 document.getAsText("/contracts/allParticipantsChannel/type/value"));
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED,
-                document.getAsText("/contracts/onInitLockCardCapture/steps/0/event/type/value"));
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED,
-                document.getAsText("/contracts/unlockCardCaptureWhenEvent/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_LOCK_REQUESTED,
+                document.getAsText("/contracts/onInitCaptureLock/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                document.getAsText("/contracts/confirmShipmentImpl/steps/1/event/type/value"));
     }
 
     @Test
-    void cardCaptureDefaultPathFailsFastWithoutAttachedCardRail() {
-        IllegalStateException missingRail = assertThrows(IllegalStateException.class, () ->
-                PayNotes.payNote("Missing rail")
+    void captureLockFailsFastWhenNoUnlockConfigured() {
+        IllegalStateException missingUnlock = assertThrows(IllegalStateException.class, () ->
+                PayNotes.payNote("Missing unlock")
                         .currency(IsoCurrency.USD)
                         .amountTotalMinor(500)
-                        .cardCapture().lockOnInit());
-        assertTrue(missingRail.getMessage().contains("No card transaction rail attached"));
+                        .capture().lockOnInit()
+                        .done()
+                        .buildDocument());
+        assertTrue(missingUnlock.getMessage().contains("no unlock path"));
 
-        Node explicitPath = PayNotes.payNote("Explicit path")
+        Node complete = PayNotes.payNote("Complete lock plan")
                 .currency(IsoCurrency.USD)
                 .amountTotalMinor(500)
-                .cardCapture().lockOnInit(DocPath.of("/customCardDetails"))
+                .captureLockedUntilEvent(ShippingEvents.ShipmentConfirmed.class)
                 .buildDocument();
-        assertEquals("${document('/customCardDetails')}",
-                explicitPath.getAsText("/contracts/onInitLockCardCapture/steps/0/event/cardTransactionDetails/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                complete.getAsText("/contracts/unlockCaptureWhenShipmentConfirmed/steps/0/event/type/value"));
     }
 
     @Test
@@ -105,11 +105,36 @@ class PayNoteBuilderTest {
                 .currency(IsoCurrency.EUR)
                 .amountTotalMinor(20000)
                 .bootstrap()
-                .bindRole("payer").email("alice@gmail.com")
-                .bindRole("payee").accountId("acc_bob_1234")
-                .bindRole("guarantor").accountId("acc_bank_1")
+                .bind("payerChannel").email("alice@gmail.com")
+                .bind("payeeChannel").accountId("acc_bob_1234")
+                .bind("guarantorChannel").accountId("acc_bank_1")
                 .build();
         assertEquals(TypeAliases.MYOS_DOCUMENT_SESSION_BOOTSTRAP, bootstrap.getAsText("/type/value"));
         assertEquals("alice@gmail.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
+    }
+
+    @Test
+    void allowsPayNoteWithoutCurrencyOrAmountAndSupportsReferenceTransactionMetadata() {
+        Node document = PayNotes.payNote("Metadata only")
+                .referenceTransactionPath("/referenceTransaction")
+                .buildDocument();
+
+        assertEquals(PayNoteAliases.PAYNOTE, document.getAsText("/type/value"));
+        assertEquals("/referenceTransaction", document.getAsText("/referenceTransactionPath/value"));
+        assertThrows(IllegalArgumentException.class, () -> document.getAsText("/amount/total/value"));
+    }
+
+    @Test
+    void participantOverrideMustRemainTypeCompatible() {
+        Node compatible = PayNotes.payNote("Compatible override")
+                .participant("shipmentCompanyChannel", "DHL", MyOsTimeline.accountId("acc_dhl_001").asNode())
+                .buildDocument();
+        assertEquals(TypeAliases.MYOS_TIMELINE_CHANNEL,
+                compatible.getAsText("/contracts/shipmentCompanyChannel/type/value"));
+
+        IllegalArgumentException incompatible = assertThrows(IllegalArgumentException.class, () ->
+                PayNotes.payNote("Incompatible")
+                        .participant("payerChannel", "bad", new Node().type("Conversation/Operation")));
+        assertTrue(incompatible.getMessage().contains("type-compatible"));
     }
 }

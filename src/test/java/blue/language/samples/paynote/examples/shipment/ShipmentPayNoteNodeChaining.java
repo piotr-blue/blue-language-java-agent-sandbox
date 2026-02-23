@@ -2,7 +2,6 @@ package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.DocTemplates;
-import blue.language.samples.paynote.sdk.PayNoteRole;
 
 public final class ShipmentPayNoteNodeChaining {
 
@@ -16,16 +15,16 @@ public final class ShipmentPayNoteNodeChaining {
                         .setCurrency("EUR")
                         .setAmountTotal(20000)
                         .set(PayNotePaths.FUNDING_SOURCE_CURRENCY.pointer(), "CHF")
-                        .bindRole(PayNoteRole.SHIPPER.roleKey()).accountId("acc_dhl_001"))
+                        .bindChannel("shipmentCompanyChannel").accountId("acc_dhl_001"))
                 .build();
     }
 
     public static Node instantiateAliceBob(Node specializedNode) {
         return DocTemplates.template(specializedNode)
                 .instantiate(i -> i
-                        .bindRole(PayNoteRole.PAYER.roleKey()).email("alice@gmail.com")
-                        .bindRole(PayNoteRole.PAYEE.roleKey()).accountId("acc_bob_1234")
-                        .bindRole(PayNoteRole.GUARANTOR.roleKey()).accountId("acc_bank_1"))
+                        .bindChannel("payerChannel").email("alice@gmail.com")
+                        .bindChannel("payeeChannel").accountId("acc_bob_1234")
+                        .bindChannel("guarantorChannel").accountId("acc_bank_1"))
                 .build();
     }
 }

@@ -128,14 +128,10 @@ public final class TypeAliases {
         aliases.put(PayNoteTypes.ReservationReleaseRequested.class, PayNoteAliases.RESERVATION_RELEASE_REQUESTED);
         aliases.put(PayNoteTypes.IssueChildPayNoteRequested.class, PayNoteAliases.ISSUE_CHILD_PAYNOTE_REQUESTED);
         aliases.put(PayNoteTypes.PayNoteCancellationRequested.class, PayNoteAliases.PAYNOTE_CANCELLATION_REQUESTED);
-        aliases.put(PayNoteTypes.CardTransactionCaptureLockRequested.class,
-                PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED);
-        aliases.put(PayNoteTypes.CardTransactionCaptureUnlockRequested.class,
-                PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED);
-        aliases.put(PayNoteTypes.CardTransactionCaptureLocked.class,
-                PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCKED);
-        aliases.put(PayNoteTypes.CardTransactionCaptureUnlocked.class,
-                PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCKED);
+        aliases.put(PayNoteTypes.CaptureLockRequested.class, PayNoteAliases.CAPTURE_LOCK_REQUESTED);
+        aliases.put(PayNoteTypes.CaptureUnlockRequested.class, PayNoteAliases.CAPTURE_UNLOCK_REQUESTED);
+        aliases.put(PayNoteTypes.CaptureLocked.class, PayNoteAliases.CAPTURE_LOCKED);
+        aliases.put(PayNoteTypes.CaptureUnlocked.class, PayNoteAliases.CAPTURE_UNLOCKED);
         aliases.put(PayNoteV2Types.PayNoteDocument.class, PAYNOTE_DOCUMENT);
 
         CLASS_TO_ALIAS = Collections.unmodifiableMap(aliases);

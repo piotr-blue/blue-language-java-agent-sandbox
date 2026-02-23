@@ -8,8 +8,4 @@ public final class PayNotes {
     public static PayNoteBuilder payNote(String name) {
         return PayNoteBuilder.payNote(name);
     }
-
-    public static PayNoteBuilder cardTransaction(String name) {
-        return payNote(name).attach(CardTransaction.defaultRef());
-    }
 }

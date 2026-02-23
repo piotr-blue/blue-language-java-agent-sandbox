@@ -34,6 +34,8 @@ class ShipmentPayNoteChainTest {
         assertEquals("acc_bank_1", finalInstance.getAsText("/channelBindings/guarantorChannel/accountId/value"));
         assertEquals(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED,
                 finalInstance.getAsText("/document/contracts/confirmShipmentImpl/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                finalInstance.getAsText("/document/contracts/confirmShipmentImpl/steps/1/event/type/value"));
         assertEquals(TypeAliases.CONVERSATION_OPERATION,
                 finalInstance.getAsText("/document/contracts/cancel/type/value"));
     }

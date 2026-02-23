@@ -24,26 +24,17 @@ class PayNoteEventsTest {
     }
 
     @Test
-    void buildsCardTransactionLockAndUnlockEvents() {
-        Node lockRequested = PayNoteEvents.cardTransactionCaptureLockRequested()
-                .cardTransactionDetails(details -> details
-                        .put("authorizationId", "AUTH_123")
-                        .put("merchantId", "MERCHANT_456")
-                        .put("captureAmountMinor", 80000))
-                .build();
+    void buildsGenericCaptureLockAndUnlockEvents() {
+        Node lockRequested = PayNoteEvents.captureLockRequested();
+        Node unlockRequested = PayNoteEvents.captureUnlockRequested();
+        Node locked = PayNoteEvents.captureLocked();
+        Node unlocked = PayNoteEvents.captureUnlocked();
 
-        Node unlockRequested = PayNoteEvents.cardTransactionCaptureUnlockRequested()
-                .cardTransactionDetails(details -> details
-                        .put("authorizationId", "AUTH_123")
-                        .put("merchantId", "MERCHANT_456")
-                        .put("captureAmountMinor", 80000))
-                .build();
-
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED, lockRequested.getAsText("/type/value"));
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED, unlockRequested.getAsText("/type/value"));
-        assertEquals("PayNote-Card-Capture-Lock-Requested-Demo-BlueId", lockRequested.getAsText("/type/blueId"));
-        assertEquals("PayNote-Card-Capture-Unlock-Requested-Demo-BlueId", unlockRequested.getAsText("/type/blueId"));
-        assertEquals("AUTH_123", lockRequested.getAsText("/cardTransactionDetails/authorizationId/value"));
-        assertEquals(80000, unlockRequested.getAsInteger("/cardTransactionDetails/captureAmountMinor/value").intValue());
+        assertEquals(PayNoteAliases.CAPTURE_LOCK_REQUESTED, lockRequested.getAsText("/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED, unlockRequested.getAsText("/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_LOCKED, locked.getAsText("/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCKED, unlocked.getAsText("/type/value"));
+        assertEquals("PayNote-Capture-Lock-Requested-Demo-BlueId", lockRequested.getAsText("/type/blueId"));
+        assertEquals("PayNote-Capture-Unlock-Requested-Demo-BlueId", unlockRequested.getAsText("/type/blueId"));
     }
 }

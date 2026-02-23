@@ -102,7 +102,50 @@ public final class StepsBuilder {
         return this;
     }
 
+    public CaptureStepBuilder capture() {
+        return new CaptureStepBuilder(this);
+    }
+
     List<Node> build() {
         return steps;
+    }
+
+    public static final class CaptureStepBuilder {
+        private final StepsBuilder parent;
+
+        private CaptureStepBuilder(StepsBuilder parent) {
+            this.parent = parent;
+        }
+
+        public StepsBuilder lock() {
+            return parent.triggerEvent("RequestCaptureLock", PayNoteEvents.captureLockRequested());
+        }
+
+        public StepsBuilder unlock() {
+            return parent.triggerEvent("RequestCaptureUnlock", PayNoteEvents.captureUnlockRequested());
+        }
+
+        public StepsBuilder markLocked() {
+            return parent.triggerEvent("CaptureLocked", PayNoteEvents.captureLocked());
+        }
+
+        public StepsBuilder markUnlocked() {
+            return parent.triggerEvent("CaptureUnlocked", PayNoteEvents.captureUnlocked());
+        }
+
+        public StepsBuilder requestNow() {
+            return parent.triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(
+                    new Node().value(BlueDocDsl.expr("document('/amount/total')"))));
+        }
+
+        public StepsBuilder requestPartial(String amountExpression) {
+            return parent.triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(
+                    new Node().value(BlueDocDsl.expr(amountExpression))));
+        }
+
+        public StepsBuilder refundFull() {
+            return parent.triggerEvent("RequestRefund", PayNoteEvents.reservationReleaseRequested(
+                    new Node().value(BlueDocDsl.expr("document('/amount/total')"))));
+        }
     }
 }

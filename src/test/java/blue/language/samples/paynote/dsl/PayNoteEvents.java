@@ -3,8 +3,6 @@ package blue.language.samples.paynote.dsl;
 import blue.language.model.Node;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 
-import java.util.function.Consumer;
-
 public final class PayNoteEvents {
 
     private PayNoteEvents() {
@@ -46,44 +44,20 @@ public final class PayNoteEvents {
                 .properties("childPayNote", valueNode(childPayNoteRef));
     }
 
-    public static CardTransactionCaptureEventBuilder cardTransactionCaptureLockRequested() {
-        return new CardTransactionCaptureEventBuilder(PayNoteTypes.CardTransactionCaptureLockRequested.class);
+    public static Node captureLockRequested() {
+        return new Node().type(TypeRef.of(PayNoteTypes.CaptureLockRequested.class).asTypeNode());
     }
 
-    public static CardTransactionCaptureEventBuilder cardTransactionCaptureUnlockRequested() {
-        return new CardTransactionCaptureEventBuilder(PayNoteTypes.CardTransactionCaptureUnlockRequested.class);
+    public static Node captureUnlockRequested() {
+        return new Node().type(TypeRef.of(PayNoteTypes.CaptureUnlockRequested.class).asTypeNode());
     }
 
-    public static Node cardTransactionCaptureLocked() {
-        return new Node().type(TypeRef.of(PayNoteTypes.CardTransactionCaptureLocked.class).asTypeNode());
+    public static Node captureLocked() {
+        return new Node().type(TypeRef.of(PayNoteTypes.CaptureLocked.class).asTypeNode());
     }
 
-    public static Node cardTransactionCaptureUnlocked() {
-        return new Node().type(TypeRef.of(PayNoteTypes.CardTransactionCaptureUnlocked.class).asTypeNode());
-    }
-
-    public static final class CardTransactionCaptureEventBuilder {
-        private final Node event;
-
-        private CardTransactionCaptureEventBuilder(Class<?> typeClass) {
-            this.event = new Node().type(TypeRef.of(typeClass).asTypeNode());
-        }
-
-        public CardTransactionCaptureEventBuilder cardTransactionDetails(Consumer<NodeObjectBuilder> customizer) {
-            NodeObjectBuilder detailsBuilder = NodeObjectBuilder.create();
-            customizer.accept(detailsBuilder);
-            event.properties("cardTransactionDetails", detailsBuilder.build());
-            return this;
-        }
-
-        public CardTransactionCaptureEventBuilder cardTransactionDetails(Node details) {
-            event.properties("cardTransactionDetails", details);
-            return this;
-        }
-
-        public Node build() {
-            return event;
-        }
+    public static Node captureUnlocked() {
+        return new Node().type(TypeRef.of(PayNoteTypes.CaptureUnlocked.class).asTypeNode());
     }
 
     private static Node valueNode(Object value) {

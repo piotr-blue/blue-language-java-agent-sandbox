@@ -7,7 +7,6 @@ public final class PayNoteAliases {
 
     // Document types
     public static final String PAYNOTE = "PayNote/PayNote";
-    public static final String CARD_TRANSACTION_PAYNOTE = "PayNote/Card Transaction PayNote";
     public static final String SHIPMENT_CAPTURE_PAYNOTE = "PayNote/Shipment Capture PayNote";
 
     // Generic PayNote events
@@ -18,14 +17,8 @@ public final class PayNoteAliases {
             "PayNote/Reserve Funds and Capture Immediately Requested";
     public static final String ISSUE_CHILD_PAYNOTE_REQUESTED = "PayNote/Issue Child PayNote Requested";
     public static final String PAYNOTE_CANCELLATION_REQUESTED = "PayNote/PayNote Cancellation Requested";
-
-    // Card transaction escrow flow events
-    public static final String CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED =
-            "PayNote/Card Transaction Capture Lock Requested";
-    public static final String CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED =
-            "PayNote/Card Transaction Capture Unlock Requested";
-    public static final String CARD_TRANSACTION_CAPTURE_LOCKED =
-            "PayNote/Card Transaction Capture Locked";
-    public static final String CARD_TRANSACTION_CAPTURE_UNLOCKED =
-            "PayNote/Card Transaction Capture Unlocked";
+    public static final String CAPTURE_LOCK_REQUESTED = "PayNote/Capture Lock Requested";
+    public static final String CAPTURE_UNLOCK_REQUESTED = "PayNote/Capture Unlock Requested";
+    public static final String CAPTURE_LOCKED = "PayNote/Capture Locked";
+    public static final String CAPTURE_UNLOCKED = "PayNote/Capture Unlocked";
 }

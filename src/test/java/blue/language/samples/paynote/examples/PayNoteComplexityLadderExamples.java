@@ -6,9 +6,7 @@ import blue.language.samples.paynote.dsl.JsObjectBuilder;
 import blue.language.samples.paynote.dsl.JsOutputBuilder;
 import blue.language.samples.paynote.dsl.JsPatchBuilder;
 import blue.language.samples.paynote.dsl.JsProgram;
-import blue.language.samples.paynote.sdk.CardTransaction;
 import blue.language.samples.paynote.sdk.IsoCurrency;
-import blue.language.samples.paynote.sdk.PayNoteRole;
 import blue.language.samples.paynote.sdk.PayNotes;
 import blue.language.samples.paynote.types.common.CommonTypes;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
@@ -18,52 +16,100 @@ public final class PayNoteComplexityLadderExamples {
     private PayNoteComplexityLadderExamples() {
     }
 
-    // Step 1 (tiny useful paynotes, mostly one-liners)
-    public static Node simpleCardLock() {
-        return PayNotes.payNote("Simple Card Lock")
-                .attach(CardTransaction.defaultRef())
+    // Step 1 (tiny useful paynotes, all complete lock->unlock or direct useful flow)
+    public static Node tinyCaptureAfterShipmentOp() {
+        return PayNotes.payNote("Tiny Capture After Shipment")
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("12.00")
-                .cardCapture().lockOnInit()
+                .captureLockedUntilOperation("confirmShipment",
+                        "shipmentCompanyChannel",
+                        "Shipment company confirms delivery",
+                        ShippingEvents.ShipmentConfirmed.class)
                 .buildDocument();
     }
 
-    public static Node simpleReserveAndCapture() {
-        return PayNotes.payNote("Simple Reserve + Capture")
+    public static Node tinyCaptureAfterBuyerApprovalOp() {
+        return PayNotes.payNote("Tiny Capture After Buyer Approval")
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("19.99")
-                .reserveAndCaptureImmediatelyOnInit()
+                .capture()
+                    .lockOnInit()
+                    .unlockOnOperation("approveCapture", op -> op
+                            .channel("payerChannel")
+                            .description("Buyer approves capture.")
+                            .requestType(String.class))
+                    .done()
                 .buildDocument();
     }
 
-    public static Node simpleRefundOperation() {
-        return PayNotes.payNote("Simple Refund")
+    public static Node tinyCaptureAfterTrackingChange() {
+        return PayNotes.payNote("Tiny Capture After Tracking Change")
+                .currency(IsoCurrency.EUR)
+                .amountTotalMajor("15.00")
+                .captureLockedUntilDocPathChanges("/shipping/trackingNumber")
+                .buildDocument();
+    }
+
+    public static Node tinyCaptureAfterEvent() {
+        return PayNotes.payNote("Tiny Capture After Event")
+                .currency(IsoCurrency.USD)
+                .amountTotalMajor("22.50")
+                .captureLockedUntilEvent(ShippingEvents.DeliveryReported.class)
+                .buildDocument();
+    }
+
+    public static Node tinyReserveThenCaptureOnEvent() {
+        return PayNotes.payNote("Tiny Reserve Then Capture")
+                .currency(IsoCurrency.USD)
+                .amountTotalMajor("8.75")
+                .reserveOnInit()
+                .captureOnEvent(ShippingEvents.ShipmentConfirmed.class, "captureWhenShipmentConfirmed")
+                .buildDocument();
+    }
+
+    public static Node tinyRefundOperation() {
+        return PayNotes.payNote("Tiny Refund")
                 .currency(IsoCurrency.EUR)
                 .amountTotalMajor("9.50")
-                .refundFullOperation(PayNoteRole.PAYEE)
+                .refundFullOperation("payeeChannel")
+                .buildDocument();
+    }
+
+    public static Node tinyReleaseOperation() {
+        return PayNotes.payNote("Tiny Release")
+                .currency(IsoCurrency.CHF)
+                .amountTotalMajor("11.00")
+                .releaseReservationOperation("releaseReservation", "guarantorChannel")
+                .buildDocument();
+    }
+
+    public static Node tinyCancellationOperation() {
+        return PayNotes.payNote("Tiny Cancel")
+                .currency(IsoCurrency.USD)
+                .requestCancellationOperation("payerChannel")
                 .buildDocument();
     }
 
     // Step 2 (custom operations + workflow composition)
     public static Node mediumShipmentEscrow() {
         return PayNotes.payNote("Medium Shipment Escrow")
-                .attach(CardTransaction.defaultRef())
                 .currency(IsoCurrency.USD)
                 .amountTotalMinor(80000)
-                .participants(p -> p.shipper())
-                .cardCapture().lockOnInit()
-                .operation("confirmShipment")
-                    .channel(PayNoteRole.SHIPPER)
-                    .description("Shipment company confirms shipment.")
-                    .steps(steps -> steps
-                            .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
-                                    payload -> payload.put("source", "shipmentCompanyChannel")))
+                .participant("shipmentCompanyChannel", "Shipment company confirms shipment.")
+                .participantsUnion("allParticipantsChannel",
+                        "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
+                .capture()
+                    .lockOnInit()
+                    .unlockOnOperation("confirmShipment", op -> op
+                            .channel("shipmentCompanyChannel")
+                            .description("Shipment company confirms shipment.")
+                            .steps(steps -> steps
+                                    .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                            payload -> payload.put("source", "shipmentCompanyChannel"))
+                                    .replaceValue("SetShipmentConfirmedAt", "/signals/shipmentConfirmedAt", "confirmed")))
                     .done()
-                .cardCapture().unlockWhen(ShippingEvents.ShipmentConfirmed.class)
-                .cardCapture().guarantorConfirmCaptureLockedOp()
-                .cardCapture().guarantorConfirmCaptureUnlockedOp()
                 .directChangeWithAllowList("directChange",
-                        PayNoteRole.PAYEE,
+                        "payeeChannel",
                         "Allow only safe payee edits",
                         "/note", "/shipping/trackingNumber")
                 .buildDocument();
@@ -75,7 +121,7 @@ public final class PayNoteComplexityLadderExamples {
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("125.00")
                 .operation("riskReview")
-                    .channel(PayNoteRole.GUARANTOR)
+                    .channel("guarantorChannel")
                     .description("Run heavy deterministic normalization and scoring.")
                     .steps(steps -> steps
                             .js("RiskEngine", hugeRiskProgram())

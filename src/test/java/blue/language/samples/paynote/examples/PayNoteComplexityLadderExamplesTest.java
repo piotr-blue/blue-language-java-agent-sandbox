@@ -12,17 +12,34 @@ class PayNoteComplexityLadderExamplesTest {
 
     @Test
     void step1TinyPayNotesProvideUsefulDefaults() {
-        Node lock = PayNoteComplexityLadderExamples.simpleCardLock();
-        Node reserveCapture = PayNoteComplexityLadderExamples.simpleReserveAndCapture();
-        Node refund = PayNoteComplexityLadderExamples.simpleRefundOperation();
+        Node shipment = PayNoteComplexityLadderExamples.tinyCaptureAfterShipmentOp();
+        Node buyerApproval = PayNoteComplexityLadderExamples.tinyCaptureAfterBuyerApprovalOp();
+        Node tracking = PayNoteComplexityLadderExamples.tinyCaptureAfterTrackingChange();
+        Node event = PayNoteComplexityLadderExamples.tinyCaptureAfterEvent();
+        Node reserveThenCapture = PayNoteComplexityLadderExamples.tinyReserveThenCaptureOnEvent();
+        Node refund = PayNoteComplexityLadderExamples.tinyRefundOperation();
+        Node release = PayNoteComplexityLadderExamples.tinyReleaseOperation();
+        Node cancel = PayNoteComplexityLadderExamples.tinyCancellationOperation();
 
-        assertEquals(PayNoteAliases.PAYNOTE, lock.getAsText("/type/value"));
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_LOCK_REQUESTED,
-                lock.getAsText("/contracts/onInitLockCardCapture/steps/0/event/type/value"));
-        assertEquals(PayNoteAliases.RESERVE_FUNDS_AND_CAPTURE_IMMEDIATELY_REQUESTED,
-                reserveCapture.getAsText("/contracts/onInitReserveAndCapture/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.PAYNOTE, shipment.getAsText("/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_LOCK_REQUESTED,
+                shipment.getAsText("/contracts/onInitCaptureLock/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                shipment.getAsText("/contracts/confirmShipmentImpl/steps/1/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                buyerApproval.getAsText("/contracts/approveCaptureImpl/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                tracking.getAsText("/contracts/unlockCaptureOnDocChangeshippingtrackingNumber/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                event.getAsText("/contracts/unlockCaptureWhenDeliveryReported/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_FUNDS_REQUESTED,
+                reserveThenCapture.getAsText("/contracts/captureWhenShipmentConfirmed/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
                 refund.getAsText("/contracts/refundFullImpl/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
+                release.getAsText("/contracts/releaseReservationImpl/steps/0/event/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_OPERATION,
+                cancel.getAsText("/contracts/requestCancellation/type/value"));
     }
 
     @Test
@@ -31,8 +48,8 @@ class PayNoteComplexityLadderExamplesTest {
         assertEquals(TypeAliases.CONVERSATION_OPERATION, medium.getAsText("/contracts/confirmShipment/type/value"));
         assertEquals(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED,
                 medium.getAsText("/contracts/confirmShipmentImpl/steps/0/event/type/value"));
-        assertEquals(PayNoteAliases.CARD_TRANSACTION_CAPTURE_UNLOCK_REQUESTED,
-                medium.getAsText("/contracts/unlockCardCaptureWhenEvent/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                medium.getAsText("/contracts/confirmShipmentImpl/steps/2/event/type/value"));
         assertEquals("/shipping/trackingNumber",
                 medium.getAsText("/policies/changesetAllowList/directChange/1/value"));
     }

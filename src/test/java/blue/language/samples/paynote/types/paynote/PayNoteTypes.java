@@ -123,25 +123,23 @@ public final class PayNoteTypes {
         public Integer finalAmount;
     }
 
-    @TypeAlias("PayNote/Card Transaction Capture Lock Requested")
-    @TypeBlueId("PayNote-Card-Capture-Lock-Requested-Demo-BlueId")
-    public static class CardTransactionCaptureLockRequested {
-        public Node cardTransactionDetails;
+    @TypeAlias("PayNote/Capture Lock Requested")
+    @TypeBlueId("PayNote-Capture-Lock-Requested-Demo-BlueId")
+    public static class CaptureLockRequested {
     }
 
-    @TypeAlias("PayNote/Card Transaction Capture Unlock Requested")
-    @TypeBlueId("PayNote-Card-Capture-Unlock-Requested-Demo-BlueId")
-    public static class CardTransactionCaptureUnlockRequested {
-        public Node cardTransactionDetails;
+    @TypeAlias("PayNote/Capture Unlock Requested")
+    @TypeBlueId("PayNote-Capture-Unlock-Requested-Demo-BlueId")
+    public static class CaptureUnlockRequested {
     }
 
-    @TypeAlias("PayNote/Card Transaction Capture Locked")
-    @TypeBlueId("PayNote-Card-Capture-Locked-Demo-BlueId")
-    public static class CardTransactionCaptureLocked {
+    @TypeAlias("PayNote/Capture Locked")
+    @TypeBlueId("PayNote-Capture-Locked-Demo-BlueId")
+    public static class CaptureLocked {
     }
 
-    @TypeAlias("PayNote/Card Transaction Capture Unlocked")
-    @TypeBlueId("PayNote-Card-Capture-Unlocked-Demo-BlueId")
-    public static class CardTransactionCaptureUnlocked {
+    @TypeAlias("PayNote/Capture Unlocked")
+    @TypeBlueId("PayNote-Capture-Unlocked-Demo-BlueId")
+    public static class CaptureUnlocked {
     }
 }

@@ -3,7 +3,7 @@ package blue.language.samples.paynote.examples.shipment;
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.processor.model.JsonPatch;
-import blue.language.samples.paynote.sdk.PayNoteRole;
+import blue.language.samples.paynote.dsl.PayNoteAliases;
 
 public final class AliceBobShipmentPayNote {
 
@@ -13,9 +13,9 @@ public final class AliceBobShipmentPayNote {
     public static Node build(String timestamp) {
         Node instantiated = DHLShipmentPayNote.template(timestamp)
                 .instantiate(i -> i
-                        .bindRole(PayNoteRole.PAYER.roleKey()).email("alice@gmail.com")
-                        .bindRole(PayNoteRole.PAYEE.roleKey()).accountId("acc_bob_1234")
-                        .bindRole(PayNoteRole.GUARANTOR.roleKey()).accountId("acc_bank_1"))
+                        .bindChannel("payerChannel").email("alice@gmail.com")
+                        .bindChannel("payeeChannel").accountId("acc_bob_1234")
+                        .bindChannel("guarantorChannel").accountId("acc_bank_1"))
                 .build();
 
         return DocTemplates.extend(instantiated, mutator -> mutator
@@ -25,7 +25,7 @@ public final class AliceBobShipmentPayNote {
                 .applyPatch(JsonPatch.add("/document/contracts/cancel",
                         new Node()
                                 .type("Conversation/Operation")
-                                .properties("channel", new Node().value(PayNoteRole.PAYER.channelKey().value()))
+                                .properties("channel", new Node().value("payerChannel"))
                                 .properties("description", new Node().value("Cancel before shipment confirmation"))))
                 .applyPatch(JsonPatch.add("/document/contracts/cancelImpl",
                         new Node()
@@ -40,9 +40,7 @@ public final class AliceBobShipmentPayNote {
                                         new Node()
                                                 .type("Conversation/Trigger Event")
                                                 .properties("event", new Node()
-                                                        .type("PayNote/Card Transaction Capture Unlock Requested")
-                                                        .properties("cardTransactionDetails",
-                                                                new Node().value("${document('" + PayNotePaths.CARD_TXN_DETAILS.pointer() + "')}")))
+                                                        .type(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED))
                                 )))));
     }
 }
