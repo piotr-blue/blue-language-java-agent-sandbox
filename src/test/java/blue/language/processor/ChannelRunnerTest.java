@@ -291,6 +291,12 @@ final class ChannelRunnerTest {
         Node kindNode = storedEvent.getProperties().get("kind");
         assertNotNull(kindNode);
         assertEquals("original", kindNode.getValue());
+
+        event.properties("kind", new Node().value("mutated-after-delivery"));
+        Node storedAfterMutation = checkpoint.lastEvent(channelBinding.key());
+        assertNotNull(storedAfterMutation);
+        assertEquals("original", storedAfterMutation.getProperties().get("kind").getValue(),
+                "Checkpoint must keep an immutable snapshot of delivered external event");
     }
 
     @Test
