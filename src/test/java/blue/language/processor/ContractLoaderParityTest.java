@@ -3,8 +3,10 @@ package blue.language.processor;
 import blue.language.Blue;
 import blue.language.NodeProvider;
 import blue.language.model.Node;
+import blue.language.processor.contracts.CustomHandlerContractProcessor;
 import blue.language.processor.contracts.SetPropertyContractProcessor;
 import blue.language.processor.contracts.TestEventChannelProcessor;
+import blue.language.processor.model.CustomHandlerContract;
 import blue.language.processor.model.DocumentUpdateChannel;
 import blue.language.processor.model.InitializationMarker;
 import org.junit.jupiter.api.Test;
@@ -160,6 +162,45 @@ class ContractLoaderParityTest {
                 "      blueId: SetProperty\n" +
                 "    propertyKey: /x\n" +
                 "    propertyValue: 1\n");
+
+        assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
+    }
+
+    @Test
+    void loadsCustomHandlerContractsUsingRegisteredProcessorType() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new CustomHandlerContractProcessor());
+        ContractLoader loader = blue.getDocumentProcessor().contractLoader();
+        Node scope = blue.yamlToNode("contracts:\n" +
+                "  main:\n" +
+                "    type:\n" +
+                "      blueId: Core/Document Update Channel\n" +
+                "    path: /document\n" +
+                "  handler:\n" +
+                "    type:\n" +
+                "      blueId: Custom.Handler\n" +
+                "    channel: main\n" +
+                "    config: alpha\n");
+
+        ContractBundle bundle = loader.load(scope, "/");
+
+        assertEquals(1, bundle.handlersFor("main").size());
+        assertEquals("handler", bundle.handlersFor("main").get(0).key());
+        assertTrue(bundle.handlersFor("main").get(0).contract() instanceof CustomHandlerContract);
+        CustomHandlerContract contract = (CustomHandlerContract) bundle.handlersFor("main").get(0).contract();
+        assertEquals("alpha", contract.getConfig());
+    }
+
+    @Test
+    void failsWhenCustomHandlerOmitsChannel() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new CustomHandlerContractProcessor());
+        ContractLoader loader = blue.getDocumentProcessor().contractLoader();
+        Node scope = blue.yamlToNode("contracts:\n" +
+                "  handler:\n" +
+                "    type:\n" +
+                "      blueId: Custom.Handler\n" +
+                "    config: alpha\n");
 
         assertThrows(IllegalStateException.class, () -> loader.load(scope, "/"));
     }
