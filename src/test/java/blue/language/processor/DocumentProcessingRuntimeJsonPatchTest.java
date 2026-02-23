@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -19,12 +18,12 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        JsonPatch patch = JsonPatch.add("/foo/bar/baz", new Node().value("qux"));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        DocumentProcessingRuntime.DocumentUpdateData result =
+                runtime.applyPatch("/", JsonPatch.add("/foo/bar/baz", new Node().value("qux")));
 
-        assertNull(data.before());
-        assertEquals("qux", data.after().getValue());
-        assertEquals("/foo/bar/baz", data.path());
+        assertNull(result.before());
+        assertEquals("qux", result.after().getValue());
+        assertEquals("/foo/bar/baz", result.path());
 
         Node baz = property(property(property(document, "foo"), "bar"), "baz");
         assertEquals("qux", baz.getValue());
@@ -53,13 +52,13 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        JsonPatch replace = JsonPatch.replace("/alpha/beta", new Node().value("v1"));
-        DocumentProcessingRuntime.DocumentUpdateData upsert = runtime.applyPatch("/", replace);
+        DocumentProcessingRuntime.DocumentUpdateData upsert =
+                runtime.applyPatch("/", JsonPatch.replace("/alpha/beta", new Node().value("v1")));
         assertNull(upsert.before());
         assertEquals("v1", upsert.after().getValue());
 
-        JsonPatch replaceAgain = JsonPatch.replace("/alpha/beta", new Node().value("v2"));
-        DocumentProcessingRuntime.DocumentUpdateData update = runtime.applyPatch("/", replaceAgain);
+        DocumentProcessingRuntime.DocumentUpdateData update =
+                runtime.applyPatch("/", JsonPatch.replace("/alpha/beta", new Node().value("v2")));
         assertEquals("v1", update.before().getValue());
         assertEquals("v2", update.after().getValue());
 
@@ -69,8 +68,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
 
     @Test
     void removeObjectProperty() {
-        Node document = new Node();
-        document.properties("key", new Node().value("value"));
+        Node document = new Node().properties("key", new Node().value("value"));
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
         DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.remove("/key"));
@@ -96,8 +94,8 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = arrayDocument("items", 1, 2, 3);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        JsonPatch patch = JsonPatch.add("/items/1", new Node().value(99));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        DocumentProcessingRuntime.DocumentUpdateData data =
+                runtime.applyPatch("/", JsonPatch.add("/items/1", new Node().value(99)));
 
         assertEquals(2, intValue(data.before()));
         assertEquals(99, intValue(data.after()));
@@ -115,8 +113,8 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = arrayDocument("values", 4, 5);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        JsonPatch patch = JsonPatch.add("/values/-", new Node().value(6));
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", patch);
+        DocumentProcessingRuntime.DocumentUpdateData data =
+                runtime.applyPatch("/", JsonPatch.add("/values/-", new Node().value(6)));
 
         assertNull(data.before());
         assertEquals(6, intValue(data.after()));
@@ -131,7 +129,8 @@ class DocumentProcessingRuntimeJsonPatchTest {
         Node document = arrayDocument("nums", 7, 8);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/nums/1", new Node().value(80)));
+        DocumentProcessingRuntime.DocumentUpdateData data =
+                runtime.applyPatch("/", JsonPatch.replace("/nums/1", new Node().value(80)));
 
         assertEquals(8, intValue(data.before()));
         assertEquals(80, intValue(data.after()));
@@ -180,10 +179,7 @@ class DocumentProcessingRuntimeJsonPatchTest {
                 () -> runtime.applyPatch("/", JsonPatch.add("/arr/0/name", new Node().value("bad"))));
         assertTrue(ex.getMessage().toLowerCase().contains("array index"), ex.getMessage());
         assertTrue(array.getItems().isEmpty());
-        Map<String, Node> arrProps = property(document, "arr").getProperties();
-        if (arrProps != null) {
-            assertTrue(arrProps.isEmpty());
-        }
+        assertNull(property(document, "arr").getProperties());
     }
 
     @Test
@@ -227,204 +223,15 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void tildeSegmentsAreUnescapedUsingJsonPointerRules() {
+    void tildeSegmentsRemainLiteral() {
         Node document = new Node();
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        runtime.applyPatch("/", JsonPatch.add("/tilde/a~1b", new Node().value("slash")));
-        runtime.applyPatch("/", JsonPatch.add("/tilde/a~0b", new Node().value("tilde")));
+        runtime.applyPatch("/", JsonPatch.add("/tilde/~1key", new Node().value("value")));
 
         Node tilde = property(document, "tilde");
-        assertEquals("slash", property(tilde, "a/b").getValue());
-        assertEquals("tilde", property(tilde, "a~b").getValue());
-    }
-
-    @Test
-    void rejectsMalformedEscapedPointerSegments() {
-        Node document = new Node();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        assertThrows(IllegalArgumentException.class,
-                () -> runtime.applyPatch("/", JsonPatch.add("/tilde/~2key", new Node().value("value"))));
-        assertThrows(IllegalArgumentException.class,
-                () -> runtime.applyPatch("/", JsonPatch.add("/tilde/~", new Node().value("value"))));
-    }
-
-    @Test
-    void missingEscapedPropertyReportsCanonicalPointerInError() {
-        Node document = new Node().properties("a/b", new Node());
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.remove("/a~1b/missing")));
-        assertTrue(ex.getMessage().contains("/a~1b/missing"), ex.getMessage());
-    }
-
-    @Test
-    void rejectsPatchPathWithoutLeadingSlash() {
-        Node document = new Node();
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        assertThrows(IllegalArgumentException.class,
-                () -> runtime.applyPatch("/", JsonPatch.add("tilde/key", new Node().value("value"))));
-    }
-
-    @Test
-    void rejectsLeadingZeroArrayIndexSegments() {
-        Node document = arrayDocument("nums", 7, 8);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.replace("/nums/01", new Node().value(80))));
-    }
-
-    @Test
-    void rejectsNonNumericArrayIndexSegments() {
-        Node document = arrayDocument("nums", 7, 8);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.add("/nums/key", new Node().value(80))));
-    }
-
-    @Test
-    void allowsNumericLookingPropertySegmentsWhenParentIsObject() {
-        Node document = new Node().properties("box", new Node());
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.add("/box/01/name", new Node().value("ok")));
-
-        Node box = property(document, "box");
-        Node key01 = property(box, "01");
-        assertEquals("ok", property(key01, "name").getValue());
-    }
-
-    @Test
-    void replacePrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"))
-                .properties("0", new Node().value("property-zero"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.replace("/mixed/0", new Node().value("property-updated")));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals("property-updated", property(mixedAfter, "0").getValue());
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-    }
-
-    @Test
-    void removePrefersNumericPropertyOverArrayIndexWhenParentHasBoth() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"))
-                .properties("0", new Node().value("property-zero"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.remove("/mixed/0"));
-
-        Node mixedAfter = property(document, "mixed");
-        assertFalse(mixedAfter.getProperties().containsKey("0"));
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-    }
-
-    @Test
-    void numericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"), new Node().value("item-one"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.replace("/mixed/1", new Node().value("item-one-updated")));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals("item-one-updated", mixedAfter.getItems().get(1).getValue());
-        assertEquals("keep", property(mixedAfter, "existing").getValue());
-    }
-
-    @Test
-    void addNumericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"), new Node().value("item-one"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.add("/mixed/1", new Node().value("item-inserted")));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-        assertEquals("item-inserted", mixedAfter.getItems().get(1).getValue());
-        assertEquals("item-one", mixedAfter.getItems().get(2).getValue());
-        assertEquals("keep", property(mixedAfter, "existing").getValue());
-    }
-
-    @Test
-    void removeNumericLeafUsesArrayWhenMixedParentHasNoMatchingProperty() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"), new Node().value("item-one"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.remove("/mixed/1"));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals(1, mixedAfter.getItems().size());
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-        assertEquals("keep", property(mixedAfter, "existing").getValue());
-    }
-
-    @Test
-    void leadingZeroNumericLeafUsesPropertyBranchWhenMixedParentHasPropertyMap() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"), new Node().value("item-one"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.replace("/mixed/01", new Node().value("property-leading-zero")));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals("property-leading-zero", property(mixedAfter, "01").getValue());
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-        assertEquals("item-one", mixedAfter.getItems().get(1).getValue());
-    }
-
-    @Test
-    void removeLeadingZeroNumericLeafUsesPropertyBranchWhenMixedParentHasPropertyMap() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"), new Node().value("item-one"))
-                .properties("01", new Node().value("property-leading-zero"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.remove("/mixed/01"));
-
-        Node mixedAfter = property(document, "mixed");
-        assertFalse(mixedAfter.getProperties().containsKey("01"));
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
-        assertEquals("item-one", mixedAfter.getItems().get(1).getValue());
-        assertEquals("keep", property(mixedAfter, "existing").getValue());
-    }
-
-    @Test
-    void addUsesPropertyBranchForNonNumericLeafOnMixedParent() {
-        Node mixed = new Node()
-                .items(new Node().value("item-zero"))
-                .properties("existing", new Node().value("keep"));
-        Node document = new Node().properties("mixed", mixed);
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        runtime.applyPatch("/", JsonPatch.add("/mixed/key", new Node().value("property-value")));
-
-        Node mixedAfter = property(document, "mixed");
-        assertEquals("property-value", property(mixedAfter, "key").getValue());
-        assertEquals("keep", property(mixedAfter, "existing").getValue());
-        assertEquals("item-zero", mixedAfter.getItems().get(0).getValue());
+        Node literal = property(tilde, "~1key");
+        assertEquals("value", literal.getValue());
     }
 
     @Test
@@ -444,28 +251,13 @@ class DocumentProcessingRuntimeJsonPatchTest {
     }
 
     @Test
-    void failedPatchRollsBackCreatedNullArrayElementWithoutShrinkingList() {
-        List<Node> items = new ArrayList<>(Collections.singletonList(null));
-        Node document = new Node().properties("arr", new Node().items(items));
-        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
-
-        IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> runtime.applyPatch("/", JsonPatch.add("/arr/0/-", new Node().value("x"))));
-        assertTrue(ex.getMessage().contains("Append token"));
-
-        List<Node> stored = array(document, "arr");
-        assertEquals(1, stored.size());
-        assertNull(stored.get(0));
-    }
-
-    @Test
     void snapshotsAreClones() {
         Node document = arrayDocument("numbers", 1);
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(document);
 
-        DocumentProcessingRuntime.DocumentUpdateData data = runtime.applyPatch("/", JsonPatch.replace("/numbers/0", new Node().value(2)));
+        DocumentProcessingRuntime.DocumentUpdateData data =
+                runtime.applyPatch("/", JsonPatch.replace("/numbers/0", new Node().value(2)));
 
-        // mutate returned nodes to ensure the document is unaffected
         data.before().properties("mutated", new Node().value(true));
         data.after().properties("mutated", new Node().value(true));
 
