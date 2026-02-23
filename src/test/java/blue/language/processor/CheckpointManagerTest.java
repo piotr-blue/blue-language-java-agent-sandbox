@@ -49,6 +49,19 @@ final class CheckpointManagerTest {
         assertEquals("payload", stored.getValue());
         assertEquals(20L, runtime.totalGas(), "Checkpoint update should charge gas");
         assertEquals("nextSig", record.lastEventSignature);
+
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        assertEquals("nextSig", checkpoint.lastSignature("testChannel"));
+        Node markerStored = checkpoint.lastEvent("testChannel");
+        assertNotNull(markerStored);
+        assertEquals("payload", markerStored.getValue());
+
+        eventNode.value("mutated-after-persist");
+        Node markerStoredAfterMutation = checkpoint.lastEvent("testChannel");
+        assertNotNull(markerStoredAfterMutation);
+        assertEquals("payload", markerStoredAfterMutation.getValue(),
+                "Checkpoint marker should store cloned event snapshots");
     }
 
     @Test
