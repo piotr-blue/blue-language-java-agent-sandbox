@@ -31,7 +31,7 @@ public final class PayNoteBuilder {
     private final Map<String, String> participantTypeByKey = new LinkedHashMap<String, String>();
     private IsoCurrency configuredCurrency;
     private boolean captureLockedOnInit;
-    private int captureUnlockPaths;
+    private int captureResolutionPaths;
 
     private PayNoteBuilder(String name) {
         this.document = BlueDocDsl.document(PayNoteV2Types.PayNoteDocument.class)
@@ -148,7 +148,7 @@ public final class PayNoteBuilder {
                                                       Class<?> emittedEventType) {
         return capture()
                 .lockOnInit()
-                .unlockOnOperation(operationKey, op -> op
+                .unlockExternalOnOperation(operationKey, op -> op
                         .channel(channelKey)
                         .description(description)
                         .steps(steps -> {
@@ -162,14 +162,14 @@ public final class PayNoteBuilder {
     public PayNoteBuilder captureLockedUntilEvent(Class<?> eventTypeClass) {
         return capture()
                 .lockOnInit()
-                .unlockWhenEventArrives(eventTypeClass)
+                .unlockExternalWhenEventArrives(eventTypeClass)
                 .done();
     }
 
     public PayNoteBuilder captureLockedUntilDocPathChanges(String path) {
         return capture()
                 .lockOnInit()
-                .unlockWhenDocPathChanges(path)
+                .unlockExternalWhenDocPathChanges(path)
                 .done();
     }
 
@@ -188,6 +188,86 @@ public final class PayNoteBuilder {
         return this;
     }
 
+    public PayNoteBuilder reserveLockedUntilOperation(String operationKey,
+                                                      String channelKey,
+                                                      String description,
+                                                      Class<?> emittedEventType) {
+        return reserveOnOperation(operationKey, channelKey, description, emittedEventType);
+    }
+
+    public PayNoteBuilder reserveLockedUntilEvent(Class<?> eventTypeClass) {
+        return onEvent("reserveWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
+                eventTypeClass,
+                steps -> steps.triggerEvent("ReserveFundsRequested",
+                        PayNoteEvents.reserveFundsRequested(new Node().value(
+                                BlueDocDsl.expr("document('/amount/total')")))));
+    }
+
+    public PayNoteBuilder reserveLockedUntilDocPathChanges(String path) {
+        return onDocChange("reserveOnDocChange" + sanitizeKey(path),
+                path,
+                steps -> steps.triggerEvent("ReserveFundsRequested",
+                        PayNoteEvents.reserveFundsRequested(new Node().value(
+                                BlueDocDsl.expr("document('/amount/total')")))));
+    }
+
+    public PayNoteBuilder reserveOnOperation(String operationKey,
+                                             String channelKey,
+                                             String description) {
+        return reserveOnOperation(operationKey, channelKey, description, null);
+    }
+
+    public PayNoteBuilder reserveOnOperation(String operationKey,
+                                             String channelKey,
+                                             String description,
+                                             Class<?> emittedEventType) {
+        return operation(operationKey, channelKey, description, steps -> {
+            if (emittedEventType != null) {
+                steps.emitType("EmitReserveSignal", emittedEventType, null);
+            }
+            steps.triggerEvent("ReserveFundsRequested",
+                    PayNoteEvents.reserveFundsRequested(new Node().value(
+                            BlueDocDsl.expr("document('/amount/total')"))));
+        });
+    }
+
+    public PayNoteBuilder refundLockedUntilOperation(String operationKey,
+                                                     String channelKey,
+                                                     String description,
+                                                     Class<?> emittedEventType) {
+        return refundOnOperation(operationKey, channelKey, description, emittedEventType);
+    }
+
+    public PayNoteBuilder refundLockedUntilEvent(Class<?> eventTypeClass) {
+        return onEvent("refundWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
+                eventTypeClass,
+                steps -> steps.capture().refundFull());
+    }
+
+    public PayNoteBuilder refundLockedUntilDocPathChanges(String path) {
+        return onDocChange("refundOnDocChange" + sanitizeKey(path),
+                path,
+                steps -> steps.capture().refundFull());
+    }
+
+    public PayNoteBuilder refundOnOperation(String operationKey,
+                                            String channelKey,
+                                            String description) {
+        return refundOnOperation(operationKey, channelKey, description, null);
+    }
+
+    public PayNoteBuilder refundOnOperation(String operationKey,
+                                            String channelKey,
+                                            String description,
+                                            Class<?> emittedEventType) {
+        return operation(operationKey, channelKey, description, steps -> {
+            if (emittedEventType != null) {
+                steps.emitType("EmitRefundSignal", emittedEventType, null);
+            }
+            steps.capture().refundFull();
+        });
+    }
+
     public PayNoteBuilder operation(String key,
                                     String channelKey,
                                     String description,
@@ -200,6 +280,7 @@ public final class PayNoteBuilder {
                                     Class<?> requestTypeClass,
                                     String description,
                                     Consumer<StepsBuilder> implementation) {
+        ensureParticipantChannel(channelKey);
         document.contracts(c -> {
             if (requestTypeClass != null) {
                 c.operation(key, channelKey, requestTypeClass, description);
@@ -342,6 +423,14 @@ public final class PayNoteBuilder {
         return this;
     }
 
+    public PayNoteBuilder onEventEmit(String workflowKey,
+                                      Class<?> triggerEventTypeClass,
+                                      Class<?> emittedEventTypeClass) {
+        return onEvent(workflowKey,
+                triggerEventTypeClass,
+                steps -> steps.emitType("EmitEventAction", emittedEventTypeClass, null));
+    }
+
     public PayNoteBuilder onDocChange(String workflowKey, String path, Consumer<StepsBuilder> customizer) {
         String channelKey = workflowKey + "Channel";
         document.contracts(c -> {
@@ -467,8 +556,8 @@ public final class PayNoteBuilder {
     }
 
     private void validateCapturePlan() {
-        if (captureLockedOnInit && captureUnlockPaths == 0) {
-            throw new IllegalStateException("Capture is locked but no unlock path is configured.");
+        if (captureLockedOnInit && captureResolutionPaths == 0) {
+            throw new IllegalStateException("Capture is locked but no unlock/request-capture resolution path is configured.");
         }
     }
 
@@ -496,6 +585,15 @@ public final class PayNoteBuilder {
         return false;
     }
 
+    private void ensureParticipantChannel(String channelKey) {
+        if (channelKey == null || channelKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("operation channel key is required");
+        }
+        if (!participantTypeByKey.containsKey(channelKey)) {
+            participant(channelKey);
+        }
+    }
+
     public static final class CaptureBuilder {
         private final PayNoteBuilder parent;
 
@@ -509,25 +607,59 @@ public final class PayNoteBuilder {
             return this;
         }
 
-        public CaptureBuilder unlockWhenEventArrives(Class<?> eventTypeClass) {
-            parent.captureUnlockPaths++;
+        public CaptureBuilder unlockExternalWhenEventArrives(Class<?> eventTypeClass) {
+            parent.captureResolutionPaths++;
             parent.onEvent("unlockCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
                     eventTypeClass,
                     steps -> steps.capture().unlock());
             return this;
         }
 
-        public CaptureBuilder unlockWhenDocPathChanges(String path) {
-            parent.captureUnlockPaths++;
+        public CaptureBuilder unlockWhenEventArrives(Class<?> eventTypeClass) {
+            return unlockExternalWhenEventArrives(eventTypeClass);
+        }
+
+        public CaptureBuilder requestCaptureWhenEventArrives(Class<?> eventTypeClass) {
+            parent.captureResolutionPaths++;
+            parent.onEvent("requestCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
+                    eventTypeClass,
+                    steps -> steps.capture().requestNow());
+            return this;
+        }
+
+        public CaptureBuilder unlockExternalWhenDocPathChanges(String path) {
+            parent.captureResolutionPaths++;
             parent.onDocChange("unlockCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().unlock());
             return this;
         }
 
-        public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
-            parent.captureUnlockPaths++;
+        public CaptureBuilder unlockWhenDocPathChanges(String path) {
+            return unlockExternalWhenDocPathChanges(path);
+        }
+
+        public CaptureBuilder requestCaptureWhenDocPathChanges(String path) {
+            parent.captureResolutionPaths++;
+            parent.onDocChange("requestCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().requestNow());
+            return this;
+        }
+
+        public CaptureBuilder unlockExternalOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            parent.captureResolutionPaths++;
             CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
             customizer.accept(operationBuilder);
-            operationBuilder.doneWithMandatoryUnlock();
+            operationBuilder.doneWithExternalUnlock();
+            return this;
+        }
+
+        public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return unlockExternalOnOperation(operationKey, customizer);
+        }
+
+        public CaptureBuilder requestCaptureOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            parent.captureResolutionPaths++;
+            CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
+            customizer.accept(operationBuilder);
+            operationBuilder.doneWithCaptureRequest();
             return this;
         }
 
@@ -579,6 +711,11 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public OperationBuilder noRequest() {
+            this.requestTypeClass = null;
+            return this;
+        }
+
         public OperationBuilder steps(Consumer<StepsBuilder> implementation) {
             this.implementation = implementation;
             return this;
@@ -623,12 +760,17 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public CaptureOperationBuilder noRequest() {
+            this.requestTypeClass = null;
+            return this;
+        }
+
         public CaptureOperationBuilder steps(Consumer<StepsBuilder> implementation) {
             this.implementation = implementation;
             return this;
         }
 
-        private PayNoteBuilder doneWithMandatoryUnlock() {
+        private PayNoteBuilder doneWithExternalUnlock() {
             if (channelKey == null || channelKey.trim().isEmpty()) {
                 throw new IllegalStateException("Operation channel must be configured for: " + key);
             }
@@ -639,6 +781,19 @@ public final class PayNoteBuilder {
                 steps.capture().unlock();
             };
             return parent.operation(key, channelKey, requestTypeClass, description, withUnlock);
+        }
+
+        private PayNoteBuilder doneWithCaptureRequest() {
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                throw new IllegalStateException("Operation channel must be configured for: " + key);
+            }
+            Consumer<StepsBuilder> withCaptureRequest = steps -> {
+                if (implementation != null) {
+                    implementation.accept(steps);
+                }
+                steps.capture().requestNow();
+            };
+            return parent.operation(key, channelKey, requestTypeClass, description, withCaptureRequest);
         }
     }
 }

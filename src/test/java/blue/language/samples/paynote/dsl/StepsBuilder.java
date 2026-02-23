@@ -63,6 +63,10 @@ public final class StepsBuilder {
         return triggerEvent(name, BLUE.objectToNode(typedEvent));
     }
 
+    public StepsBuilder emit(Object typedEvent) {
+        return emit(null, typedEvent);
+    }
+
     public StepsBuilder emitType(String name, Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
         Node event = new Node().type(TypeRef.of(eventTypeClass).asTypeNode());
         if (payloadCustomizer != null) {
@@ -78,6 +82,14 @@ public final class StepsBuilder {
         return triggerEvent(name, event);
     }
 
+    public StepsBuilder emitType(Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        return emitType(null, eventTypeClass, payloadCustomizer);
+    }
+
+    public StepsBuilder emitType(Class<?> eventTypeClass) {
+        return emitType(null, eventTypeClass, null);
+    }
+
     public StepsBuilder emitAdHocEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
         Node event = new Node().type(TypeRef.of(CommonTypes.NamedEvent.class).asTypeNode());
         event.properties("name", new Node().value(eventName));
@@ -87,6 +99,14 @@ public final class StepsBuilder {
             event.properties("payload", payloadBuilder.build());
         }
         return triggerEvent(name, event);
+    }
+
+    public StepsBuilder namedEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        return emitAdHocEvent(name, eventName, payloadCustomizer);
+    }
+
+    public StepsBuilder namedEvent(String name, String eventName) {
+        return emitAdHocEvent(name, eventName, null);
     }
 
     public StepsBuilder replaceValue(String name, String path, Object value) {

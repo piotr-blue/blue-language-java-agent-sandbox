@@ -8,6 +8,17 @@ Operations are invoked through timeline messages carrying:
 - request payload
 - target document reference
 
+Reference shape:
+
+```yaml
+message:
+  type: Conversation/Operation Request
+  operation: <operationName>
+  request: <payload>
+  document:
+    blueId: ...
+```
+
 SDK implication:
 
 - operation DSL should expose request typing (`requestType(...)`) for clarity and runtime safety.

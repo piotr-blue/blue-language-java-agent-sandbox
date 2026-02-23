@@ -6,6 +6,7 @@ import blue.language.samples.paynote.types.core.CoreTypes;
 import blue.language.samples.paynote.types.domain.PayNoteDemoEvents;
 import blue.language.samples.paynote.types.domain.RecruitmentEvents;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
+import blue.language.samples.paynote.types.domain.VoucherEvents;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
@@ -51,6 +52,11 @@ public final class TypeAliases {
     public static final String PAYNOTE_DEMO_CAPTURE_HOOK_RAN = "PayNote Demo/Capture Hook Ran";
     public static final String RECRUITMENT_CV_CLASSIFICATION_REQUESTED = "Recruitment/CV Classification Requested";
     public static final String RECRUITMENT_SENIOR_CANDIDATE_DETECTED = "Recruitment/Senior Candidate Detected";
+    public static final String DEMO_SATISFACTION_CONFIRMED = "Demo/Satisfaction Confirmed";
+    public static final String SYNCHRONY_CREDIT_LINE_PAYMENT_REQUESTED = "Synchrony/Credit Line Payment Requested";
+    public static final String VOUCHER_MONITORING_APPROVED = "Voucher/Monitoring Approved";
+    public static final String VOUCHER_START_MONITORING_REQUESTED = "Voucher/Start Monitoring Requested";
+    public static final String VOUCHER_RESTAURANT_TRANSACTION_REPORTED = "Voucher/Restaurant Transaction Reported";
 
     // MyOS
     public static final String MYOS_DOCUMENT_SESSION_BOOTSTRAP = "MyOS/Document Session Bootstrap";
@@ -102,6 +108,11 @@ public final class TypeAliases {
         aliases.put(PayNoteDemoEvents.CaptureHookRan.class, PAYNOTE_DEMO_CAPTURE_HOOK_RAN);
         aliases.put(RecruitmentEvents.CvClassificationRequested.class, RECRUITMENT_CV_CLASSIFICATION_REQUESTED);
         aliases.put(RecruitmentEvents.SeniorCandidateDetected.class, RECRUITMENT_SENIOR_CANDIDATE_DETECTED);
+        aliases.put(VoucherEvents.SatisfactionConfirmed.class, DEMO_SATISFACTION_CONFIRMED);
+        aliases.put(VoucherEvents.CreditLinePaymentRequested.class, SYNCHRONY_CREDIT_LINE_PAYMENT_REQUESTED);
+        aliases.put(VoucherEvents.MonitoringApproved.class, VOUCHER_MONITORING_APPROVED);
+        aliases.put(VoucherEvents.StartMonitoringRequested.class, VOUCHER_START_MONITORING_REQUESTED);
+        aliases.put(VoucherEvents.RestaurantTransactionReported.class, VOUCHER_RESTAURANT_TRANSACTION_REPORTED);
 
         // MyOS
         aliases.put(MyOsTypes.DocumentSessionBootstrap.class, MYOS_DOCUMENT_SESSION_BOOTSTRAP);

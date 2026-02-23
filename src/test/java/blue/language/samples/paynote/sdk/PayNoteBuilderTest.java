@@ -47,7 +47,7 @@ class PayNoteBuilderTest {
                         "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockOnOperation("confirmShipment", op -> op
+                    .unlockExternalOnOperation("confirmShipment", op -> op
                             .channel("shipmentCompanyChannel")
                             .description("Confirm shipment")
                             .requestType(String.class)
@@ -82,7 +82,7 @@ class PayNoteBuilderTest {
                         .capture().lockOnInit()
                         .done()
                         .buildDocument());
-        assertTrue(missingUnlock.getMessage().contains("no unlock path"));
+        assertTrue(missingUnlock.getMessage().contains("resolution path"));
 
         Node complete = PayNotes.payNote("Complete lock plan")
                 .currency(IsoCurrency.USD)
@@ -91,6 +91,31 @@ class PayNoteBuilderTest {
                 .buildDocument();
         assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
                 complete.getAsText("/contracts/unlockCaptureWhenShipmentConfirmed/steps/0/event/type/value"));
+    }
+
+    @Test
+    void distinguishesUnlockExternalAndRequestCaptureSemantics() {
+        Node externalUnlock = PayNotes.payNote("External unlock")
+                .capture()
+                    .lockOnInit()
+                    .unlockExternalOnOperation("confirm", op -> op
+                            .channel("payerChannel")
+                            .description("External unlock"))
+                    .done()
+                .buildDocument();
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                externalUnlock.getAsText("/contracts/confirmImpl/steps/0/event/type/value"));
+
+        Node captureRequest = PayNotes.payNote("Capture request")
+                .capture()
+                    .lockOnInit()
+                    .requestCaptureOnOperation("confirm", op -> op
+                            .channel("payerChannel")
+                            .description("Request capture"))
+                    .done()
+                .buildDocument();
+        assertEquals(PayNoteAliases.CAPTURE_FUNDS_REQUESTED,
+                captureRequest.getAsText("/contracts/confirmImpl/steps/0/event/type/value"));
     }
 
     @Test
@@ -136,5 +161,30 @@ class PayNoteBuilderTest {
                 PayNotes.payNote("Incompatible")
                         .participant("payerChannel", "bad", new Node().type("Conversation/Operation")));
         assertTrue(incompatible.getMessage().contains("type-compatible"));
+    }
+
+    @Test
+    void supportsReserveAndRefundOperationSymmetryHelpers() {
+        Node document = PayNotes.payNote("Reserve and refund helpers")
+                .reserveLockedUntilOperation("approveReserve",
+                        "payerChannel",
+                        "Approve reserve",
+                        ShippingEvents.ShipmentConfirmed.class)
+                .refundLockedUntilOperation("approveRefund",
+                        "payeeChannel",
+                        "Approve refund",
+                        ShippingEvents.DeliveryReported.class)
+                .reserveLockedUntilEvent(ShippingEvents.ShipmentConfirmed.class)
+                .refundLockedUntilEvent(ShippingEvents.DeliveryReported.class)
+                .buildDocument();
+
+        assertEquals(PayNoteAliases.RESERVE_FUNDS_REQUESTED,
+                document.getAsText("/contracts/approveReserveImpl/steps/1/event/type/value"));
+        assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
+                document.getAsText("/contracts/approveRefundImpl/steps/1/event/type/value"));
+        assertEquals(PayNoteAliases.RESERVE_FUNDS_REQUESTED,
+                document.getAsText("/contracts/reserveWhenShipmentConfirmed/steps/0/event/type/value"));
+        assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
+                document.getAsText("/contracts/refundWhenDeliveryReported/steps/0/event/type/value"));
     }
 }

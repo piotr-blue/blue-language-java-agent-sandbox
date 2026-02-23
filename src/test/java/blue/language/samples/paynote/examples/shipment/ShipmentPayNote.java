@@ -19,7 +19,7 @@ public final class ShipmentPayNote {
                         "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockOnOperation("confirmShipment", op -> op
+                    .unlockExternalOnOperation("confirmShipment", op -> op
                             .channel("shipmentCompanyChannel")
                             .description("Confirm that the shipment is complete.")
                             .steps(steps -> steps

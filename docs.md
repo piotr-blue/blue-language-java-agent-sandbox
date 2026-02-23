@@ -61,9 +61,13 @@ Use:
   - `participants("a", "b", "c")`
 - Capture helpers use capture terminology only:
   - `capture().lockOnInit()`
-  - `capture().unlockWhenEventArrives(...)`
-  - `capture().unlockOnOperation(...)`
+  - `capture().unlockExternalWhenEventArrives(...)`
+  - `capture().unlockExternalOnOperation(...)`
+  - `capture().requestCaptureOnOperation(...)`
   - atomic one-liners like `captureLockedUntilOperation(...)`.
+- Reserve/refund helper symmetry:
+  - `reserveLockedUntilOperation(...)`, `reserveLockedUntilEvent(...)`, `reserveLockedUntilDocPathChanges(...)`
+  - `refundLockedUntilOperation(...)`, `refundLockedUntilEvent(...)`, `refundLockedUntilDocPathChanges(...)`
 - Document authoring is separate from bootstrap bindings.
 - Lock plans fail fast if no unlock path is configured.
 
@@ -124,3 +128,32 @@ This demonstrates:
 1. Base template (abstract channels + core behavior),
 2. Specialization (EUR 200 from CHF + DHL),
 3. Final instance bindings (Alice/Bob/guarantor) plus extension.
+
+---
+
+## Voucher flow examples
+
+See:
+
+- `src/test/java/blue/language/samples/paynote/examples/voucher/ArmchairProtectionWithVoucherPayNote.java`
+- `src/test/java/blue/language/samples/paynote/examples/voucher/BalancedBowlVoucherPayNote.java`
+- `src/test/java/blue/language/samples/paynote/examples/voucher/VoucherFlowExamplesTest.java`
+
+These show:
+
+1. capture locked until satisfaction,
+2. funds-captured trigger emits credit-line payment request,
+3. monitoring approval flow with budgeted partial captures (`min(spent, remaining)` JS).
+
+---
+
+## Operation invocation shape
+
+```yaml
+message:
+  type: Conversation/Operation Request
+  operation: increment
+  request: 5
+  document:
+    blueId: ...
+```

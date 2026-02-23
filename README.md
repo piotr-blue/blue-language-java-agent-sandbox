@@ -47,5 +47,20 @@ Key behavior:
   - `src/test/java/blue/language/samples/paynote/examples/MyPayNote.java`
 - Template → specialize → instantiate shipment chain:
   - `src/test/java/blue/language/samples/paynote/examples/shipment/`
+- Voucher scenarios:
+  - `src/test/java/blue/language/samples/paynote/examples/voucher/`
+
+## Operation invocation shape
+
+Operations are invoked on timelines with an `Operation Request` message shape:
+
+```yaml
+message:
+  type: Conversation/Operation Request
+  operation: increment
+  request: 5
+  document:
+    blueId: ...
+```
 
 Each example has tests asserting document type/name, contracts/workflows, and key JS fragments.

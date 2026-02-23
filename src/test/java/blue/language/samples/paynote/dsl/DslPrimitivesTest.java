@@ -2,6 +2,7 @@ package blue.language.samples.paynote.dsl;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.samples.paynote.types.common.CommonTypes;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,5 +77,21 @@ class DslPrimitivesTest {
 
         assertEquals("payer@demo.com", bootstrap.getAsText("/channelBindings/payerChannel/email/value"));
         assertEquals("ACC-123", bootstrap.getAsText("/channelBindings/payeeChannel/accountId/value"));
+    }
+
+    @Test
+    void supportsNamedEventAndTypeEmitConvenienceOverloads() {
+        Node named = new StepsBuilder()
+                .namedEvent("Notify", "CounterChanged")
+                .build()
+                .get(0);
+        assertEquals(TypeAliases.COMMON_NAMED_EVENT, named.getAsText("/event/type/value"));
+        assertEquals("CounterChanged", named.getAsText("/event/name/value"));
+
+        Node typed = new StepsBuilder()
+                .emitType(CommonTypes.NamedEvent.class)
+                .build()
+                .get(0);
+        assertEquals(TypeAliases.COMMON_NAMED_EVENT, typed.getAsText("/event/type/value"));
     }
 }

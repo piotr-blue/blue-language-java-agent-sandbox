@@ -34,7 +34,7 @@ public final class PayNoteComplexityLadderExamples {
                 .amountTotalMajor("19.99")
                 .capture()
                     .lockOnInit()
-                    .unlockOnOperation("approveCapture", op -> op
+                    .unlockExternalOnOperation("approveCapture", op -> op
                             .channel("payerChannel")
                             .description("Buyer approves capture.")
                             .requestType(String.class))
@@ -71,7 +71,7 @@ public final class PayNoteComplexityLadderExamples {
         return PayNotes.payNote("Tiny Refund")
                 .currency(IsoCurrency.EUR)
                 .amountTotalMajor("9.50")
-                .refundFullOperation("payeeChannel")
+                .refundOnOperation("requestRefund", "payeeChannel", "Payee requests refund.")
                 .buildDocument();
     }
 
@@ -100,7 +100,7 @@ public final class PayNoteComplexityLadderExamples {
                         "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockOnOperation("confirmShipment", op -> op
+                    .unlockExternalOnOperation("confirmShipment", op -> op
                             .channel("shipmentCompanyChannel")
                             .description("Shipment company confirms shipment.")
                             .steps(steps -> steps
