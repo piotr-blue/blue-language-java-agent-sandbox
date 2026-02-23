@@ -137,6 +137,7 @@ WASM usage is charged via `chargeWasmGas`.
     - `ScriptRuntimeException#errorName()`
     - `ScriptRuntimeException#runtimeMessage()`
     - `ScriptRuntimeException#stackAvailable()`
+    - `ScriptRuntimeException#runtimeStack()`
 - Evaluator wraps script failures => `CodeBlockEvaluationError` with:
   - original source code available via `code()`
   - truncated code snippet in message (`Failed to evaluate code block: ...`)
@@ -144,6 +145,7 @@ WASM usage is charged via `chargeWasmGas`.
     - `CodeBlockEvaluationError#runtimeErrorName()`
     - `CodeBlockEvaluationError#runtimeErrorMessage()`
     - `CodeBlockEvaluationError#runtimeStackAvailable()`
+    - `CodeBlockEvaluationError#runtimeStack()`
 - Evaluator validates binding keys against supported runtime bindings and rejects unsupported keys up-front (`Unsupported QuickJS binding: "<key>"`).
 - Evaluator also validates host-handler binding shapes for parity:
   - `document` must be function-shaped (non-null non-function values are rejected)
