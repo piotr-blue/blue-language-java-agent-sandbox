@@ -29,12 +29,12 @@ Status legend:
 |---|---|---|---|
 | Registry lookup by BlueId/type chain | `src/registry/contract-processor-registry.ts` | `processor/ContractProcessorRegistry.java` | IN_PROGRESS |
 | Default processor registration | `src/registry/contract-processor-registry-builder.ts` | `processor/ContractProcessorRegistryBuilder.java` | IN_PROGRESS |
-| Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | `processor/registry/processors/TimelineChannelProcessor.java` | IN_PROGRESS |
-| Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | `processor/registry/processors/CompositeTimelineChannelProcessor.java` | IN_PROGRESS |
-| MyOS timeline channel processor | `src/registry/processors/myos-timeline-channel-processor.ts` | `processor/registry/processors/MyOSTimelineChannelProcessor.java` | IN_PROGRESS |
+| Timeline channel processor | `src/registry/processors/timeline-channel-processor.ts` | `processor/registry/processors/TimelineChannelProcessor.java` | DONE |
+| Composite timeline channel processor | `src/registry/processors/composite-timeline-channel-processor.ts` | `processor/registry/processors/CompositeTimelineChannelProcessor.java` | DONE |
+| MyOS timeline channel processor | `src/registry/processors/myos-timeline-channel-processor.ts` | `processor/registry/processors/MyOSTimelineChannelProcessor.java` | DONE |
 | Sequential workflow handler processor | `src/registry/processors/sequential-workflow-processor.ts` | `processor/registry/processors/SequentialWorkflowHandlerProcessor.java` | DONE |
 | Sequential workflow operation processor | `src/registry/processors/sequential-workflow-operation-processor.ts` | `processor/registry/processors/SequentialWorkflowOperationProcessor.java` | DONE |
-| Operation marker processor | `src/registry/processors/operation-marker-processor.ts` | `processor/registry/processors/OperationMarkerProcessor.java` | IN_PROGRESS |
+| Operation marker processor | `src/registry/processors/operation-marker-processor.ts` | `processor/registry/processors/OperationMarkerProcessor.java` | DONE |
 
 ## 3) Expression + QuickJS runtime
 
@@ -200,6 +200,7 @@ Current in-flight work:
   - channel-level event-filter matching semantics
   - strict conversation timeline-entry type gating (arbitrary events with `timelineId` are ignored)
   (`TimelineChannelProcessorTest`, `TimelineChannelProcessorIntegrationParityTest`).
+- Timeline/composite/MyOS channel processor rows in section 2 are now tracked as `DONE` based on direct unit + integration parity coverage (`TimelineChannelProcessorTest`, `TimelineChannelProcessorIntegrationParityTest`, `CompositeTimelineChannelProcessorTest`, `CompositeTimelineChannelIntegrationParityTest`, `MyOSTimelineChannelProcessorTest`, `MyOSTimelineChannelIntegrationParityTest`), and operation marker processor row is tracked `DONE` with marker-type/alias/default-registration parity coverage (`SequentialWorkflowProcessorTest`, `ContractProcessorRegistryBuilderDefaultsTest`, `ParityFixturesTest`).
 - `QuickJSEvaluator` now mirrors JS binding-default semantics for missing inputs (`event`, `eventCanonical`, `steps`, `currentContract`, `currentContractCanonical`) with direct migration tests for default/null behavior and canonical fallbacks (`QuickJSEvaluatorTest`).
 - `QuickJSEvaluator` now supports host `emit` callback parity in direct evaluator usage by forwarding emitted events to a supplied Java callback and returning plain evaluation values (`QuickJSEvaluatorTest#forwardsEmitCallsToHostBindingAndReturnsPlainResult`), while retaining envelope behavior when no callback is supplied (workflow-step path).
 - `QuickJSEvaluator` now mirrors JS runtime code wrapping semantics by evaluating scripts as function bodies (`return` required for defined results), and migrated parity fixtures/tests now use explicit `return (...)` object literals where results are expected (`QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`, `SequentialWorkflowProcessorTest`, `ParityFixturesTest`).
