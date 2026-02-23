@@ -40,7 +40,7 @@ Status legend:
 
 | Area | JS reference | Java reference | Status |
 |---|---|---|---|
-| QuickJS evaluator | `src/util/expression/quickjs-evaluator.ts` | `processor/script/QuickJSEvaluator.java` | IN_PROGRESS |
+| QuickJS evaluator | `src/util/expression/quickjs-evaluator.ts` | `processor/script/QuickJSEvaluator.java` | DONE |
 | Expression utils/traversal | `src/util/expression/quickjs-expression-utils.ts` | `processor/script/QuickJsExpressionUtils.java` | IN_PROGRESS |
 | QuickJS config exports | `src/util/expression/quickjs-config.ts` | `processor/script/QuickJsConfig.java` | DONE |
 | Script runtime integration | JS runtime usage in evaluator/steps | `processor/script/*`, `tools/quickjs-sidecar/index.js` | IN_PROGRESS |
@@ -113,6 +113,7 @@ Current in-flight work:
 - Default registry bootstrap parity now explicitly verifies all operation-marker aliases (`Conversation/Operation`, `Operation`, `Conversation/Change Operation`, `ChangeOperation`) are registered by defaults (`ContractProcessorRegistryBuilderDefaultsTest`).
 - QuickJS sidecar failures now preserve structured error names/messages plus runtime stack payloads (with stack availability marker), with runtime exception accessors for downstream error-model parity (`ScriptRuntimeException#errorName/#runtimeMessage/#stackAvailable/#runtimeStack`) and direct migration coverage (`QuickJsSidecarRuntimeTest`, including syntax/runtime/out-of-gas error classes); wrapped evaluator failures now surface the same metadata via `CodeBlockEvaluationError` accessors (`runtimeErrorName`, `runtimeErrorMessage`, `runtimeStackAvailable`, `runtimeStack`) with direct coverage in `QuickJSEvaluatorTest` and `CodeBlockEvaluationErrorTest`, while evaluator continues to enforce supported binding-key validation plus host-handler binding shape validation for `document`/`emit` and out-of-gas timeout classification for tiny wasm budgets (`QuickJSEvaluatorGasTest`). Sidecar now reports deterministic non-zero gas-used estimates with bounded remaining fuel, but exact QuickJS wasm-fuel accounting parity remains partial.
 - `QuickJSEvaluator` canonical helper parity now includes deep/shallow `canon.unwrap(...)` behavior for wrapped canonical objects/arrays (`value`/`items`) with direct migration assertions in `QuickJSEvaluatorTest#canonUnwrapSupportsDeepAndShallowModes`.
+- QuickJS evaluator row in section 3 is now tracked as `DONE` based on direct parity coverage across sync evaluation, binding defaults, host callback validation, canonical helpers, structured error metadata propagation, null-vs-undefined handling, and deterministic global masking (`QuickJSEvaluatorTest`, `QuickJSEvaluatorGasTest`).
 - JavaScript step parity now also verifies deep/shallow `canon.unwrap(...)` usage through workflow execution bindings (`SequentialWorkflowProcessorTest#javaScriptCodeStepCanonUnwrapSupportsDeepAndShallowModes`).
 - JavaScript step parity coverage now also includes:
   - special document segment reads for `name`/`description`/`value`/`blueId` via both plain and canonical document helpers
