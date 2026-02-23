@@ -327,6 +327,30 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
+    void sequentialWorkflowOperationAcceptsTimelineMessageTypeDeclaredAsScalarValue() {
+        Blue blue = new Blue();
+        Node initialized = blue.initializeDocument(operationWorkflowDocument(null, "ownerChannel")).document();
+        String storedBlueId = storedDocumentBlueId(initialized);
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: Conversation/Timeline Entry\n" +
+                "eventId: evt-op-scalar-message-type\n" +
+                "timeline:\n" +
+                "  timelineId: owner-42\n" +
+                "message:\n" +
+                "  type: Conversation/Operation Request\n" +
+                "  operation: increment\n" +
+                "  allowNewerVersion: false\n" +
+                "  document:\n" +
+                "    blueId: " + storedBlueId + "\n" +
+                "  request: 3\n");
+
+        DocumentProcessingResult result = blue.processDocument(initialized, event);
+
+        assertEquals(new BigInteger("3"), result.document().getProperties().get("counter").getValue());
+    }
+
+    @Test
     void sequentialWorkflowOperationAcceptsProviderDerivedTimelineMessageOperationRequestType() {
         NodeProvider provider = blueId -> {
             if (!"Custom/Derived Operation Request".equals(blueId)) {

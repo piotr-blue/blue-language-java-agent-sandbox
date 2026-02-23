@@ -57,6 +57,46 @@ class WorkflowContractSupportTest {
     }
 
     @Test
+    void matchesTypeRequirementSupportsCandidateTypeNodesUsingPropertyBlueIdChains() {
+        Node candidate = new Node()
+                .type(new Node().properties("blueId", new Node().value("Custom/Derived Payload")))
+                .value("ok");
+        Node requirement = new Node()
+                .type(new Node().blueId("Custom/Base Payload"));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node().type(new Node().blueId("Custom/Base Payload"));
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement, provider));
+    }
+
+    @Test
+    void matchesTypeRequirementSupportsCandidateTypeNodesUsingScalarValueChains() {
+        Node candidate = new Node()
+                .type(new Node().value("Custom/Derived Payload"))
+                .value("ok");
+        Node requirement = new Node()
+                .type(new Node().blueId("Custom/Base Payload"));
+
+        NodeProvider provider = blueId -> {
+            if (!"Custom/Derived Payload".equals(blueId)) {
+                return Collections.emptyList();
+            }
+            Node definition = new Node().value("Custom/Base Payload");
+            return Collections.singletonList(definition);
+        };
+
+        assertFalse(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement));
+        assertTrue(WorkflowContractSupport.matchesTypeRequirement(candidate, requirement, provider));
+    }
+
+    @Test
     void matchesTypeRequirementResolvesProviderDefinitionPropertyBlueIdChainsForEntries() {
         Node candidate = new Node().properties("payload",
                 new Node().type(new Node().blueId("Custom/Derived Payload")).value("ok"));

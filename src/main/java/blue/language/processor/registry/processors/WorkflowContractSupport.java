@@ -210,12 +210,14 @@ final class WorkflowContractSupport {
             return true;
         }
 
-        String candidateBlueId = candidate.getType() != null ? candidate.getType().getBlueId() : null;
-        if (candidateBlueId != null && !candidateBlueId.trim().isEmpty()) {
-            if (expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId)) {
-                return true;
+        Node candidateType = candidate.getType();
+        if (candidateType != null) {
+            for (String candidateBlueId : extractBlueIds(candidateType)) {
+                if (expectedBlueId.equals(candidateBlueId) || equivalentCoreType(expectedBlueId, candidateBlueId)) {
+                    return true;
+                }
             }
-            if (hasTypeInChain(candidate.getType(),
+            if (hasTypeInChain(candidateType,
                     expectedBlueId,
                     nodeProvider,
                     new LinkedHashSet<String>(),
