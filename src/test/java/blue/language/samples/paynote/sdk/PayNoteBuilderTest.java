@@ -58,21 +58,16 @@ class PayNoteBuilderTest {
                     .done()
                 .buildDocument();
 
-        assertEquals(PayNoteAliases.PAYNOTE, document.getAsText("/type/value"));
-        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
-                document.getAsText("/contracts/payerChannel/type/value"));
-        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
-                document.getAsText("/contracts/payeeChannel/type/value"));
-        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
-                document.getAsText("/contracts/guarantorChannel/type/value"));
-        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
-                document.getAsText("/contracts/shipmentCompanyChannel/type/value"));
+        PayNoteAssert.assertThat(document)
+                .isPayNoteDocument()
+                .hasParticipant("payerChannel")
+                .hasParticipant("payeeChannel")
+                .hasParticipant("guarantorChannel")
+                .hasParticipant("shipmentCompanyChannel")
+                .captureLocksOnInit()
+                .captureUnlocksViaOperation("confirmShipment");
         assertEquals(TypeAliases.CONVERSATION_COMPOSITE_TIMELINE_CHANNEL,
                 document.getAsText("/contracts/allParticipantsChannel/type/value"));
-        assertEquals(PayNoteAliases.CAPTURE_LOCK_REQUESTED,
-                document.getAsText("/contracts/onInitCaptureLock/steps/0/event/type/value"));
-        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
-                document.getAsText("/contracts/confirmShipmentImpl/steps/1/event/type/value"));
     }
 
     @Test
@@ -105,8 +100,9 @@ class PayNoteBuilderTest {
                             .description("External unlock"))
                     .done()
                 .buildDocument();
-        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
-                externalUnlock.getAsText("/contracts/confirmImpl/steps/0/event/type/value"));
+        PayNoteAssert.assertThat(externalUnlock)
+                .captureLocksOnInit()
+                .captureUnlocksViaOperation("confirm");
 
         Node captureRequest = PayNotes.payNote("Capture request")
                 .capture()
@@ -116,8 +112,9 @@ class PayNoteBuilderTest {
                             .description("Request capture"))
                     .done()
                 .buildDocument();
-        assertEquals(PayNoteAliases.CAPTURE_FUNDS_REQUESTED,
-                captureRequest.getAsText("/contracts/confirmImpl/steps/0/event/type/value"));
+        PayNoteAssert.assertThat(captureRequest)
+                .captureLocksOnInit()
+                .captureRequestsViaOperation("confirm");
     }
 
     @Test
