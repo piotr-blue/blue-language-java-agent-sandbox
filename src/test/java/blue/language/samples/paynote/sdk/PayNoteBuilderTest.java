@@ -5,7 +5,9 @@ import blue.language.samples.paynote.dsl.ChannelKey;
 import blue.language.samples.paynote.dsl.MyOsTimeline;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.TypeAliases;
+import blue.language.samples.paynote.dsl.TypeRef;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
+import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -186,5 +188,53 @@ class PayNoteBuilderTest {
                 document.getAsText("/contracts/reserveWhenShipmentConfirmed/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
                 document.getAsText("/contracts/refundWhenDeliveryReported/steps/0/event/type/value"));
+    }
+
+    @Test
+    void acceptsEventsFromGeneratesParticipantIngressOperation() {
+        Node document = PayNotes.payNote("Ingress")
+                .acceptsEventsFrom("inspector")
+                .buildDocument();
+
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                document.getAsText("/contracts/inspectorChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_OPERATION,
+                document.getAsText("/contracts/inspectorEmitEvents/type/value"));
+        assertEquals("inspectorChannel", document.getAsText("/contracts/inspectorEmitEvents/channel/value"));
+        assertEquals(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION,
+                document.getAsText("/contracts/inspectorEmitEventsImpl/type/value"));
+        String js = document.getAsText("/contracts/inspectorEmitEventsImpl/steps/0/code/value");
+        assertTrue(js.contains("Array.isArray(req) ? req : [req]"));
+        assertTrue(!js.contains("const allowed = ["));
+    }
+
+    @Test
+    void acceptsEventsFromSupportsAllowedEventTypeFiltering() {
+        Node document = PayNotes.payNote("Filtered ingress")
+                .acceptsEventsFrom("guarantor",
+                        PayNoteTypes.FundsReserved.class,
+                        ShippingEvents.ShipmentConfirmed.class)
+                .buildDocument();
+
+        assertEquals(TypeAliases.CONVERSATION_OPERATION,
+                document.getAsText("/contracts/guarantorEmitEvents/type/value"));
+        String js = document.getAsText("/contracts/guarantorEmitEventsImpl/steps/0/code/value");
+        assertTrue(js.contains("const allowed = ["));
+        assertTrue(js.contains(TypeRef.of(PayNoteTypes.FundsReserved.class).alias()));
+        assertTrue(js.contains(TypeAliases.SHIPPING_SHIPMENT_CONFIRMED));
+        assertTrue(js.contains("allowed.includes(e.type)"));
+    }
+
+    @Test
+    void participantLabelsAreMergedAcrossMultipleParticipants() {
+        Node document = PayNotes.payNote("Labels merged")
+                .participant("shipmentCompanyChannel", "Shipment company")
+                .participant("inspectorChannel", "Inspector")
+                .buildDocument();
+
+        assertEquals("Shipment company",
+                document.getAsText("/participantLabels/shipmentCompanyChannel/value"));
+        assertEquals("Inspector",
+                document.getAsText("/participantLabels/inspectorChannel/value"));
     }
 }

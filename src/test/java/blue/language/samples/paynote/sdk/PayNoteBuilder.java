@@ -15,11 +15,13 @@ import blue.language.samples.paynote.dsl.MyOsDsl;
 import blue.language.samples.paynote.dsl.PayNoteEvents;
 import blue.language.samples.paynote.dsl.StepsBuilder;
 import blue.language.samples.paynote.dsl.TypeAliases;
+import blue.language.samples.paynote.dsl.TypeRef;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ public final class PayNoteBuilder {
 
     private final BlueDocumentBuilder document;
     private final Map<String, String> participantTypeByKey = new LinkedHashMap<String, String>();
+    private final Map<String, Node> participantLabels = new LinkedHashMap<String, Node>();
     private IsoCurrency configuredCurrency;
     private boolean captureLockedOnInit;
     private int captureResolutionPaths;
@@ -114,7 +117,8 @@ public final class PayNoteBuilder {
         }
         participantTypeByKey.put(channelKey, nextTypeAlias);
         if (description != null && !description.trim().isEmpty()) {
-            document.putNode("participantLabels", new Node().properties(channelKey, new Node().value(description)));
+            participantLabels.put(channelKey, new Node().value(description));
+            document.putNode("participantLabels", new Node().properties(new LinkedHashMap<String, Node>(participantLabels)));
         }
         return this;
     }
@@ -135,6 +139,24 @@ public final class PayNoteBuilder {
 
     public PayNoteBuilder participantsUnion(ChannelKey compositeChannelKey, String... channelKeys) {
         document.contracts(c -> c.compositeTimelineChannel(compositeChannelKey.value(), channelKeys));
+        return this;
+    }
+
+    public PayNoteBuilder acceptsEventsFrom(String participantName, Class<?>... allowedEventTypes) {
+        String channelKey = toChannelKey(participantName);
+        ensureParticipantChannel(channelKey);
+
+        String participantKey = toParticipantKey(channelKey);
+        String operationKey = participantKey + "EmitEvents";
+        String implementationKey = operationKey + "Impl";
+        String jsCode = buildAcceptEventsIngressJs(allowedEventTypes);
+
+        document.contracts(c -> {
+            c.operation(operationKey,
+                    channelKey,
+                    "Allow " + participantKey + " to emit events into this document.");
+            c.implementOperation(implementationKey, operationKey, steps -> steps.jsRaw("EmitEvents", jsCode));
+        });
         return this;
     }
 
@@ -592,6 +614,50 @@ public final class PayNoteBuilder {
         if (!participantTypeByKey.containsKey(channelKey)) {
             participant(channelKey);
         }
+    }
+
+    private String buildAcceptEventsIngressJs(Class<?>... allowedEventTypes) {
+        if (allowedEventTypes == null || allowedEventTypes.length == 0) {
+            return ""
+                    + "const req = event.message.request;\n"
+                    + "const events = Array.isArray(req) ? req : [req];\n"
+                    + "return { events: events };";
+        }
+        List<String> aliases = new ArrayList<String>();
+        for (Class<?> eventTypeClass : Arrays.asList(allowedEventTypes)) {
+            aliases.add("'" + escapeJsString(TypeRef.of(eventTypeClass).alias()) + "'");
+        }
+        return ""
+                + "const allowed = [" + String.join(", ", aliases) + "];\n"
+                + "const req = event.message.request;\n"
+                + "const events = (Array.isArray(req) ? req : [req])\n"
+                + "  .filter(e => e && allowed.includes(e.type));\n"
+                + "return { events: events };";
+    }
+
+    private String toChannelKey(String participantName) {
+        if (participantName == null || participantName.trim().isEmpty()) {
+            throw new IllegalArgumentException("participant name is required");
+        }
+        String key = participantName.trim();
+        if (key.endsWith("Channel")) {
+            return key;
+        }
+        return key + "Channel";
+    }
+
+    private String toParticipantKey(String channelKey) {
+        if (channelKey.endsWith("Channel")) {
+            return channelKey.substring(0, channelKey.length() - "Channel".length());
+        }
+        return channelKey;
+    }
+
+    private String escapeJsString(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("'", "\\'");
     }
 
     public static final class CaptureBuilder {
