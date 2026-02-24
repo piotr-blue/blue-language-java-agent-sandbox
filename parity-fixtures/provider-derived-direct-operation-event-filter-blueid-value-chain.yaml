@@ -43,6 +43,6 @@ event: |
     payload: 10
 expected:
   paths:
-    /counter: 10
+    /counter: 0
   triggeredEventsCount: 0
   capabilityFailure: false

@@ -117,10 +117,12 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
         if (process != null && process.isAlive()) {
             return;
         }
-        if (!Files.exists(sidecarScript)) {
-            throw new ScriptRuntimeException("QuickJS sidecar script not found: " + sidecarScript.toAbsolutePath());
+        Path absoluteScript = sidecarScript.toAbsolutePath();
+        if (!Files.exists(absoluteScript)) {
+            throw new ScriptRuntimeException("QuickJS sidecar script not found: " + absoluteScript);
         }
-        ProcessBuilder builder = new ProcessBuilder(nodeBinary, sidecarScript.toAbsolutePath().toString());
+        ensureDependenciesInstalled(absoluteScript.getParent());
+        ProcessBuilder builder = new ProcessBuilder(nodeBinary, absoluteScript.toString());
         builder.redirectErrorStream(true);
         try {
             process = builder.start();
@@ -129,6 +131,56 @@ public class QuickJsSidecarRuntime implements ScriptRuntime {
         } catch (IOException ex) {
             throw new ScriptRuntimeException("Unable to start QuickJS sidecar process", ex);
         }
+    }
+
+    private void ensureDependenciesInstalled(Path sidecarDirectory) {
+        if (sidecarDirectory == null) {
+            return;
+        }
+        Path packageJson = sidecarDirectory.resolve("package.json");
+        if (!Files.exists(packageJson)) {
+            return;
+        }
+        Path runtimePackage = sidecarDirectory
+                .resolve("node_modules")
+                .resolve("@blue-quickjs")
+                .resolve("quickjs-runtime");
+        if (Files.exists(runtimePackage)) {
+            return;
+        }
+        ProcessBuilder installer = new ProcessBuilder("npm", "install", "--no-audit", "--no-fund");
+        installer.directory(sidecarDirectory.toFile());
+        installer.redirectErrorStream(true);
+        try {
+            Process installProcess = installer.start();
+            String output = readProcessOutput(installProcess);
+            int exitCode = installProcess.waitFor();
+            if (exitCode != 0) {
+                throw new ScriptRuntimeException(
+                        "Failed to install QuickJS sidecar dependencies (exit " + exitCode + "): " + output);
+            }
+        } catch (IOException ex) {
+            throw new ScriptRuntimeException("Failed to install QuickJS sidecar dependencies", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ScriptRuntimeException("Interrupted while installing QuickJS sidecar dependencies", ex);
+        }
+    }
+
+    private String readProcessOutput(Process process) throws IOException {
+        if (process == null) {
+            return "";
+        }
+        StringBuilder output = new StringBuilder();
+        BufferedReader buffered = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        while ((line = buffered.readLine()) != null) {
+            if (output.length() > 0) {
+                output.append('\n');
+            }
+            output.append(line);
+        }
+        return output.toString();
     }
 
     private static BigInteger toBigInteger(Object raw) {

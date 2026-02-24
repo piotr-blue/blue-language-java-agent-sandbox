@@ -44,3 +44,4 @@ bin/
 
 .cicd
 .fake
+tools/quickjs-sidecar/node_modules/

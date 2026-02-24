@@ -16,11 +16,12 @@ import java.math.BigInteger;
 import java.util.Collections;
 import java.util.List;
 
+import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static blue.language.utils.Properties.INTEGER_TYPE_BLUE_ID;
 
 class SequentialWorkflowProcessorTest {
 
@@ -456,7 +457,7 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
-    void sequentialWorkflowOperationSupportsDirectOperationRequestEventShape() {
+    void sequentialWorkflowOperationSkipsDirectOperationRequestEventShapeByDefault() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
 
@@ -493,11 +494,11 @@ class SequentialWorkflowProcessorTest {
                 "request: 4\n");
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
-        assertEquals(new BigInteger("4"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
-    void sequentialWorkflowOperationDirectRequestDefaultsAllowNewerWhenFlagMissing() {
+    void sequentialWorkflowOperationDirectRequestIsRejectedEvenWhenAllowNewerDefaults() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
 
@@ -536,7 +537,7 @@ class SequentialWorkflowProcessorTest {
                 "request: 9\n");
         DocumentProcessingResult result = blue.processDocument(initialized, event);
 
-        assertEquals(new BigInteger("9"), result.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), result.document().getProperties().get("counter").getValue());
     }
 
     @Test
@@ -584,7 +585,7 @@ class SequentialWorkflowProcessorTest {
     }
 
     @Test
-    void sequentialWorkflowOperationDirectRequestHonorsHandlerEventFilters() {
+    void sequentialWorkflowOperationDirectRequestDoesNotMatchHandlerEventFiltersByDefault() {
         Blue blue = new Blue();
         blue.registerContractProcessor(new TestEventChannelProcessor());
 
@@ -623,7 +624,7 @@ class SequentialWorkflowProcessorTest {
                 "allowNewerVersion: false\n" +
                 "request: 4\n");
         DocumentProcessingResult matched = blue.processDocument(initialized, matching);
-        assertEquals(new BigInteger("4"), matched.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), matched.document().getProperties().get("counter").getValue());
 
         Node nonMatching = blue.yamlToNode("type:\n" +
                 "  blueId: TestEvent\n" +
@@ -633,7 +634,7 @@ class SequentialWorkflowProcessorTest {
                 "allowNewerVersion: true\n" +
                 "request: 9\n");
         DocumentProcessingResult skipped = blue.processDocument(matched.document(), nonMatching);
-        assertEquals(new BigInteger("4"), skipped.document().getProperties().get("counter").getValue());
+        assertEquals(new BigInteger("0"), skipped.document().getProperties().get("counter").getValue());
     }
 
     @Test
@@ -732,6 +733,58 @@ class SequentialWorkflowProcessorTest {
 
         SequentialWorkflowOperationProcessor processor = new SequentialWorkflowOperationProcessor();
         assertTrue(processor.matches(contract, context));
+    }
+
+    @Test
+    void sequentialWorkflowOperationCompatModeAllowsDirectRequestShape() {
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new TestEventChannelProcessor());
+
+        Node document = blue.yamlToNode("name: Direct Operation Request Compat Doc\n" +
+                "counter: 0\n" +
+                "contracts:\n" +
+                "  testChannel:\n" +
+                "    type:\n" +
+                "      blueId: TestEventChannel\n" +
+                "  increment:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Operation\n" +
+                "    channel: testChannel\n" +
+                "    request:\n" +
+                "      type: Integer\n" +
+                "  operationWorkflow:\n" +
+                "    type:\n" +
+                "      blueId: Conversation/Sequential Workflow Operation\n" +
+                "    channel: testChannel\n" +
+                "    operation: increment\n");
+        Node initialized = blue.initializeDocument(document).document();
+
+        Node event = blue.yamlToNode("type:\n" +
+                "  blueId: TestEvent\n" +
+                "eventId: evt-op-direct-compat\n" +
+                "kind: TestEvent\n" +
+                "operation: increment\n" +
+                "request: 4\n");
+
+        SequentialWorkflowOperation contract = new SequentialWorkflowOperation();
+        contract.setOperation("increment");
+        contract.setChannelKey("testChannel");
+
+        DocumentProcessor owner = blue.getDocumentProcessor();
+        ProcessorEngine.Execution execution = new ProcessorEngine.Execution(owner, initialized);
+        execution.loadBundles("/");
+        ProcessorExecutionContext context = execution.createContext(
+                "/",
+                execution.bundleForScope("/"),
+                event,
+                false,
+                false);
+
+        SequentialWorkflowOperationProcessor strict = new SequentialWorkflowOperationProcessor(false);
+        SequentialWorkflowOperationProcessor compat = new SequentialWorkflowOperationProcessor(true);
+
+        assertFalse(strict.matches(contract, context));
+        assertTrue(compat.matches(contract, context));
     }
 
     @Test

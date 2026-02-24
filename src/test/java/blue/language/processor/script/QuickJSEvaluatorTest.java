@@ -106,7 +106,7 @@ class QuickJSEvaluatorTest {
             ScriptRuntimeResult result = evaluator.evaluate(
                     "return ({ id: canon.unwrap(canon.at(eventCanonical, '/payload/id')), unit: document('/unit'), canonicalUnit: document.canonical('/unit').value });",
                     bindings,
-                    BigInteger.valueOf(1000L));
+                    BigInteger.valueOf(10000L));
 
             assertTrue(result.value() instanceof Map);
             @SuppressWarnings("unchecked")
@@ -138,7 +138,7 @@ class QuickJSEvaluatorTest {
                             "  arrayPlain: canon.unwrap({ items: [{ value: 1 }, { value: 2 }] })\n" +
                             "};",
                     new LinkedHashMap<String, Object>(),
-                    BigInteger.valueOf(1000L));
+                    BigInteger.valueOf(10000L));
 
             assertTrue(result.value() instanceof Map);
             @SuppressWarnings("unchecked")
@@ -190,7 +190,9 @@ class QuickJSEvaluatorTest {
             assertTrue(error.getMessage().contains("Failed to evaluate code block"));
             assertTrue(error.code().contains("await"));
             assertEquals("SyntaxError", error.runtimeErrorName());
-            assertTrue(error.runtimeErrorMessage() != null && error.runtimeErrorMessage().contains("await"));
+            assertTrue(error.runtimeErrorMessage() != null
+                    && (error.runtimeErrorMessage().contains("await")
+                    || error.runtimeErrorMessage().contains("expecting ';'")));
             assertTrue(error.runtimeStackAvailable());
             assertTrue(String.valueOf(error.runtimeStack()).contains("SyntaxError"));
         }
@@ -390,7 +392,7 @@ class QuickJSEvaluatorTest {
             ScriptRuntimeResult result = evaluator.evaluate(
                     "return ({ plain: document('/unit'), getAlias: document.get('/unit'), canonical: document.canonical('/unit').value, canonicalAlias: document.getCanonical('/unit').value });",
                     bindings,
-                    BigInteger.valueOf(1000L));
+                    BigInteger.valueOf(10000L));
 
             assertTrue(result.value() instanceof Map);
             @SuppressWarnings("unchecked")
@@ -497,7 +499,7 @@ class QuickJSEvaluatorTest {
             ScriptRuntimeResult result = evaluator.evaluate(
                     "return ({ relative: document('counter'), absolute: document('/contracts/workflow/counter'), canonical: document.canonical('counter').value });",
                     bindings,
-                    BigInteger.valueOf(1000L));
+                    BigInteger.valueOf(10000L));
 
             assertTrue(result.value() instanceof Map);
             @SuppressWarnings("unchecked")

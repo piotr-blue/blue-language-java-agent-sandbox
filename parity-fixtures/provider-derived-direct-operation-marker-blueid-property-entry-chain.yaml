@@ -35,6 +35,6 @@ event: |
   request: 1
 expected:
   paths:
-    /counter: testChannel
+    /counter: 0
   triggeredEventsCount: 0
   capabilityFailure: false

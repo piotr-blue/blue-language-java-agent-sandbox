@@ -1,147 +1,465 @@
 #!/usr/bin/env node
 
-const readline = require('readline');
-const vm = require('vm');
+import readline from 'node:readline';
+import {
+  evaluate,
+} from '@blue-quickjs/quickjs-runtime';
+import {
+  HOST_V1_HASH,
+  HOST_V1_MANIFEST,
+} from '@blue-quickjs/abi-manifest';
 
-const DEFAULT_TIMEOUT_MS = 1000;
-const MIN_TIMEOUT_MS = 10;
-const FALLBACK_WASM_GAS_USED = 1n;
-
-function timeoutFromWasmGasLimit(wasmGasLimit) {
-  if (wasmGasLimit === null || wasmGasLimit === undefined) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-  try {
-    const parsed = BigInt(String(wasmGasLimit));
-    if (parsed <= 0n) {
-      return 1;
-    }
-    const scaled = Number(parsed / 1_000_000n);
-    if (!Number.isFinite(scaled) || Number.isNaN(scaled)) {
-      return DEFAULT_TIMEOUT_MS;
-    }
-    return Math.max(MIN_TIMEOUT_MS, Math.min(DEFAULT_TIMEOUT_MS, scaled));
-  } catch (_error) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-}
-
-function isTimeoutError(error) {
-  if (!error) {
-    return false;
-  }
-  const message = String(error.message || error);
-  return message.includes('Script execution timed out');
-}
-
-function wrapOutOfGasError(error) {
-  const wrapped = new Error(
-    'OutOfGas: execution exceeded wasm gas limit',
-  );
-  wrapped.name = 'OutOfGasError';
-  wrapped.cause = error;
-  return wrapped;
-}
-
-function evaluateCode(code, bindings, wasmGasLimit) {
-  const emittedEvents = [];
-  const sandbox = Object.assign({}, bindings || {}, {
-    emit: (event) => {
-      emittedEvents.push(event);
-      return event;
-    },
-    Date: undefined,
-    process: undefined,
-  });
-  const context = vm.createContext(sandbox);
-  const timeout = timeoutFromWasmGasLimit(wasmGasLimit);
-  let result;
-  try {
-    result = vm.runInContext(code, context, { timeout });
-  } catch (firstError) {
-    if (isTimeoutError(firstError)) {
-      throw wrapOutOfGasError(firstError);
-    }
-    const wrapped = `(function(){${code}\n})()`;
-    try {
-      result = vm.runInContext(wrapped, context, { timeout });
-    } catch (wrappedError) {
-      if (isTimeoutError(wrappedError)) {
-        throw wrapOutOfGasError(wrappedError);
-      }
-      throw wrappedError;
-    }
-  }
-
-  const resultDefined = typeof result !== 'undefined';
-  if (emittedEvents.length === 0) {
-    return { value: result, resultDefined };
-  }
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    const withEvents = { ...result };
-    if (Array.isArray(withEvents.events)) {
-      withEvents.events = [...withEvents.events, ...emittedEvents];
-    } else {
-      withEvents.events = emittedEvents;
-    }
-    return { value: withEvents, resultDefined };
-  }
-  if (typeof result === 'undefined') {
-    return {
-      value: { __resultDefined: false, events: emittedEvents },
-      resultDefined: false,
-    };
-  }
-  return {
-    value: { __result: result, __resultDefined: true, events: emittedEvents },
-    resultDefined: true,
-  };
-}
-
-function estimateWasmGasUsed(code) {
-  const text = typeof code === 'string' ? code : '';
-  const numericLiterals = text.match(/\d+/g) || [];
-  let numericWeight = 0n;
-  for (const literal of numericLiterals) {
-    try {
-      const value = BigInt(literal);
-      numericWeight += value > 1_000_000n ? 1_000_000n : value;
-    } catch (_error) {
-      // ignore malformed literal segments
-    }
-  }
-  const lengthWeight = BigInt(text.length * 5);
-  const estimated = FALLBACK_WASM_GAS_USED + lengthWeight + (numericWeight / 10n);
-  return estimated > 0n ? estimated : FALLBACK_WASM_GAS_USED;
-}
-
-function computeWasmGasRemaining(wasmGasLimit, wasmGasUsed) {
-  if (wasmGasLimit === null || wasmGasLimit === undefined) {
-    return null;
-  }
-  try {
-    const limit = BigInt(String(wasmGasLimit));
-    const used = wasmGasUsed == null ? 0n : BigInt(String(wasmGasUsed));
-    const remaining = limit - used;
-    return remaining > 0n ? remaining : 0n;
-  } catch (_error) {
-    return wasmGasLimit;
-  }
-}
-
-function respond(payload) {
-  process.stdout.write(`${JSON.stringify(payload)}\n`);
-}
+const FALLBACK_WASM_GAS_LIMIT = 1_000_000_000n;
+const HOST_CALL_UNITS = 1;
 
 const reader = readline.createInterface({
   input: process.stdin,
   crlfDelay: Infinity,
 });
 
-reader.on('line', (line) => {
+function respond(payload) {
+  process.stdout.write(`${JSON.stringify(payload)}\n`);
+}
+
+function normalizeInputBindings(bindings) {
+  const safe = bindings && typeof bindings === 'object' ? bindings : {};
+  const event = Object.prototype.hasOwnProperty.call(safe, 'event')
+    ? safe.event
+    : null;
+  const eventCanonical =
+    Object.prototype.hasOwnProperty.call(safe, 'eventCanonical') &&
+    safe.eventCanonical !== undefined
+      ? safe.eventCanonical
+      : event;
+  const steps = Object.prototype.hasOwnProperty.call(safe, 'steps') &&
+    safe.steps !== undefined
+      ? safe.steps
+      : [];
+  const currentContract = Object.prototype.hasOwnProperty.call(
+    safe,
+    'currentContract',
+  )
+    ? safe.currentContract
+    : null;
+  const currentContractCanonical =
+    Object.prototype.hasOwnProperty.call(safe, 'currentContractCanonical') &&
+    safe.currentContractCanonical !== undefined
+      ? safe.currentContractCanonical
+      : currentContract;
+  return {
+    bindings: safe,
+    input: {
+      event,
+      eventCanonical,
+      steps,
+      currentContract,
+      currentContractCanonical,
+    },
+  };
+}
+
+function toBigIntOrDefault(raw) {
+  if (raw === null || raw === undefined) {
+    return FALLBACK_WASM_GAS_LIMIT;
+  }
+  try {
+    const value = BigInt(String(raw));
+    if (value <= 0n) {
+      return 1n;
+    }
+    return value;
+  } catch (_error) {
+    return FALLBACK_WASM_GAS_LIMIT;
+  }
+}
+
+function isSafeBindingIdentifier(key) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key);
+}
+
+function serializeBindingLiteral(value) {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    return 'null';
+  }
+  return serialized;
+}
+
+function buildBindingPrelude(bindings) {
+  const reserved = new Set([
+    'event',
+    'eventCanonical',
+    'steps',
+    'currentContract',
+    'currentContractCanonical',
+    'emit',
+    'document',
+  ]);
+  const lines = [];
+  for (const [key, value] of Object.entries(bindings)) {
+    if (reserved.has(key)) {
+      continue;
+    }
+    if (!isSafeBindingIdentifier(key)) {
+      continue;
+    }
+    lines.push(`const ${key} = ${serializeBindingLiteral(value)};`);
+  }
+  if (lines.length === 0) {
+    return '';
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+function mapEvaluateError(result) {
+  if (!result || result.ok !== false) {
+    return {
+      name: 'Error',
+      message: 'Unknown QuickJS runtime failure',
+      stack: undefined,
+    };
+  }
+
+  const detail = result.error || {};
+  if (detail.kind === 'out-of-gas') {
+    return {
+      name: 'OutOfGasError',
+      message: `OutOfGas: ${detail.message || 'out of gas'}`,
+      stack: result.raw || undefined,
+    };
+  }
+  if (detail.kind === 'js-exception') {
+    return {
+      name: detail.name || 'Error',
+      message: detail.message || result.message || 'QuickJS exception',
+      stack: result.raw || undefined,
+    };
+  }
+  if (detail.kind === 'host-error') {
+    return {
+      name: 'HostError',
+      message: detail.message || result.message || 'QuickJS host error',
+      stack: result.raw || undefined,
+    };
+  }
+  if (detail.kind === 'manifest-error') {
+    return {
+      name: 'ManifestError',
+      message: detail.message || result.message || 'QuickJS manifest error',
+      stack: result.raw || undefined,
+    };
+  }
+  return {
+    name: detail.name || 'Error',
+    message: detail.message || result.message || 'QuickJS evaluation failed',
+    stack: result.raw || undefined,
+  };
+}
+
+function isUndefinedResultError(result) {
+  if (!result || result.ok !== false || !result.error) {
+    return false;
+  }
+  const detail = result.error;
+  return (
+    detail.kind === 'js-exception' &&
+    detail.name === 'TypeError' &&
+    typeof detail.message === 'string' &&
+    detail.message.includes('unsupported DV type: undefined')
+  );
+}
+
+function buildResultWithEvents(value, events) {
+  if (!Array.isArray(events) || events.length === 0) {
+    return { value, resultDefined: true };
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const withEvents = { ...value };
+    if (Array.isArray(withEvents.events)) {
+      withEvents.events = [...withEvents.events, ...events];
+    } else {
+      withEvents.events = events;
+    }
+    return { value: withEvents, resultDefined: true };
+  }
+  return {
+    value: {
+      __result: value,
+      __resultDefined: true,
+      events,
+    },
+    resultDefined: true,
+  };
+}
+
+function buildUndefinedWithEvents(events) {
+  if (!Array.isArray(events) || events.length === 0) {
+    return { value: null, resultDefined: false };
+  }
+  return {
+    value: {
+      __resultDefined: false,
+      events,
+    },
+    resultDefined: false,
+  };
+}
+
+function collapseSlashes(pointer) {
+  if (typeof pointer !== 'string' || pointer.length === 0) {
+    return '/';
+  }
+  let out = '';
+  let previousSlash = false;
+  for (let i = 0; i < pointer.length; i += 1) {
+    const ch = pointer.charAt(i);
+    if (ch === '/') {
+      if (!previousSlash) {
+        out += '/';
+      }
+      previousSlash = true;
+      continue;
+    }
+    previousSlash = false;
+    out += ch;
+  }
+  if (out.length > 1 && out.endsWith('/')) {
+    out = out.slice(0, -1);
+  }
+  return out.length === 0 ? '/' : out;
+}
+
+function normalizePointer(pointer, scopePath) {
+  if (pointer === undefined || pointer === null || pointer === '') {
+    return '/';
+  }
+  if (typeof pointer !== 'string') {
+    return null;
+  }
+  if (pointer.startsWith('/')) {
+    return collapseSlashes(pointer);
+  }
+  let scope = typeof scopePath === 'string' && scopePath.length > 0 ? scopePath : '/';
+  if (!scope.startsWith('/')) {
+    scope = `/${scope}`;
+  }
+  scope = collapseSlashes(scope);
+  const combined = scope === '/' ? `/${pointer}` : `${scope}/${pointer}`;
+  return collapseSlashes(combined);
+}
+
+function readAtPointer(root, pointer, scopePath) {
+  if (root === undefined || root === null) {
+    return null;
+  }
+  const normalized = normalizePointer(pointer, scopePath);
+  if (normalized === null) {
+    return null;
+  }
+  if (normalized === '/') {
+    return root;
+  }
+  const segments = normalized
+    .substring(1)
+    .split('/')
+    .map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+
+  let current = root;
+  for (const segment of segments) {
+    if (current === undefined || current === null) {
+      return null;
+    }
+    if (Array.isArray(current)) {
+      if (!/^\d+$/.test(segment)) {
+        return null;
+      }
+      const index = Number(segment);
+      current = current[index];
+      continue;
+    }
+    if (typeof current !== 'object') {
+      return null;
+    }
+    current = current[segment];
+  }
+  return current === undefined ? null : current;
+}
+
+function unwrapPotentialNode(current) {
+  if (
+    current &&
+    typeof current === 'object' &&
+    !Array.isArray(current) &&
+    Object.prototype.hasOwnProperty.call(current, 'value')
+  ) {
+    const keys = Object.keys(current);
+    const allowed = new Set(['value', 'type', 'name', 'description']);
+    if (keys.length <= 4 && keys.every((key) => allowed.has(key))) {
+      return current.value;
+    }
+  }
+  return current;
+}
+
+function isRawValuePointer(normalizedPointer) {
+  if (!normalizedPointer || normalizedPointer === '/') {
+    return false;
+  }
+  const idx = normalizedPointer.lastIndexOf('/');
+  const segment = idx >= 0 ? normalizedPointer.substring(idx + 1) : normalizedPointer;
+  return (
+    segment === 'blueId' ||
+    segment === 'name' ||
+    segment === 'description' ||
+    segment === 'value'
+  );
+}
+
+function isTypeMetadataPointer(normalizedPointer) {
+  if (!normalizedPointer) {
+    return false;
+  }
+  return normalizedPointer === '/type' || normalizedPointer.indexOf('/type/') >= 0;
+}
+
+function readSimpleDocument(bindings, pointer) {
+  const scopePath = bindings.__scopePath;
+  const normalizedPointer = normalizePointer(pointer, scopePath);
+  if (normalizedPointer === null) {
+    return null;
+  }
+  const simple =
+    bindings.__documentDataSimple !== undefined
+      ? bindings.__documentDataSimple
+      : bindings.__documentData;
+  const canonical = bindings.__documentDataCanonical ?? simple;
+
+  let value = readAtPointer(simple, normalizedPointer, scopePath);
+  if (value === null && (isRawValuePointer(normalizedPointer) || isTypeMetadataPointer(normalizedPointer))) {
+    const canonicalValue = readAtPointer(canonical, normalizedPointer, scopePath);
+    if (canonicalValue !== null) {
+      return unwrapPotentialNode(canonicalValue);
+    }
+  }
+  if (value === null) {
+    return null;
+  }
+  return unwrapPotentialNode(value);
+}
+
+function readCanonicalDocument(bindings, pointer) {
+  const scopePath = bindings.__scopePath;
+  const normalizedPointer = normalizePointer(pointer, scopePath);
+  if (normalizedPointer === null) {
+    return null;
+  }
+  const simple =
+    bindings.__documentDataSimple !== undefined
+      ? bindings.__documentDataSimple
+      : bindings.__documentData;
+  const canonical = bindings.__documentDataCanonical ?? simple;
+  const value = readAtPointer(canonical, normalizedPointer, scopePath);
+  if (value === null) {
+    return null;
+  }
+  if (isRawValuePointer(normalizedPointer)) {
+    return unwrapPotentialNode(value);
+  }
+  return value;
+}
+
+async function evaluateCode(code, bindings, wasmGasLimit) {
+  const normalized = normalizeInputBindings(bindings);
+  const prelude = buildBindingPrelude(normalized.bindings);
+  const programCode = `${prelude}${typeof code === 'string' ? code : ''}`;
+  const gasLimit = toBigIntOrDefault(wasmGasLimit);
+
+  let evaluated = await evaluateProgram(programCode, normalized, gasLimit);
+  if (shouldRetryWrapped(evaluated.runtimeResult)) {
+    evaluated = await evaluateProgram(
+      `(() => {\n${programCode}\n})()`,
+      normalized,
+      gasLimit,
+    );
+  }
+  const emittedEvents = evaluated.emittedEvents;
+  const runtimeResult = evaluated.runtimeResult;
+
+  if (runtimeResult.ok) {
+    const normalizedResult = buildResultWithEvents(runtimeResult.value, emittedEvents);
+    return {
+      ok: true,
+      result: normalizedResult.value,
+      resultDefined: normalizedResult.resultDefined,
+      wasmGasUsed: runtimeResult.gasUsed,
+      wasmGasRemaining: runtimeResult.gasRemaining,
+    };
+  }
+
+  if (isUndefinedResultError(runtimeResult)) {
+    const normalizedUndefined = buildUndefinedWithEvents(emittedEvents);
+    return {
+      ok: true,
+      result: normalizedUndefined.value,
+      resultDefined: normalizedUndefined.resultDefined,
+      wasmGasUsed: runtimeResult.gasUsed,
+      wasmGasRemaining: runtimeResult.gasRemaining,
+    };
+  }
+
+  return {
+    ok: false,
+    error: mapEvaluateError(runtimeResult),
+    wasmGasUsed: runtimeResult.gasUsed,
+    wasmGasRemaining: runtimeResult.gasRemaining,
+  };
+}
+
+async function evaluateProgram(programCode, normalized, gasLimit) {
+  const emittedEvents = [];
+  const runtimeResult = await evaluate({
+    program: {
+      code: programCode,
+      abiId: 'Host.v1',
+      abiVersion: 1,
+      abiManifestHash: HOST_V1_HASH,
+    },
+    input: normalized.input,
+    gasLimit,
+    manifest: HOST_V1_MANIFEST,
+    handlers: {
+      document: {
+        get: (path) => ({
+          ok: readSimpleDocument(normalized.bindings, path),
+          units: HOST_CALL_UNITS,
+        }),
+        getCanonical: (path) => ({
+          ok: readCanonicalDocument(normalized.bindings, path),
+          units: HOST_CALL_UNITS,
+        }),
+      },
+      emit: (value) => {
+        emittedEvents.push(value);
+        return { ok: null, units: HOST_CALL_UNITS };
+      },
+    },
+  });
+  return { runtimeResult, emittedEvents };
+}
+
+function shouldRetryWrapped(result) {
+  if (!result || result.ok !== false || !result.error) {
+    return false;
+  }
+  const detail = result.error;
+  return detail.kind === 'js-exception' && detail.name === 'SyntaxError';
+}
+
+reader.on('line', async (line) => {
   if (!line || !line.trim()) {
     return;
   }
+
   let request;
   try {
     request = JSON.parse(line);
@@ -150,6 +468,7 @@ reader.on('line', (line) => {
       id: null,
       ok: false,
       error: {
+        name: 'Error',
         message: `Invalid JSON request: ${error.message}`,
       },
     });
@@ -158,20 +477,40 @@ reader.on('line', (line) => {
 
   const id = request.id || null;
   const code = typeof request.code === 'string' ? request.code : '';
-  const bindings = request.bindings && typeof request.bindings === 'object' ? request.bindings : {};
+  const bindings =
+    request.bindings && typeof request.bindings === 'object'
+      ? request.bindings
+      : {};
   const wasmGasLimit = request.wasmGasLimit != null ? String(request.wasmGasLimit) : null;
 
   try {
-    const evaluation = evaluateCode(code, bindings, wasmGasLimit);
-    const wasmGasUsed = estimateWasmGasUsed(code);
-    const wasmGasRemaining = computeWasmGasRemaining(wasmGasLimit, wasmGasUsed);
+    const runtime = await evaluateCode(code, bindings, wasmGasLimit);
+    if (runtime.ok) {
+      respond({
+        id,
+        ok: true,
+        resultDefined: runtime.resultDefined,
+        result: runtime.result,
+        wasmGasUsed:
+          runtime.wasmGasUsed == null ? null : runtime.wasmGasUsed.toString(),
+        wasmGasRemaining:
+          runtime.wasmGasRemaining == null
+            ? null
+            : runtime.wasmGasRemaining.toString(),
+      });
+      return;
+    }
+
     respond({
       id,
-      ok: true,
-      resultDefined: evaluation.resultDefined,
-      result: evaluation.value,
-      wasmGasUsed: wasmGasUsed.toString(),
-      wasmGasRemaining: wasmGasRemaining == null ? null : wasmGasRemaining.toString(),
+      ok: false,
+      wasmGasUsed:
+        runtime.wasmGasUsed == null ? null : runtime.wasmGasUsed.toString(),
+      wasmGasRemaining:
+        runtime.wasmGasRemaining == null
+          ? null
+          : runtime.wasmGasRemaining.toString(),
+      error: runtime.error,
     });
   } catch (error) {
     respond({

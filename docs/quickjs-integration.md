@@ -1,158 +1,94 @@
 # QuickJS integration (Java parity track)
 
-This document describes the Java QuickJS integration architecture used by the document processor parity work.
+This document describes the current Java QuickJS runtime architecture after parity migration.
 
-## Runtime components
+## Runtime stack
 
-- `ScriptRuntime` (`blue.language.processor.script.ScriptRuntime`)
-  - Runtime SPI for script evaluation.
-  - Accepts a `ScriptRuntimeRequest` (`code`, `bindings`, `wasmGasLimit`).
-  - Returns `ScriptRuntimeResult` (`value`, `valueDefined`, `wasmGasUsed`, `wasmGasRemaining`).
-- `QuickJsSidecarRuntime`
-  - Default SPI implementation backed by a managed Node sidecar process.
-  - Uses line-delimited JSON request/response messages over stdio.
-- `QuickJSEvaluator`
-  - Java-facing evaluator wrapper that maps sidecar failures to `CodeBlockEvaluationError`.
-  - Wraps workflow/evaluator code as a function body (JS parity), so scripts must `return ...` to produce a defined result.
-- `QuickJsExpressionUtils`
-  - Expression helpers and traversal utilities used by workflow step executors.
-  - Supports:
-    - standalone expression detection `${...}`
-    - template substitution with embedded expressions
-    - expression evaluation wrapped as `return (<expr>);` for JS-equivalent object-literal semantics
-    - include/exclude pointer predicate matching (brace expansion, extglob, character classes, and brace-range steps)
+- `ScriptRuntime` — Java SPI for script evaluation requests/responses.
+- `QuickJsSidecarRuntime` — default implementation using a managed Node sidecar process.
+- `QuickJSEvaluator` — evaluator facade that:
+  - validates bindings,
+  - normalizes defaults,
+  - wraps code as JS function-body execution (`return ...` required for defined result),
+  - maps runtime failures into `CodeBlockEvaluationError`.
+- `QuickJsExpressionUtils` — expression/template traversal helpers built on top of `QuickJSEvaluator`.
 
-## Sidecar protocol
+## Sidecar backend
 
-Current sidecar entrypoint: `tools/quickjs-sidecar/index.js`.
+Sidecar entrypoint: `tools/quickjs-sidecar/index.js`.
 
-Message format:
+Backend runtime:
 
-- Request:
-  - `id` (uuid string)
-  - `code` (string)
-  - `bindings` (json object)
-  - `wasmGasLimit` (string|number|null)
-- Response:
-  - `id`
-  - `ok` (boolean)
-  - `resultDefined` (boolean, whether script returned a defined value; distinguishes `undefined` from explicit `null`)
-  - `result` (any, when ok)
-  - `error` (object|string, when not ok)
-  - `wasmGasUsed` (string|number|null)
-  - `wasmGasRemaining` (string|number|null)
+- `@blue-quickjs/quickjs-runtime`
+- `@blue-quickjs/abi-manifest`
+- `@blue-quickjs/dv`
 
-`QuickJsSidecarRuntime` validates `id` correspondence and surfaces protocol/runtime errors as `ScriptRuntimeException`.
+The sidecar no longer uses Node `vm` execution or heuristic gas estimation.
 
-`ScriptRuntimeResult` now carries:
+## Protocol
 
-- `value` (evaluated value or `null`)
-- `valueDefined` (true when script produced a defined value, false for `undefined`)
-- gas fields (`wasmGasUsed`, `wasmGasRemaining`)
+Line-delimited JSON over stdio.
 
-Timeout/error normalization parity:
+Request:
 
-- Sidecar classifies VM timeout failures under tiny `wasmGasLimit` budgets as:
-  - `name: "OutOfGasError"`
-  - `message: "OutOfGas: execution exceeded wasm gas limit"`
-- `QuickJSEvaluator`/`QuickJsSidecarRuntime` preserve this in surfaced exception text.
-- Successful sidecar evaluations now report deterministic non-zero `wasmGasUsed` estimates and bounded `wasmGasRemaining` values derived from code complexity and numeric literals (parity-friendly metering shape while full QuickJS fuel parity is still pending).
+- `id`
+- `code`
+- `bindings`
+- `wasmGasLimit`
 
-## Gas mapping
+Response:
 
-QuickJS gas constants are exported via `QuickJsConfig` and backed by `ProcessorGasSchedule`.
+- `id`
+- `ok`
+- `resultDefined`
+- `result`
+- `error` (when `ok=false`)
+- `wasmGasUsed`
+- `wasmGasRemaining`
 
-- `WASM_FUEL_PER_HOST_GAS_UNIT`
-- `DEFAULT_JS_STEP_HOST_GAS_LIMIT`
-- `DEFAULT_EXPRESSION_HOST_GAS_LIMIT`
-- `DEFAULT_WASM_GAS_LIMIT`
-- `DEFAULT_EXPRESSION_WASM_GAS_LIMIT`
-- `hostGasToWasmFuel(...)`
+`QuickJsSidecarRuntime` enforces response id correlation and normalizes runtime errors into `ScriptRuntimeException`.
 
-Workflow expression/step evaluation charges gas through:
+## Fuel / gas behavior
 
-- `ProcessorExecutionContext#chargeWasmGas(...)`
-- `GasMeter#chargeWasmGas(...)`
+- Sidecar reports runtime fuel directly from quickjs runtime:
+  - `gasUsed`
+  - `gasRemaining`
+- Java runtime surfaces those as:
+  - `ScriptRuntimeResult.wasmGasUsed`
+  - `ScriptRuntimeResult.wasmGasRemaining`
+- Processor gas accounting converts wasm fuel via `ProcessorGasSchedule`.
 
-## Step executor bindings
+## Undefined/null and emit semantics
 
-`QuickJSStepBindings` provides default bindings used by step executors:
+Sidecar preserves JS result semantics:
 
-- `event` (simple/plain JSON snapshot of current event)
-- `eventCanonical` (official/canonical JSON event snapshot)
-- `steps` (results from prior workflow steps)
-- `currentContract` (simple contract snapshot from bound workflow contract-node metadata when available; otherwise `/contracts/<key>`)
-- `currentContractCanonical` (official contract snapshot from bound workflow contract-node metadata when available; otherwise `/contracts/<key>`)
-- internal document snapshots used by evaluator prelude:
-  - `__documentDataSimple`
-  - `__documentDataCanonical`
-  - `__scopePath`
+- explicit `null` => `resultDefined=true`, `result=null`
+- `undefined` => `resultDefined=false`, `result=null`
 
-Evaluator prelude host APIs:
+Emit parity:
 
-- `document(pointer?)`
-  - resolves relative pointers against `__scopePath`
-  - reads from simple snapshot
-  - unwraps scalar node wrappers
-  - for raw terminal segments (`/blueId`, `/name`, `/description`, `/value`) falls back to canonical snapshot when needed
-- `document.canonical(pointer?)`
-  - resolves from canonical snapshot (preserves metadata/type wrappers)
-- `document.get(pointer?)` / `document.getCanonical(pointer?)`
-  - alias helpers for parity with host-handler style API names used in JS workflows
-- `canon.at(value, pointer)` and `canon.unwrap(value)`
-  - `canon.unwrap(value, deep?)` now supports:
-    - deep unwrapping (default) across canonical wrappers (`{ value: ... }`, `{ items: [...] }`) and nested objects
-    - shallow mode (`deep=false`) that only unwraps the top-level wrapper
+- when emit callback is not supplied, sidecar returns emitted events in result envelope (`events[]` / `__result*` metadata),
+- when Java evaluator emit callback is supplied, evaluator forwards emitted payloads to callback and returns plain script value.
 
-QuickJS evaluator binding defaults/fallbacks:
+## Document/canon behavior
 
-- missing `event` defaults to `null`
-- missing `eventCanonical` defaults to `event`
-- missing `steps` defaults to `[]`
-- missing `currentContract` defaults to `null`
-- missing `currentContractCanonical` defaults to `currentContract`
+- QuickJS built-in host globals (`document`, `canon`) are used directly.
+- `QuickJSEvaluator` rewrites alias calls for parity compatibility:
+  - `document.get(...)` -> `document(...)`
+  - `document.getCanonical(...)` -> `document.canonical(...)`
+- Sidecar host document handlers implement:
+  - scope-relative pointer resolution via `__scopePath`,
+  - fallback from `__documentDataSimple` to `__documentData`,
+  - canonical fallback where required (`__documentDataCanonical` -> simple),
+  - raw terminal segment unwrapping (`blueId`, `name`, `description`, `value`) for plain/canonical reads.
 
-Emit callback behavior:
+## Dependency management
 
-- when no host emit callback is supplied, sidecar `emit(...)` values are returned via the existing `result.events[]` envelope used by workflow steps.
-- when a host emit callback is supplied to `QuickJSEvaluator` (direct evaluator usage), emitted values are forwarded to the callback and the evaluator returns the plain script result value (JS parity behavior).
-- evaluator now preserves `undefined` vs explicit `null` semantics in this callback path as well (using sidecar `resultDefined` / envelope `__resultDefined` metadata), enabling workflow step-runner parity where only `undefined` skips step-result registration.
+- Sidecar dependencies are declared in `tools/quickjs-sidecar/package.json`.
+- `QuickJsSidecarRuntime` installs sidecar dependencies on first start when `node_modules` is missing.
 
-Document callback behavior (direct evaluator usage):
+## Failure mapping
 
-- `QuickJSEvaluator` accepts:
-  - `document` as `Function<Object, Object>` (simple callback), or
-  - `QuickJSEvaluator.DocumentBinding` (simple + canonical callbacks).
-- for literal pointer calls in script code (`document('/...')`, `document.get('/...')`, `document.canonical('/...')`, `document.getCanonical('/...')`), evaluator materializes pointer snapshots from callback reads and feeds them into prelude document helpers.
-- evaluator now also attempts root snapshot reads at `/`; when callbacks provide root data, dynamic pointer expressions (e.g. `document(pointerVar)`) resolve through the preloaded snapshot model.
-- existing workflow-step path (`QuickJSStepBindings` with `__documentDataSimple` / `__documentDataCanonical`) remains the default and is unchanged.
-
-Document snapshots are charged via `chargeDocumentSnapshot`.
-WASM usage is charged via `chargeWasmGas`.
-
-## Failure handling
-
-- Sidecar startup, protocol, or evaluation failures => `ScriptRuntimeException`.
-  - sidecar error payloads (`name`, `message`, optional `stack`) are normalized into readable exception text.
-  - structured error metadata is exposed for downstream parity/error handling:
-    - `ScriptRuntimeException#errorName()`
-    - `ScriptRuntimeException#runtimeMessage()`
-    - `ScriptRuntimeException#stackAvailable()`
-    - `ScriptRuntimeException#runtimeStack()`
-- Evaluator wraps script failures => `CodeBlockEvaluationError` with:
-  - original source code available via `code()`
-  - truncated code snippet in message (`Failed to evaluate code block: ...`)
-  - structured runtime error metadata passthrough for wrapped sidecar failures:
-    - `CodeBlockEvaluationError#runtimeErrorName()`
-    - `CodeBlockEvaluationError#runtimeErrorMessage()`
-    - `CodeBlockEvaluationError#runtimeStackAvailable()`
-    - `CodeBlockEvaluationError#runtimeStack()`
-- Evaluator validates binding keys against supported runtime bindings and rejects unsupported keys up-front (`Unsupported QuickJS binding: "<key>"`).
-- Evaluator also validates host-handler binding shapes for parity:
-  - `document` must be function-shaped (non-null non-function values are rejected)
-  - `emit` must be function-shaped (non-null non-function values are rejected)
-- Step processors convert fatal script usage issues to processor fatal termination through `ProcessorExecutionContext#throwFatal`.
-- Sidecar supports `emit(...)` callback parity by collecting emitted payloads and returning them in `result.events[]`; JavaScript step executor emits these events through processor runtime.
-- JavaScript step event emission now promotes payload `type` values (string or `{ blueId }`) into node semantic type metadata before enqueueing, preserving Triggered Event Channel routing behavior for JS-produced events.
-- Sidecar masks non-deterministic globals (`Date`, `process`) to align workflow execution with deterministic runtime expectations.
-
+- Out-of-gas runtime failures map to `OutOfGasError`.
+- JS exceptions preserve error name/message and stack payload when available.
+- Evaluator wraps all runtime failures as `CodeBlockEvaluationError` while preserving structured runtime metadata.

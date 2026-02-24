@@ -5,6 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,18 +26,18 @@ final class PatchEngine {
         Objects.requireNonNull(patch, "patch");
 
         String normalizedScope = PointerUtils.normalizeScope(originScopePath);
-        String targetPath = PointerUtils.normalizeRequiredPointer(patch.getPath(), "Patch path");
-        List<String> segments = PointerUtils.splitPointerSegmentsList(targetPath);
+        String targetPath = normalizePatchPointer(patch.getPath());
+        List<String> segments = splitPatchSegments(targetPath);
 
-        Node before = cloneNode(readNode(document, segments, LookupMode.BEFORE, targetPath));
+        Node before = cloneNode(readPatchNode(document, segments, LookupMode.BEFORE, targetPath));
         JsonPatch.Op op = patch.getOp();
 
         switch (patch.getOp()) {
             case ADD:
-                applyAdd(document, segments, patch.getVal().clone(), targetPath);
+                applyAdd(document, segments, clonePatchValue(patch.getVal()), targetPath);
                 break;
             case REPLACE:
-                applyReplace(document, segments, patch.getVal().clone(), targetPath);
+                applyReplace(document, segments, clonePatchValue(patch.getVal()), targetPath);
                 break;
             case REMOVE:
                 applyRemove(document, segments, targetPath);
@@ -47,7 +48,7 @@ final class PatchEngine {
 
         Node after = patch.getOp() == JsonPatch.Op.REMOVE
                 ? null
-                : cloneNode(readNode(document, segments, LookupMode.AFTER, targetPath));
+                : cloneNode(readPatchNode(document, segments, LookupMode.AFTER, targetPath));
         List<String> cascadeScopes = PointerUtils.ancestorPointers(normalizedScope, true);
         return new PatchResult(targetPath, before, after, op, normalizedScope, cascadeScopes);
     }
@@ -110,137 +111,113 @@ final class PatchEngine {
     }
 
     private void applyAdd(Node root, List<String> segments, Node value, String path) {
-        ParentContext ctx = resolveParent(root, segments, true, path);
+        if ("/".equals(path) || path.length() == 0) {
+            throw new IllegalStateException("ADD operation cannot target document root");
+        }
+        PatchParentContext ctx = resolvePatchParent(root, segments, path, false);
         try {
             Node parent = ctx.parent;
-            String leaf = ctx.leaf;
+            String leaf = ctx.key;
+            boolean append = "-".equals(leaf);
 
-            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
-            if (existingProperties != null && existingProperties.containsKey(leaf)) {
-                ensureMutableProperties(parent).put(leaf, value);
+            List<Node> items = parent.getItems();
+            if (isPatchArrayIndexSegment(leaf)) {
+                if (items == null) {
+                    if (append) {
+                        throw new IllegalStateException("Append token '-' requires array at " + path);
+                    }
+                    throw new IllegalStateException("Array index segment requires array at " + path);
+                }
+                List<Node> mutable = ensureMutableItems(parent);
+                if (append) {
+                    mutable.add(value);
+                    return;
+                }
+                int index = parsePatchArrayIndex(leaf, path);
+                if (index < 0 || index > mutable.size()) {
+                    throw new IllegalStateException("Array index out of bounds in path: " + path);
+                }
+                mutable.add(index, value);
                 return;
             }
 
-            List<Node> items = parent.getItems();
-            if (items != null) {
-                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
-                    List<Node> mutable = ensureMutableItems(parent);
-                    if ("-".equals(leaf)) {
-                        mutable.add(value);
-                        return;
-                    }
-                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
-                    if (index < 0 || index > mutable.size()) {
-                        throw new IllegalStateException("Array index out of bounds for add: " + path);
-                    }
-                    mutable.add(index, value);
-                    return;
-                }
-                if (existingProperties == null) {
-                    throw new IllegalStateException("Expected numeric array index in path: " + path);
-                }
-            }
-
-            if ("-".equals(leaf)) {
-                throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
-            }
-            parent.properties(leaf, value);
+            Map<String, Node> properties = ensureMutableProperties(parent);
+            properties.put(leaf, value);
         } catch (RuntimeException ex) {
-            ctx.rollback(this);
+            rollbackPatchCreated(ctx.createdNodes);
             throw ex;
         }
     }
 
     private void applyReplace(Node root, List<String> segments, Node value, String path) {
-        ParentContext ctx = resolveParent(root, segments, true, path);
+        if ("/".equals(path) || path.length() == 0) {
+            throw new IllegalStateException("REPLACE operation cannot target document root");
+        }
+        PatchParentContext ctx = resolvePatchParent(root, segments, path, false);
         try {
             Node parent = ctx.parent;
-            String leaf = ctx.leaf;
+            String leaf = ctx.key;
 
-            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
-            if (existingProperties != null && existingProperties.containsKey(leaf)) {
-                ensureMutableProperties(parent).put(leaf, value);
+            List<Node> items = parent.getItems();
+            if (isPatchArrayIndexSegment(leaf)) {
+                if (items == null) {
+                    throw new IllegalStateException("Array index segment requires array at " + path);
+                }
+                int index = parsePatchArrayIndex(leaf, path);
+                if (index < 0 || index >= items.size()) {
+                    throw new IllegalStateException("Array index out of bounds in path: " + path);
+                }
+                List<Node> mutable = ensureMutableItems(parent);
+                mutable.set(index, value);
                 return;
             }
 
-            List<Node> items = parent.getItems();
-            if (items != null) {
-                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
-                    if ("-".equals(leaf)) {
-                        throw new IllegalStateException("Replace does not support append token at path: " + path);
-                    }
-                    List<Node> mutable = ensureMutableItems(parent);
-                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
-                    if (index < 0 || index >= mutable.size()) {
-                        throw new IllegalStateException("Array index out of bounds for replace: " + path);
-                    }
-                    mutable.set(index, value);
-                    return;
-                }
-                if (existingProperties == null) {
-                    throw new IllegalStateException("Expected numeric array index in path: " + path);
-                }
-            }
-
-            if ("-".equals(leaf)) {
-                throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
-            }
-            parent.properties(leaf, value);
+            Map<String, Node> properties = ensureMutableProperties(parent);
+            properties.put(leaf, value);
         } catch (RuntimeException ex) {
-            ctx.rollback(this);
+            rollbackPatchCreated(ctx.createdNodes);
             throw ex;
         }
     }
 
     private void applyRemove(Node root, List<String> segments, String path) {
-        ParentContext ctx = resolveParent(root, segments, false, path);
+        if ("/".equals(path) || path.length() == 0) {
+            throw new IllegalStateException("REMOVE operation cannot target document root");
+        }
+        PatchParentContext ctx = resolvePatchParent(root, segments, path, true);
         try {
             Node parent = ctx.parent;
-            String leaf = ctx.leaf;
+            String leaf = ctx.key;
 
-            Map<String, Node> existingProperties = ensureMutableProperties(parent, false);
-            if (existingProperties != null && existingProperties.containsKey(leaf)) {
-                existingProperties.remove(leaf);
+            List<Node> items = parent.getItems();
+            if (isPatchArrayIndexSegment(leaf)) {
+                if (items == null) {
+                    throw new IllegalStateException("Array index segment requires array at " + path);
+                }
+                int index = parsePatchArrayIndex(leaf, path);
+                if (index < 0 || index >= items.size()) {
+                    throw new IllegalStateException("Array index out of bounds in path: " + path);
+                }
+                List<Node> mutable = ensureMutableItems(parent);
+                mutable.remove(index);
                 return;
             }
 
-            List<Node> items = parent.getItems();
-            if (items != null) {
-                if ("-".equals(leaf) || PointerUtils.isArrayIndexSegment(leaf)) {
-                    if ("-".equals(leaf)) {
-                        throw new IllegalStateException("Remove does not support append token at path: " + path);
-                    }
-                    List<Node> mutable = ensureMutableItems(parent);
-                    int index = PointerUtils.parseArrayIndexOrThrow(leaf, path);
-                    if (index < 0 || index >= mutable.size()) {
-                        throw new IllegalStateException("Array index out of bounds for remove: " + path);
-                    }
-                    mutable.remove(index);
-                    return;
-                }
-                if (existingProperties == null) {
-                    throw new IllegalStateException("Expected numeric array index in path: " + path);
-                }
-            }
-
-            if ("-".equals(leaf)) {
-                throw new IllegalStateException("Append token '-' requires array parent at path: " + path);
-            }
             Map<String, Node> properties = ensureMutableProperties(parent, false);
             if (properties == null || !properties.containsKey(leaf)) {
-                throw new IllegalStateException("Path does not exist for remove: " + path);
+                throw new IllegalStateException("Path does not exist: " + path);
             }
             properties.remove(leaf);
         } catch (RuntimeException ex) {
-            ctx.rollback(this);
+            rollbackPatchCreated(ctx.createdNodes);
             throw ex;
         }
     }
 
-    private Node readNode(Node root,
-                          List<String> segments,
-                          LookupMode mode,
-                          String path) {
+    private Node readPatchNode(Node root,
+                               List<String> segments,
+                               LookupMode mode,
+                               String path) {
         if (segments.isEmpty()) {
             return root;
         }
@@ -248,7 +225,7 @@ final class PatchEngine {
         for (int i = 0; i < segments.size(); i++) {
             String segment = segments.get(i);
             boolean last = i == segments.size() - 1;
-            current = descendForRead(current, segment, last, mode, path);
+            current = descendPatchForRead(current, segment, last, mode, path);
             if (current == null) {
                 return null;
             }
@@ -256,22 +233,16 @@ final class PatchEngine {
         return current;
     }
 
-    private Node descendForRead(Node current,
-                                String segment,
-                                boolean last,
-                                LookupMode mode,
-                                String path) {
+    private Node descendPatchForRead(Node current,
+                                     String segment,
+                                     boolean last,
+                                     LookupMode mode,
+                                     String path) {
         if (current == null) {
             return null;
         }
-
-        Map<String, Node> properties = ensureMutableProperties(current, false);
-        if (properties != null && properties.containsKey(segment)) {
-            return properties.get(segment);
-        }
-
         List<Node> items = current.getItems();
-        if (items != null && ("-".equals(segment) || PointerUtils.isArrayIndexSegment(segment))) {
+        if (items != null) {
             if ("-".equals(segment)) {
                 if (!last) {
                     throw new IllegalStateException("Append token '-' must be final segment: " + path);
@@ -281,13 +252,155 @@ final class PatchEngine {
                 }
                 return items.isEmpty() ? null : items.get(items.size() - 1);
             }
-            int index = PointerUtils.parseArrayIndexOrThrow(segment, path);
+            int index = parsePatchArrayIndex(segment, path);
             if (index < 0 || index >= items.size()) {
                 return null;
             }
             return items.get(index);
         }
-        return null;
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        if (properties == null) {
+            return null;
+        }
+        return properties.get(segment);
+    }
+
+    private PatchParentContext resolvePatchParent(Node root,
+                                                  List<String> segments,
+                                                  String originalPath,
+                                                  boolean removeOperation) {
+        if (segments.isEmpty()) {
+            throw new IllegalStateException("Cannot apply patch to document root");
+        }
+
+        Node current = root;
+        List<CreatedNode> createdNodes = new ArrayList<>();
+        for (int i = 0; i < segments.size() - 1; i++) {
+            String segment = segments.get(i);
+            String pointer = patchPointerPrefix(segments, i + 1);
+            current = descendPatchForMutation(current, segment, pointer, removeOperation, createdNodes);
+        }
+        return new PatchParentContext(current, segments.get(segments.size() - 1), createdNodes);
+    }
+
+    private Node descendPatchForMutation(Node current,
+                                         String segment,
+                                         String pointer,
+                                         boolean removeOperation,
+                                         List<CreatedNode> createdNodes) {
+        if (current == null) {
+            throw new IllegalStateException("Path does not exist: " + pointer);
+        }
+
+        if (isPatchArrayIndexSegment(segment)) {
+            List<Node> items = current.getItems();
+            if (items == null) {
+                throw new IllegalStateException("Array index segment requires array at " + pointer);
+            }
+            int index = parsePatchArrayIndex(segment, pointer);
+            if (index < 0 || index >= items.size()) {
+                throw new IllegalStateException("Array index out of bounds in path: " + pointer);
+            }
+            Node child = items.get(index);
+            if (child == null) {
+                throw new IllegalStateException("Array index out of bounds in path: " + pointer);
+            }
+            return child;
+        }
+
+        Map<String, Node> properties = ensureMutableProperties(current, false);
+        Node child = properties != null ? properties.get(segment) : null;
+        if (child == null) {
+            if (removeOperation) {
+                throw new IllegalStateException("Path does not exist: " + pointer);
+            }
+            child = new Node();
+            boolean mapWasAbsent = properties == null;
+            ensureMutableProperties(current).put(segment, child);
+            if (createdNodes != null) {
+                createdNodes.add(CreatedNode.forProperty(current, segment, mapWasAbsent));
+            }
+        }
+        return child;
+    }
+
+    private void rollbackPatchCreated(List<CreatedNode> createdNodes) {
+        if (createdNodes == null || createdNodes.isEmpty()) {
+            return;
+        }
+        rollbackCreatedNodes(createdNodes);
+    }
+
+    private String normalizePatchPointer(String pointer) {
+        if (pointer == null || pointer.length() == 0) {
+            return "/";
+        }
+        return pointer.charAt(0) == '/' ? pointer : "/" + pointer;
+    }
+
+    private List<String> splitPatchSegments(String pointer) {
+        String normalized = normalizePatchPointer(pointer);
+        if ("/".equals(normalized) || normalized.length() == 0) {
+            return new ArrayList<String>();
+        }
+        String raw = normalized.charAt(0) == '/' ? normalized.substring(1) : normalized;
+        if (raw.length() == 0) {
+            return new ArrayList<String>();
+        }
+        return new ArrayList<String>(Arrays.asList(raw.split("/", -1)));
+    }
+
+    private boolean isPatchArrayIndexSegment(String segment) {
+        if (segment == null || segment.length() == 0) {
+            return false;
+        }
+        if ("-".equals(segment)) {
+            return true;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            char c = segment.charAt(i);
+            if (c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private int parsePatchArrayIndex(String segment, String path) {
+        if (segment == null || segment.length() == 0) {
+            throw new IllegalStateException("Expected numeric array index in path: " + path);
+        }
+        try {
+            return Integer.parseInt(segment);
+        } catch (NumberFormatException ex) {
+            throw new IllegalStateException("Expected numeric array index in path: " + path);
+        }
+    }
+
+    private String patchPointerPrefix(List<String> segments, int length) {
+        if (segments == null || length <= 0) {
+            return "/";
+        }
+        int limit = Math.min(length, segments.size());
+        if (limit <= 0) {
+            return "/";
+        }
+        StringBuilder pointer = new StringBuilder();
+        for (int i = 0; i < limit; i++) {
+            pointer.append('/');
+            String segment = segments.get(i);
+            if (segment != null) {
+                pointer.append(segment);
+            }
+        }
+        return pointer.length() == 0 ? "/" : pointer.toString();
+    }
+
+    private Node clonePatchValue(Node value) {
+        if (value == null) {
+            return new Node().value(null);
+        }
+        return value.clone();
     }
 
     private ParentContext resolveParent(Node root,
@@ -488,6 +601,18 @@ final class PatchEngine {
             if (createdNodes != null && !createdNodes.isEmpty()) {
                 engine.rollbackCreatedNodes(createdNodes);
             }
+        }
+    }
+
+    private static final class PatchParentContext {
+        final Node parent;
+        final String key;
+        final List<CreatedNode> createdNodes;
+
+        PatchParentContext(Node parent, String key, List<CreatedNode> createdNodes) {
+            this.parent = parent;
+            this.key = key;
+            this.createdNodes = createdNodes;
         }
     }
 

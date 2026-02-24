@@ -20,13 +20,23 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
     private static final String OPERATION_REQUEST_BLUE_ID = "Operation Request";
 
     private final WorkflowStepRunner stepRunner;
+    private final boolean allowDirectOperationShape;
 
     public SequentialWorkflowOperationProcessor() {
-        this(WorkflowStepRunner.defaultRunner());
+        this(WorkflowStepRunner.defaultRunner(), false);
     }
 
     public SequentialWorkflowOperationProcessor(WorkflowStepRunner stepRunner) {
+        this(stepRunner, false);
+    }
+
+    public SequentialWorkflowOperationProcessor(boolean allowDirectOperationShape) {
+        this(WorkflowStepRunner.defaultRunner(), allowDirectOperationShape);
+    }
+
+    public SequentialWorkflowOperationProcessor(WorkflowStepRunner stepRunner, boolean allowDirectOperationShape) {
         this.stepRunner = stepRunner;
+        this.allowDirectOperationShape = allowDirectOperationShape;
     }
 
     @Override
@@ -50,7 +60,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         }
         NodeProvider nodeProvider = context.nodeProvider();
 
-        Node requestNode = extractOperationRequestNode(eventNode);
+        Node requestNode = extractOperationRequestNode(eventNode, nodeProvider);
         if (requestNode == null) {
             return false;
         }
@@ -105,8 +115,8 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         return channel != null && !channel.trim().isEmpty() ? channel.trim() : null;
     }
 
-    private Node extractOperationRequestNode(Node eventNode) {
-        if (isOperationRequestNode(eventNode)) {
+    private Node extractOperationRequestNode(Node eventNode, NodeProvider nodeProvider) {
+        if (allowDirectOperationShape && isOperationRequestNode(eventNode)) {
             return eventNode;
         }
         if (!TimelineEventSupport.isConversationOrMyOSTimelineEntry(eventNode)) {
@@ -116,7 +126,7 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
             return null;
         }
         Node message = eventNode.getProperties().get("message");
-        if (isOperationRequestNode(message)) {
+        if (isOperationRequestNode(message) && isTypedOperationRequestNode(message, nodeProvider)) {
             return message;
         }
         return null;
@@ -154,17 +164,10 @@ public class SequentialWorkflowOperationProcessor implements HandlerProcessor<Se
         if (!WorkflowContractSupport.matchesEventFilter(eventNode, contract.getEvent(), nodeProvider)) {
             return false;
         }
-        if (!requiresOperationRequestTypeGate(eventNode, requestNode)) {
-            return true;
+        if (eventNode == requestNode) {
+            return allowDirectOperationShape;
         }
-        if (contract.getEvent() != null) {
-            return true;
-        }
-        return isTypedOperationRequestNode(requestNode, nodeProvider);
-    }
-
-    private boolean requiresOperationRequestTypeGate(Node eventNode, Node requestNode) {
-        return eventNode != null && requestNode != null && eventNode != requestNode;
+        return true;
     }
 
     private Node loadOperationNode(SequentialWorkflowOperation contract, ProcessorExecutionContext context) {
