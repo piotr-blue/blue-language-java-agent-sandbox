@@ -8,8 +8,8 @@ import blue.language.samples.paynote.types.common.CommonTypes;
 import blue.language.samples.paynote.types.domain.CookbookEvents;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
-import blue.language.samples.paynote.types.payments.PaymentRequests;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
+import blue.language.types.payments.PaymentRequests;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -99,23 +99,23 @@ public final class PayNoteCookbookExamples {
                         .triggerPayment("SellerShare",
                                 PaymentRequests.InternalLedgerTransferRequested.class,
                                 payload -> payload
-                                        .put("processor", "guarantorChannel")
-                                        .put("payer", "payerChannel")
-                                        .put("payee", "payeeChannel")
-                                        .put("currency", "USD")
-                                        .put("amount", 38250)
-                                        .put("ledgerAccountFrom", "wallet_marketplace")
-                                        .put("ledgerAccountTo", "wallet_seller"))
+                                        .processor("guarantorChannel")
+                                        .payer("payerChannel")
+                                        .payee("payeeChannel")
+                                        .currency("USD")
+                                        .amountMinor(38250)
+                                        .ledgerAccountFrom("wallet_marketplace")
+                                        .ledgerAccountTo("wallet_seller"))
                         .triggerPayment("PlatformFee",
                                 PaymentRequests.InternalLedgerTransferRequested.class,
                                 payload -> payload
-                                        .put("processor", "guarantorChannel")
-                                        .put("payer", "payerChannel")
-                                        .put("payee", "platformChannel")
-                                        .put("currency", "USD")
-                                        .put("amount", 6750)
-                                        .put("ledgerAccountFrom", "wallet_marketplace")
-                                        .put("ledgerAccountTo", "wallet_platform")))
+                                        .processor("guarantorChannel")
+                                        .payer("payerChannel")
+                                        .payee("platformChannel")
+                                        .currency("USD")
+                                        .amountMinor(6750)
+                                        .ledgerAccountFrom("wallet_marketplace")
+                                        .ledgerAccountTo("wallet_platform")))
                 .participant("platformChannel", "Platform settlement account")
                 .buildDocument();
     }
@@ -286,13 +286,13 @@ public final class PayNoteCookbookExamples {
                         "IssueMatchingTransfer",
                         PaymentRequests.InternalLedgerTransferRequested.class,
                         payload -> payload
-                                .put("processor", "guarantorChannel")
-                                .put("payer", "matchingFund")
-                                .put("payee", "charityWallet")
-                                .put("currency", "USD")
-                                .put("amount", 10000)
-                                .put("ledgerAccountFrom", "fund_matching")
-                                .put("ledgerAccountTo", "charity_primary")))
+                                .processor("guarantorChannel")
+                                .payer("matchingFund")
+                                .payee("charityWallet")
+                                .currency("USD")
+                                .amountMinor(10000)
+                                .ledgerAccountFrom("fund_matching")
+                                .ledgerAccountTo("charity_primary")))
                 .buildDocument();
     }
 
@@ -360,12 +360,12 @@ public final class PayNoteCookbookExamples {
                         "CreditLinePaymentRequested",
                         PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
                         payload -> payload
-                                .put("processor", "guarantorChannel")
-                                .put("payer", "merchantAccount")
-                                .put("payee", "customerAccount")
-                                .put("currency", "USD")
-                                .put("amount", 10000)
-                                .put("creditLineId", "credit-line-123")))
+                                .processor("guarantorChannel")
+                                .payer("merchantAccount")
+                                .payee("customerAccount")
+                                .currency("USD")
+                                .amountMinor(10000)
+                                .creditLineId("credit-line-123")))
                 .buildDocument();
     }
 
@@ -378,13 +378,13 @@ public final class PayNoteCookbookExamples {
                         "IssueAchRefund",
                         PaymentRequests.AchTransferRequested.class,
                         payload -> payload
-                                .put("processor", "guarantorChannel")
-                                .put("payer", "merchantBank")
-                                .put("payee", "customerBank")
-                                .put("currency", "USD")
-                                .put("amount", 25000)
-                                .put("sourceIban", "US001")
-                                .put("destinationIban", "US002")))
+                                .processor("guarantorChannel")
+                                .payer("merchantBank")
+                                .payee("customerBank")
+                                .currency("USD")
+                                .amountMinor(25000)
+                                .routingNumber("US001")
+                                .accountNumber("US002")))
                 .buildDocument();
     }
 
@@ -400,13 +400,13 @@ public final class PayNoteCookbookExamples {
                     .steps(steps -> steps.triggerPayment("TriggerCryptoPayout",
                             PaymentRequests.CryptoTransferRequested.class,
                             payload -> payload
-                                    .put("processor", "guarantorChannel")
-                                    .put("payer", "treasury")
-                                    .put("payee", "beneficiary")
-                                    .put("currency", "USD")
-                                    .put("amount", 7500)
-                                    .put("asset", "USDC")
-                                    .put("walletAddress", "0xabc123")))
+                                    .processor("guarantorChannel")
+                                    .payer("treasury")
+                                    .payee("beneficiary")
+                                    .currency("USD")
+                                    .amountMinor(7500)
+                                    .asset("USDC")
+                                    .toAddress("0xabc123")))
                     .done()
                 .buildDocument();
     }
@@ -423,13 +423,13 @@ public final class PayNoteCookbookExamples {
                         "IssueInternalLedgerTransfer",
                         PaymentRequests.InternalLedgerTransferRequested.class,
                         payload -> payload
-                                .put("processor", "guarantorChannel")
-                                .put("payer", "kyc_pool")
-                                .put("payee", "approved_user_wallet")
-                                .put("currency", "USD")
-                                .put("amount", 6000)
-                                .put("ledgerAccountFrom", "pool_account")
-                                .put("ledgerAccountTo", "user_wallet")))
+                                .processor("guarantorChannel")
+                                .payer("kyc_pool")
+                                .payee("approved_user_wallet")
+                                .currency("USD")
+                                .amountMinor(6000)
+                                .ledgerAccountFrom("pool_account")
+                                .ledgerAccountTo("user_wallet")))
                 .buildDocument();
     }
 }

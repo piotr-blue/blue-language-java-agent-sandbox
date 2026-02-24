@@ -9,9 +9,9 @@ import blue.language.samples.paynote.types.domain.RecruitmentEvents;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
-import blue.language.samples.paynote.types.payments.PaymentRequests;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
+import blue.language.types.payments.PaymentRequests;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,9 +70,10 @@ public final class TypeAliases {
     public static final String COOKBOOK_INSPECTION_PASSED = "Cookbook/Inspection Passed";
     public static final String PAYMENTS_PAYMENT_REQUESTED = "Payments/Payment Requested";
     public static final String PAYMENTS_ACH_TRANSFER_REQUESTED = "Payments/Ach Transfer Requested";
-    public static final String PAYMENTS_CARD_CHARGE_REQUESTED = "Payments/Card Charge Requested";
-    public static final String PAYMENTS_CARD_STORED_CREDENTIAL_CHARGE_REQUESTED =
-            "Payments/Card Stored Credential Charge Requested";
+    public static final String PAYMENTS_SEPA_TRANSFER_REQUESTED = "Payments/Sepa Transfer Requested";
+    public static final String PAYMENTS_WIRE_TRANSFER_REQUESTED = "Payments/Wire Transfer Requested";
+    public static final String PAYMENTS_CARD_PAYMENT_REQUESTED = "Payments/Card Payment Requested";
+    public static final String PAYMENTS_CARD_TOKEN_PAYMENT_REQUESTED = "Payments/Card Token Payment Requested";
     public static final String PAYMENTS_CREDIT_LINE_MERCHANT_TO_CARDHOLDER_PAYMENT_REQUESTED =
             "Payments/Credit Line Merchant To Cardholder Payment Requested";
     public static final String PAYMENTS_INTERNAL_LEDGER_TRANSFER_REQUESTED =
@@ -145,9 +146,10 @@ public final class TypeAliases {
         aliases.put(CookbookEvents.InspectionPassed.class, COOKBOOK_INSPECTION_PASSED);
         aliases.put(PaymentRequests.PaymentRequested.class, PAYMENTS_PAYMENT_REQUESTED);
         aliases.put(PaymentRequests.AchTransferRequested.class, PAYMENTS_ACH_TRANSFER_REQUESTED);
-        aliases.put(PaymentRequests.CardChargeRequested.class, PAYMENTS_CARD_CHARGE_REQUESTED);
-        aliases.put(PaymentRequests.CardStoredCredentialChargeRequested.class,
-                PAYMENTS_CARD_STORED_CREDENTIAL_CHARGE_REQUESTED);
+        aliases.put(PaymentRequests.SepaTransferRequested.class, PAYMENTS_SEPA_TRANSFER_REQUESTED);
+        aliases.put(PaymentRequests.WireTransferRequested.class, PAYMENTS_WIRE_TRANSFER_REQUESTED);
+        aliases.put(PaymentRequests.CardPaymentRequested.class, PAYMENTS_CARD_PAYMENT_REQUESTED);
+        aliases.put(PaymentRequests.CardTokenPaymentRequested.class, PAYMENTS_CARD_TOKEN_PAYMENT_REQUESTED);
         aliases.put(PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
                 PAYMENTS_CREDIT_LINE_MERCHANT_TO_CARDHOLDER_PAYMENT_REQUESTED);
         aliases.put(PaymentRequests.InternalLedgerTransferRequested.class, PAYMENTS_INTERNAL_LEDGER_TRANSFER_REQUESTED);

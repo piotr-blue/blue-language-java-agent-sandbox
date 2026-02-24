@@ -1,7 +1,7 @@
 package blue.language.samples.paynote.dsl;
 
 import blue.language.model.Node;
-import blue.language.samples.paynote.types.payments.PaymentRequests;
+import blue.language.types.payments.PaymentRequests;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,11 +16,11 @@ class TriggerPaymentDslTest {
         steps.triggerPayment("TriggerAch",
                 PaymentRequests.AchTransferRequested.class,
                 payload -> payload
-                        .put("processor", "guarantorChannel")
-                        .put("currency", "EUR")
-                        .put("amount", 1999)
-                        .put("sourceIban", "DE111")
-                        .put("destinationIban", "DE222"));
+                        .processor("guarantorChannel")
+                        .currency("EUR")
+                        .amountMinor(1999)
+                        .routingNumber("DE111")
+                        .accountNumber("DE222"));
 
         Node root = new Node().items(steps.build());
         assertEquals(TypeAliases.CONVERSATION_TRIGGER_EVENT, root.getAsText("/0/type/value"));
@@ -35,7 +35,7 @@ class TriggerPaymentDslTest {
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> steps.triggerPayment(
                 PaymentRequests.InternalLedgerTransferRequested.class,
-                payload -> payload.put("amount", 500)));
+                payload -> payload.amountMinor(500)));
         assertEquals("triggerPayment requires non-empty processor field", ex.getMessage());
     }
 }

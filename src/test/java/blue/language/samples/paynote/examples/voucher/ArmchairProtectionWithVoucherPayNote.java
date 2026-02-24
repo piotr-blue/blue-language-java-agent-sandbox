@@ -3,7 +3,7 @@ package blue.language.samples.paynote.examples.voucher;
 import blue.language.model.Node;
 import blue.language.samples.paynote.sdk.PayNotes;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
-import blue.language.samples.paynote.types.payments.PaymentRequests;
+import blue.language.types.payments.PaymentRequests;
 
 public final class ArmchairProtectionWithVoucherPayNote {
 
@@ -29,13 +29,13 @@ public final class ArmchairProtectionWithVoucherPayNote {
                         "SynchronyCreditLinePaymentRequested",
                         PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
                         payload -> payload
-                                .put("processor", "guarantorChannel")
-                                .put("payer", "payeeChannel")
-                                .put("payee", "payerChannel")
-                                .put("currency", "USD")
-                                .put("amount", 10000)
-                                .put("creditLineId", "synchrony-facility-001")
-                                .putNode("attachedPayNote", BalancedBowlVoucherPayNote.templateDoc())))
+                                .processor("guarantorChannel")
+                                .payer("payeeChannel")
+                                .payee("payerChannel")
+                                .currency("USD")
+                                .amountMinor(10000)
+                                .creditLineId("synchrony-facility-001")
+                                .attachPayNote(BalancedBowlVoucherPayNote.templateDoc())))
                 .buildDocument();
     }
 }
