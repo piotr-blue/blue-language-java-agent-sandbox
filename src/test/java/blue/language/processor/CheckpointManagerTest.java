@@ -2,7 +2,6 @@ package blue.language.processor;
 
 import blue.language.model.Node;
 import blue.language.processor.model.ChannelEventCheckpoint;
-import blue.language.processor.model.MarkerContract;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
 import org.junit.jupiter.api.Test;
@@ -10,8 +9,9 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Validates checkpoint marker lifecycle operations without exercising the full engine.
@@ -49,6 +49,19 @@ final class CheckpointManagerTest {
         assertEquals("payload", stored.getValue());
         assertEquals(20L, runtime.totalGas(), "Checkpoint update should charge gas");
         assertEquals("nextSig", record.lastEventSignature);
+
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        assertNotNull(checkpoint);
+        assertEquals("nextSig", checkpoint.lastSignature("testChannel"));
+        Node markerStored = checkpoint.lastEvent("testChannel");
+        assertNotNull(markerStored);
+        assertEquals("payload", markerStored.getValue());
+
+        eventNode.value("mutated-after-persist");
+        Node markerStoredAfterMutation = checkpoint.lastEvent("testChannel");
+        assertNotNull(markerStoredAfterMutation);
+        assertEquals("payload", markerStoredAfterMutation.getValue(),
+                "Checkpoint marker should store cloned event snapshots");
     }
 
     @Test
@@ -72,6 +85,44 @@ final class CheckpointManagerTest {
         assertNull(nested);
     }
 
-    private static final class DummyMarker extends MarkerContract {
+    @Test
+    void findsCheckpointRecordsAndDerivesExistingSignatureWhenMissingExplicitSignature() {
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? String.valueOf(node.getValue()) : null);
+        ContractBundle bundle = ContractBundle.builder().build();
+        manager.ensureCheckpointMarker("/", bundle);
+
+        ChannelEventCheckpoint checkpoint = (ChannelEventCheckpoint) bundle.marker(ProcessorContractConstants.KEY_CHECKPOINT);
+        checkpoint.putEvent("channelA", new Node().value("prior"));
+
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(bundle, "channelA");
+        assertNotNull(record);
+        assertEquals("prior", record.lastEventSignature);
+    }
+
+    @Test
+    void detectsDuplicateEventsViaSignatures() {
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? String.valueOf(node.getValue()) : null);
+        ContractBundle bundle = ContractBundle.builder().build();
+        manager.ensureCheckpointMarker("/", bundle);
+
+        CheckpointManager.CheckpointRecord missing = manager.findCheckpoint(bundle, "missing");
+        assertFalse(manager.isDuplicate(missing, "sig"), "Missing record must not report duplicates");
+
+        CheckpointManager.CheckpointRecord record = manager.findCheckpoint(bundle, "channelX");
+        Node eventNode = new Node().value("value-x");
+        manager.persist("/", bundle, record, "sig-x", eventNode);
+
+        assertTrue(manager.isDuplicate(record, "sig-x"));
+    }
+
+    @Test
+    void ignoresPersistenceWhenRecordIsNull() {
+        DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
+        CheckpointManager manager = new CheckpointManager(runtime, node -> node != null ? String.valueOf(node.getValue()) : null);
+        ContractBundle bundle = ContractBundle.builder().build();
+
+        assertDoesNotThrow(() -> manager.persist("/", bundle, null, "sig", new Node().value("v")));
     }
 }

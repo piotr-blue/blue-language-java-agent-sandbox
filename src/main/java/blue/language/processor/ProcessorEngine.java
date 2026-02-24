@@ -5,18 +5,16 @@ import blue.language.processor.model.ChannelContract;
 import blue.language.processor.model.Contract;
 import blue.language.processor.model.HandlerContract;
 import blue.language.processor.model.JsonPatch;
+import blue.language.processor.util.NodeCanonicalizer;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.ProcessorPointerConstants;
-import blue.language.utils.NodeToMapListOrValue;
-import blue.language.utils.UncheckedObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.erdtman.jcs.JsonCanonicalizer;
 
 final class ProcessorEngine {
 
@@ -75,12 +73,12 @@ final class ProcessorEngine {
 
     @SuppressWarnings("unchecked")
     static ChannelMatch evaluateChannel(DocumentProcessor owner,
+                                            String bindingKey,
                                             ChannelContract contract,
                                             ContractBundle bundle,
                                             String scopePath,
                                             Node event) {
-        ChannelProcessor<? extends ChannelContract> processor =
-                owner.registry().lookupChannel((Class<? extends ChannelContract>) contract.getClass()).orElse(null);
+        ChannelProcessor<? extends ChannelContract> processor = owner.registry().lookupChannel(contract).orElse(null);
         if (processor == null) {
             return ChannelMatch.noMatch();
         }
@@ -93,31 +91,32 @@ final class ProcessorEngine {
         @SuppressWarnings("unchecked")
         ChannelProcessor<ChannelContract> typed = (ChannelProcessor<ChannelContract>) processor;
         ChannelEvaluationContext context = new ChannelEvaluationContext(scopePath,
+                bindingKey,
                 clonedEvent,
                 eventObject,
-                bundle.markers());
-        boolean matches = typed.matches(contract, context);
-        String eventId = matches ? typed.eventId(contract, context) : null;
-        return new ChannelMatch(matches, eventId, typed, matches ? context : null);
+                bundle.markers(),
+                bundle,
+                owner.registry());
+        ChannelProcessorEvaluation evaluation = typed.evaluate(contract, context);
+        if (evaluation == null || !evaluation.matches()) {
+            return ChannelMatch.noMatch();
+        }
+        Node eventNode = evaluation.eventNode() != null ? evaluation.eventNode() : context.event();
+        return new ChannelMatch(true, evaluation.eventId(), typed, context, eventNode, evaluation.deliveries());
     }
 
     static Node createLifecycleInitiatedEvent(String documentId) {
-        Node event = new Node().properties("type", new Node().value("Document Processing Initiated"));
+        Node event = new Node()
+                .type(new Node().blueId("Core/Document Processing Initiated"))
+                .properties("type", new Node()
+                .value("Core/Document Processing Initiated")
+                .type(new Node().blueId("Core/Document Processing Initiated")));
         event.properties("documentId", new Node().value(documentId));
         return event;
     }
 
     static String canonicalSignature(Node node) {
-        if (node == null) {
-            return null;
-        }
-        Object canonical = NodeToMapListOrValue.get(node);
-        try {
-            String json = UncheckedObjectMapper.JSON_MAPPER.writeValueAsString(canonical);
-            return new JsonCanonicalizer(json).getEncodedString();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to canonicalize node for checkpoint comparison", ex);
-        }
+        return NodeCanonicalizer.canonicalSignature(node);
     }
 
     static Node createDocumentUpdateEvent(DocumentProcessingRuntime.DocumentUpdateData data, String scopePath) {
@@ -259,7 +258,15 @@ final class ProcessorEngine {
                          ContractBundle bundle,
                          JsonPatch patch,
                          boolean allowReservedMutation) {
-            scopeExecutor.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+            handlePatch(scopePath, bundle, patch, allowReservedMutation, false);
+        }
+
+        void handlePatch(String scopePath,
+                         ContractBundle bundle,
+                         JsonPatch patch,
+                         boolean allowReservedMutation,
+                         boolean allowTerminatedWork) {
+            scopeExecutor.handlePatch(scopePath, bundle, patch, allowReservedMutation, allowTerminatedWork);
         }
 
         ProcessorExecutionContext createContext(String scopePath,
@@ -290,6 +297,10 @@ final class ProcessorEngine {
 
         DocumentProcessingRuntime runtime() {
             return runtime;
+        }
+
+        DocumentProcessor owner() {
+            return owner;
         }
 
         boolean isScopeInactive(String scopePath) {
@@ -382,10 +393,13 @@ final class ProcessorEngine {
     @SuppressWarnings("unchecked")
     static void executeHandler(DocumentProcessor owner, HandlerContract contract, ProcessorExecutionContext context) {
         HandlerProcessor<? extends HandlerContract> processor = owner.registry()
-                .lookupHandler((Class<? extends HandlerContract>) contract.getClass())
+                .lookupHandler(contract)
                 .orElseThrow(() -> new IllegalStateException(
                         "No processor registered for contract type " + contract.getClass().getName()));
         HandlerProcessor<HandlerContract> typed = (HandlerProcessor<HandlerContract>) processor;
+        if (!typed.matches(contract, context)) {
+            return;
+        }
         typed.execute(contract, context);
     }
 
@@ -394,23 +408,29 @@ final class ProcessorEngine {
         final String eventId;
         final ChannelProcessor<ChannelContract> processor;
         final ChannelEvaluationContext context;
+        final Node eventNode;
+        final List<ChannelProcessorEvaluation.ChannelDelivery> deliveries;
 
         ChannelMatch(boolean matches,
                      String eventId,
                      ChannelProcessor<ChannelContract> processor,
-                     ChannelEvaluationContext context) {
+                     ChannelEvaluationContext context,
+                     Node eventNode,
+                     List<ChannelProcessorEvaluation.ChannelDelivery> deliveries) {
             this.matches = matches;
             this.eventId = eventId;
             this.processor = processor;
             this.context = context;
+            this.eventNode = eventNode;
+            this.deliveries = deliveries;
         }
 
         Node eventNode() {
-            return context != null ? context.event() : null;
+            return eventNode;
         }
 
         static ChannelMatch noMatch() {
-            return new ChannelMatch(false, null, null, null);
+            return new ChannelMatch(false, null, null, null, null, java.util.Collections.<ChannelProcessorEvaluation.ChannelDelivery>emptyList());
         }
     }
 

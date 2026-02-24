@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DocumentProcessingRuntimeScopeTest {
 
@@ -30,12 +32,14 @@ class DocumentProcessingRuntimeScopeTest {
     }
 
     @Test
-    void scopeApisRejectNonPointerScopeInputs() {
+    void scopeApisNormalizeNonPointerScopeInputs() {
         DocumentProcessingRuntime runtime = new DocumentProcessingRuntime(new Node());
 
-        assertThrows(IllegalArgumentException.class, () -> runtime.scope("scope"));
-        assertThrows(IllegalArgumentException.class, () -> runtime.existingScope("scope"));
-        assertThrows(IllegalArgumentException.class, () -> runtime.isScopeTerminated("scope"));
-        assertThrows(IllegalArgumentException.class, () -> runtime.chargeScopeEntry("scope"));
+        ScopeRuntimeContext normalized = runtime.scope("scope");
+        assertSame(normalized, runtime.scope("/scope"));
+        assertNull(runtime.existingScope("missing"));
+
+        runtime.chargeScopeEntry("scope");
+        assertTrue(runtime.totalGas() > 0L);
     }
 }

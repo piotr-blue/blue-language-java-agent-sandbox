@@ -53,17 +53,16 @@ class PointerUtilsTest {
     }
 
     @Test
-    void normalizePointerRejectsNonPointerPaths() {
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizePointer("x"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.normalizeScope("scope"));
+    void normalizePointerAddsLeadingSlashForNonPointerPaths() {
+        assertEquals("/x", PointerUtils.normalizePointer("x"));
+        assertEquals("/scope", PointerUtils.normalizeScope("scope"));
     }
 
     @Test
     void resolvePointerRejectsMalformedEscapes() {
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "/x~"));
         assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "/x~2"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("scope", "/x"));
-        assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "x"));
+        assertThrows(IllegalArgumentException.class, () -> PointerUtils.resolvePointer("/scope", "x~"));
     }
 
     @Test
@@ -164,7 +163,21 @@ class PointerUtilsTest {
         assertEquals("/scope/value", PointerUtils.appendEscapedPointerSegment("/scope", "value"));
         assertThrows(IllegalArgumentException.class,
                 () -> PointerUtils.appendEscapedPointerSegment("/scope", null));
-        assertThrows(IllegalArgumentException.class,
-                () -> PointerUtils.appendPointerSegment("scope", "value"));
+    }
+
+    @Test
+    void stripSlashesNormalizesNullBlankAndTrimmedSlashWrappedValues() {
+        assertEquals("", PointerUtils.stripSlashes(null));
+        assertEquals("", PointerUtils.stripSlashes("   "));
+        assertEquals("foo/bar", PointerUtils.stripSlashes(" /foo/bar/ "));
+        assertEquals("foo", PointerUtils.stripSlashes("///foo///"));
+    }
+
+    @Test
+    void joinRelativePointersBuildsNormalizedRelativePointers() {
+        assertEquals("/foo/bar", PointerUtils.joinRelativePointers("foo", "bar"));
+        assertEquals("/bar", PointerUtils.joinRelativePointers("", "bar"));
+        assertEquals("/foo", PointerUtils.joinRelativePointers("foo", ""));
+        assertEquals("/", PointerUtils.joinRelativePointers("", ""));
     }
 }

@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@TypeBlueId("ChannelEventCheckpoint")
+@TypeBlueId({"Core/Channel Event Checkpoint", "ChannelEventCheckpoint"})
 public class ChannelEventCheckpoint extends MarkerContract {
 
     private Map<String, Node> lastEvents = new LinkedHashMap<>();

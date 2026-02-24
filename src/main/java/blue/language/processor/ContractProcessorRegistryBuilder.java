@@ -1,6 +1,12 @@
 package blue.language.processor;
 
 import blue.language.processor.model.Contract;
+import blue.language.processor.registry.processors.CompositeTimelineChannelProcessor;
+import blue.language.processor.registry.processors.MyOSTimelineChannelProcessor;
+import blue.language.processor.registry.processors.OperationMarkerProcessor;
+import blue.language.processor.registry.processors.SequentialWorkflowHandlerProcessor;
+import blue.language.processor.registry.processors.SequentialWorkflowOperationProcessor;
+import blue.language.processor.registry.processors.TimelineChannelProcessor;
 
 import java.util.Objects;
 
@@ -20,6 +26,12 @@ public final class ContractProcessorRegistryBuilder {
     }
 
     public ContractProcessorRegistryBuilder registerDefaults() {
+        registry.registerChannel(new TimelineChannelProcessor());
+        registry.registerChannel(new CompositeTimelineChannelProcessor());
+        registry.registerChannel(new MyOSTimelineChannelProcessor());
+        registry.registerHandler(new SequentialWorkflowHandlerProcessor());
+        registry.registerHandler(new SequentialWorkflowOperationProcessor());
+        registry.registerMarker(new OperationMarkerProcessor());
         return this;
     }
 

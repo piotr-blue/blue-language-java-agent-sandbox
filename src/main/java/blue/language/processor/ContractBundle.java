@@ -7,6 +7,7 @@ import blue.language.processor.model.ProcessEmbedded;
 import blue.language.processor.model.ChannelEventCheckpoint;
 import blue.language.processor.util.ProcessorContractConstants;
 import blue.language.processor.util.PointerUtils;
+import blue.language.model.TypeBlueId;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -94,11 +95,44 @@ public final class ContractBundle {
         return sorted;
     }
 
+    public ChannelBinding channel(String key) {
+        if (key == null) {
+            return null;
+        }
+        String normalized = key.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        ChannelContract contract = channels.get(normalized);
+        if (contract == null) {
+            return null;
+        }
+        return new ChannelBinding(normalized, contract);
+    }
+
     public List<ChannelBinding> channelsOfType(Class<? extends ChannelContract> type) {
         List<ChannelBinding> result = new ArrayList<>();
         for (Map.Entry<String, ChannelContract> entry : channels.entrySet()) {
             ChannelContract contract = entry.getValue();
             if (type.isInstance(contract)) {
+                result.add(new ChannelBinding(entry.getKey(), contract));
+            }
+        }
+        result.sort(Comparator
+                .comparingInt(ChannelBinding::order)
+                .thenComparing(ChannelBinding::key));
+        return result;
+    }
+
+    public List<ChannelBinding> channelsOfType(String blueId) {
+        if (blueId == null || blueId.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        String normalized = blueId.trim();
+        List<ChannelBinding> result = new ArrayList<>();
+        for (Map.Entry<String, ChannelContract> entry : channels.entrySet()) {
+            ChannelContract contract = entry.getValue();
+            if (channelMatchesBlueId(contract, normalized)) {
                 result.add(new ChannelBinding(entry.getKey(), contract));
             }
         }
@@ -209,11 +243,6 @@ public final class ContractBundle {
 
         public Builder addMarker(String key, MarkerContract contract) {
             String normalizedKey = validateContractKey(key, "Marker");
-            ensureUniqueContractKey(normalizedKey);
-            if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey) && !(contract instanceof ChannelEventCheckpoint)) {
-                throw new IllegalStateException(
-                        "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
-            }
             if (contract instanceof ChannelEventCheckpoint) {
                 if (!ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
                     throw new IllegalStateException(
@@ -222,6 +251,12 @@ public final class ContractBundle {
                 if (checkpointDeclared) {
                     throw new IllegalStateException("Duplicate Channel Event Checkpoint markers detected in same contracts map");
                 }
+            } else if (ProcessorContractConstants.KEY_CHECKPOINT.equals(normalizedKey)) {
+                throw new IllegalStateException(
+                        "Reserved key 'checkpoint' must contain a Channel Event Checkpoint");
+            }
+            ensureUniqueContractKey(normalizedKey);
+            if (contract instanceof ChannelEventCheckpoint) {
                 checkpointDeclared = true;
             }
             markers.put(normalizedKey, contract);
@@ -260,5 +295,25 @@ public final class ContractBundle {
             }
             return normalized;
         }
+    }
+
+    private static boolean channelMatchesBlueId(ChannelContract contract, String blueId) {
+        if (contract == null || blueId == null) {
+            return false;
+        }
+        TypeBlueId annotation = contract.getClass().getAnnotation(TypeBlueId.class);
+        if (annotation == null) {
+            return false;
+        }
+        String[] values = annotation.value();
+        if (values != null) {
+            for (String value : values) {
+                if (blueId.equals(value != null ? value.trim() : null)) {
+                    return true;
+                }
+            }
+        }
+        String defaultValue = annotation.defaultValue();
+        return blueId.equals(defaultValue != null ? defaultValue.trim() : null);
     }
 }

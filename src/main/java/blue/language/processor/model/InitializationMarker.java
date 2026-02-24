@@ -2,7 +2,7 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("InitializationMarker")
+@TypeBlueId({"Core/Processing Initialized Marker", "InitializationMarker"})
 public class InitializationMarker extends MarkerContract {
 
     private String documentId;

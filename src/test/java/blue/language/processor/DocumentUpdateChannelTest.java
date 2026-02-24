@@ -280,4 +280,48 @@ class DocumentUpdateChannelTest {
         assertNotNull(x);
         assertEquals(new BigInteger("1"), x.getValue());
     }
+
+    @Test
+    void documentUpdateEventsPreserveAppendPointerToken() {
+        String yaml = "name: Append Doc\n" +
+                "list: []\n" +
+                "contracts:\n" +
+                "  lifecycle:\n" +
+                "    type:\n" +
+                "      blueId: LifecycleChannel\n" +
+                "  watchList:\n" +
+                "    type:\n" +
+                "      blueId: DocumentUpdateChannel\n" +
+                "    path: /list\n" +
+                "  appendItem:\n" +
+                "    channel: lifecycle\n" +
+                "    type:\n" +
+                "      blueId: SetProperty\n" +
+                "    event:\n" +
+                "      type:\n" +
+                "        blueId: DocumentProcessingInitiated\n" +
+                "    path: /list\n" +
+                "    propertyKey: \"-\"\n" +
+                "    propertyValue: 5\n" +
+                "  assertAppend:\n" +
+                "    channel: watchList\n" +
+                "    type:\n" +
+                "      blueId: AssertDocumentUpdate\n" +
+                "    expectedPath: /list/-\n" +
+                "    expectedOp: add\n" +
+                "    expectBeforeNull: true\n" +
+                "    expectedAfterValue: 5\n";
+
+        Blue blue = new Blue();
+        blue.registerContractProcessor(new SetPropertyContractProcessor());
+        blue.registerContractProcessor(new AssertDocumentUpdateContractProcessor());
+
+        Node processed = blue.initializeDocument(blue.yamlToNode(yaml)).document();
+
+        Node list = processed.getProperties().get("list");
+        assertNotNull(list);
+        assertNotNull(list.getItems());
+        assertEquals(1, list.getItems().size());
+        assertEquals(new BigInteger("5"), list.getItems().get(0).getValue());
+    }
 }

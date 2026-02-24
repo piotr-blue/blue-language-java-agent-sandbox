@@ -2,6 +2,6 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 
-@TypeBlueId("LifecycleChannel")
+@TypeBlueId({"Core/Lifecycle Event Channel", "LifecycleChannel"})
 public class LifecycleChannel extends ChannelContract {
 }

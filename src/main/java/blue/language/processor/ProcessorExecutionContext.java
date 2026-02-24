@@ -1,9 +1,11 @@
 package blue.language.processor;
 
+import blue.language.NodeProvider;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.processor.model.JsonPatch;
 
+import java.math.BigInteger;
 import java.util.Objects;
 
 /**
@@ -40,7 +42,7 @@ public final class ProcessorExecutionContext {
         if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
             return;
         }
-        execution.handlePatch(scopePath, bundle, patch, allowReservedMutation);
+        execution.handlePatch(scopePath, bundle, patch, allowReservedMutation, allowTerminatedWork);
     }
 
     public void emitEvent(Node emission) {
@@ -66,6 +68,34 @@ public final class ProcessorExecutionContext {
         runtime().addGas(units);
     }
 
+    public void chargeTriggerEventBase() {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeTriggerEventBase();
+    }
+
+    public void chargeUpdateDocumentBase(int changesetLength) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeUpdateDocumentBase(changesetLength);
+    }
+
+    public void chargeDocumentSnapshot(String absolutePointer, Node snapshot) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeDocumentSnapshot(absolutePointer, snapshot);
+    }
+
+    public void chargeWasmGas(BigInteger wasmFuel) {
+        if (!allowTerminatedWork && execution.isScopeInactive(scopePath)) {
+            return;
+        }
+        runtime().chargeWasmGas(wasmFuel);
+    }
+
     public void throwFatal(String reason) {
         throw new ProcessorFatalException(reason);
     }
@@ -75,15 +105,29 @@ public final class ProcessorExecutionContext {
     }
 
     public Node documentAt(String absolutePointer) {
-        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
-        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
-        return node != null ? node.clone() : null;
+        if (absolutePointer == null || absolutePointer.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+            Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
+            return node != null ? node.clone() : null;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     public boolean documentContains(String absolutePointer) {
-        String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
-        Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
-        return node != null;
+        if (absolutePointer == null || absolutePointer.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            String normalizedPointer = PointerUtils.normalizePointer(absolutePointer);
+            Node node = ProcessorEngine.nodeAt(runtime().document(), normalizedPointer);
+            return node != null;
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     public void terminateGracefully(String reason) {
@@ -92,6 +136,14 @@ public final class ProcessorExecutionContext {
 
     public void terminateFatally(String reason) {
         execution.enterFatalTermination(scopePath, bundle, reason);
+    }
+
+    public NodeProvider nodeProvider() {
+        DocumentProcessor owner = execution.owner();
+        if (owner == null || owner.registry() == null) {
+            return null;
+        }
+        return owner.registry().nodeProvider();
     }
 
     private DocumentProcessingRuntime runtime() {
