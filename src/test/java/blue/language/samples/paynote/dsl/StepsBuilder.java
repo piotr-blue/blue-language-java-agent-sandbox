@@ -34,6 +34,14 @@ public final class StepsBuilder {
         return this;
     }
 
+    public StepsBuilder jsTemplate(String name, String codeTemplate) {
+        return jsRaw(name, JsTemplateResolver.resolveDefaults(codeTemplate));
+    }
+
+    public StepsBuilder jsTemplate(String name, String codeTemplate, Map<String, String> tokens) {
+        return jsRaw(name, JsTemplateResolver.resolve(codeTemplate, tokens));
+    }
+
     public StepsBuilder updateDocument(String name, Consumer<ChangesetBuilder> customizer) {
         ChangesetBuilder changesetBuilder = new ChangesetBuilder();
         customizer.accept(changesetBuilder);

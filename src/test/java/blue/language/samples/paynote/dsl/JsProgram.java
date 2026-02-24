@@ -34,6 +34,10 @@ public final class JsProgram {
             return this;
         }
 
+        public Builder lineTemplate(String templateLine) {
+            return line(JsTemplateResolver.resolveDefaults(templateLine));
+        }
+
         public Builder blank() {
             lines.add("");
             return this;
@@ -45,6 +49,16 @@ public final class JsProgram {
             }
             for (String line : newLines) {
                 line(line);
+            }
+            return this;
+        }
+
+        public Builder linesTemplate(String... templateLines) {
+            if (templateLines == null) {
+                return this;
+            }
+            for (String line : templateLines) {
+                lineTemplate(line);
             }
             return this;
         }

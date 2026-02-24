@@ -149,7 +149,7 @@ public final class RecruitmentClassifierBootstrapExample {
 
     private static JsProgram onCvSubscriptionInitiatedProgram() {
         return BlueDocDsl.js(js -> js
-                .lines(
+                .linesTemplate(
                         "const cvSessionId = event.targetSessionId;",
                         "const changeset = [",
                         "  { op: 'replace', path: '/cvSubscriptionReady', val: true },",
@@ -161,7 +161,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "",
                         "const events = [",
                         "  {",
-                        "    type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
+                        "    type: '{{MYOS_CALL_OPERATION_REQUESTED}}',",
                         "    onBehalfOf: 'recruitmentChannel',",
                         "    targetSessionId: cvSessionId,",
                         "    operation: 'changeProcessingStatus',",
@@ -177,7 +177,7 @@ public final class RecruitmentClassifierBootstrapExample {
 
     private static JsProgram onCvEpochProgram() {
         return BlueDocDsl.js(js -> js
-                .lines(
+                .linesTemplate(
                         "const cvSessionId = event.update?.sessionId;",
                         "if (!cvSessionId) {",
                         "  return { events: [], changeset: [] };",
@@ -212,7 +212,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "    ],",
                         "    events: [",
                         "      {",
-                        "        type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
+                        "        type: '{{MYOS_CALL_OPERATION_REQUESTED}}',",
                         "        onBehalfOf: 'recruitmentChannel',",
                         "        targetSessionId: cvSessionId,",
                         "        operation: 'changeProcessingStatus',",
@@ -247,7 +247,7 @@ public final class RecruitmentClassifierBootstrapExample {
                         "  ],",
                         "  events: [",
                         "    {",
-                        "      type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
+                        "      type: '{{MYOS_CALL_OPERATION_REQUESTED}}',",
                         "      onBehalfOf: 'recruitmentChannel',",
                         "      targetSessionId: document('/llmProviderSessionId'),",
                         "      operation: 'provideInstructions',",
@@ -264,7 +264,7 @@ public final class RecruitmentClassifierBootstrapExample {
 
     private static JsProgram onProviderResponseProgram() {
         return BlueDocDsl.js(js -> js
-                .lines(
+                .linesTemplate(
                         "const response = event.update ?? {};",
                         "const inResponseTo = response.inResponseTo ?? {};",
                         "const requestId = inResponseTo.requestId;",
@@ -302,13 +302,13 @@ public final class RecruitmentClassifierBootstrapExample {
                         "",
                         "const events = shouldAlert",
                         "  ? [{",
-                        "      type: '" + TypeAliases.CONVERSATION_CHAT_MESSAGE + "',",
+                        "      type: '{{CONVERSATION_CHAT_MESSAGE}}',",
                         "      message: 'New senior CV to review: ' + candidateName + ' (' + experienceSummary + '). CV sessionId: ' + cvSessionId + '.',",
                         "    }]",
                         "  : [];",
                         "",
                         "events.push({",
-                        "  type: '" + TypeAliases.MYOS_CALL_OPERATION_REQUESTED + "',",
+                        "  type: '{{MYOS_CALL_OPERATION_REQUESTED}}',",
                         "  onBehalfOf: 'recruitmentChannel',",
                         "  targetSessionId: cvSessionId,",
                         "  operation: 'changeProcessingStatus',",

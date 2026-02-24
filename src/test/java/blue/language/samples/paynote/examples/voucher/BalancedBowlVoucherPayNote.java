@@ -38,24 +38,25 @@ public final class BalancedBowlVoucherPayNote {
                                         .put("scope", "merchant-only")
                                         .put("subject", "payeeChannel")))
                 .onEvent("onRestaurantTxn", VoucherEvents.RestaurantTransactionReported.class, steps -> steps
-                        .jsRaw("CaptureUpToRemaining", captureUpToRemainingCode()))
+                        .jsTemplate("CaptureUpToRemaining", captureUpToRemainingTemplate()))
                 .buildDocument();
     }
 
-    private static String captureUpToRemainingCode() {
-        return ""
-                + "const spent = event.message.amount;\n"
-                + "const total = document('/amount/total') || 0;\n"
-                + "const captured = document('/amount/captured') || 0;\n"
-                + "const remaining = total - captured;\n"
-                + "if (remaining <= 0) {\n"
-                + "  return { events: [] };\n"
-                + "}\n"
-                + "const toCapture = Math.min(spent, remaining);\n"
-                + "return {\n"
-                + "  events: [\n"
-                + "    { type: '" + PayNoteAliases.CAPTURE_FUNDS_REQUESTED + "', amount: toCapture }\n"
-                + "  ]\n"
-                + "};";
+    private static String captureUpToRemainingTemplate() {
+        return """
+                const spent = event.message.amount;
+                const total = document('/amount/total') || 0;
+                const captured = document('/amount/captured') || 0;
+                const remaining = total - captured;
+                if (remaining <= 0) {
+                  return { events: [] };
+                }
+                const toCapture = Math.min(spent, remaining);
+                return {
+                  events: [
+                    { type: '{{CAPTURE_FUNDS_REQUESTED}}', amount: toCapture }
+                  ]
+                };
+                """;
     }
 }

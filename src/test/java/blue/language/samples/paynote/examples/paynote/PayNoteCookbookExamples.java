@@ -1,7 +1,6 @@
 package blue.language.samples.paynote.examples.paynote;
 
 import blue.language.model.Node;
-import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.examples.voucher.BalancedBowlVoucherPayNote;
 import blue.language.samples.paynote.sdk.IsoCurrency;
 import blue.language.samples.paynote.sdk.PayNotes;
@@ -321,14 +320,14 @@ public final class PayNoteCookbookExamples {
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("499.00")
                 .onEvent("captureUsage", CookbookEvents.UsageReported.class, steps -> steps
-                        .jsRaw("CaptureCappedUsage",
-                                "const units = Number(event.message.units ?? 0);\n"
-                                        + "const cap = Number(document('/amount/total') ?? 0);\n"
-                                        + "const captured = Number(document('/amount/captured') ?? 0);\n"
-                                        + "const remaining = Math.max(cap - captured, 0);\n"
-                                        + "const charge = Math.min(units, remaining);\n"
-                                        + "return { events: [{ type: '" + PayNoteAliases.CAPTURE_FUNDS_REQUESTED
-                                        + "', amount: charge }] };"))
+                        .jsTemplate("CaptureCappedUsage", """
+                                const units = Number(event.message.units ?? 0);
+                                const cap = Number(document('/amount/total') ?? 0);
+                                const captured = Number(document('/amount/captured') ?? 0);
+                                const remaining = Math.max(cap - captured, 0);
+                                const charge = Math.min(units, remaining);
+                                return { events: [{ type: '{{CAPTURE_FUNDS_REQUESTED}}', amount: charge }] };
+                                """))
                 .buildDocument();
     }
 
@@ -341,14 +340,14 @@ public final class PayNoteCookbookExamples {
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("125.00")
                 .onEvent("reportSpend", VoucherEvents.RestaurantTransactionReported.class, steps -> steps
-                        .jsRaw("CaptureOnlyWhitelistedMerchant",
-                                "const merchant = event.message.merchantId;\n"
-                                        + "if (merchant !== 'balanced_bowl_001') {\n"
-                                        + "  return { events: [] };\n"
-                                        + "}\n"
-                                        + "const spent = Number(event.message.amount ?? 0);\n"
-                                        + "return { events: [{ type: '" + PayNoteAliases.CAPTURE_FUNDS_REQUESTED
-                                        + "', amount: spent }] };"))
+                        .jsTemplate("CaptureOnlyWhitelistedMerchant", """
+                                const merchant = event.message.merchantId;
+                                if (merchant !== 'balanced_bowl_001') {
+                                  return { events: [] };
+                                }
+                                const spent = Number(event.message.amount ?? 0);
+                                return { events: [{ type: '{{CAPTURE_FUNDS_REQUESTED}}', amount: spent }] };
+                                """))
                 .buildDocument();
     }
 
