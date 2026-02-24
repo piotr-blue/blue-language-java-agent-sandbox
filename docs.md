@@ -2,6 +2,10 @@
 
 This repo now keeps **one latest SDK surface** (no `v1` / `v2` / `vnext` package usage for authoring).
 
+## Runtime baseline
+
+- Java 17 is required for local development, CI build, and release pipelines.
+
 ## Where to start
 
 ### 1) Generic document builder (non-PayNote)
@@ -61,18 +65,42 @@ Use:
   - `participants("a", "b", "c")`
 - Capture helpers use capture terminology only:
   - `capture().lockOnInit()`
+  - `capture().lockOnEvent(...)`
+  - `capture().lockOnOperation(...)`
+  - `capture().lockOnDocPathChange(...)`
   - `capture().unlockOnEvent(...)`
   - `capture().unlockOnOperation(...)`
-  - `capture().unlockOnChange(...)`
-  - `capture().requestCaptureOnOperation(...)`
+  - `capture().unlockOnDocPathChange(...)`
+  - `capture().requestOnInit()`
   - `capture().requestOnEvent(...)`
-  - `capture().requestOnChange(...)`
+  - `capture().requestOnOperation(...)`
+  - `capture().requestOnDocPathChange(...)`
+  - `capture().requestPartialOnEvent(..., amountExpression)`
+  - `capture().requestPartialOnOperation(..., amountExpression, op -> ...)`
+  - `capture().requestPartialOnDocPathChange(..., amountExpression)`
+  - `capture().refundOnEvent(...)`
+  - `capture().refundOnOperation(...)`
+  - `capture().refundOnDocPathChange(...)`
+  - `capture().refundPartialOnEvent(..., amountExpression)`
+  - `capture().refundPartialOnOperation(..., amountExpression, op -> ...)`
+  - `capture().refundPartialOnDocPathChange(..., amountExpression)`
+  - no duplicate alias surface (`unlockExternal...`, `requestCapture...`) is needed anymore.
+- Participant event ingress:
+  - `acceptsEventsFrom("inspector")`
+  - `acceptsEventsFrom("guarantor", AllowedEventA.class, AllowedEventB.class)`
   - atomic one-liners like `captureLockedUntilOperation(...)`.
 - Reserve/refund helper symmetry:
   - `reserveLockedUntilOperation(...)`, `reserveLockedUntilEvent(...)`, `reserveLockedUntilDocPathChanges(...)`
   - `refundLockedUntilOperation(...)`, `refundLockedUntilEvent(...)`, `refundLockedUntilDocPathChanges(...)`
 - Payment event trigger helper:
-  - `steps.triggerPayment(PaymentType.class, payload -> payload.put("processor", "...")...)`
+  - `steps.triggerPayment(PaymentType.class, pay -> pay
+      .processor("...")
+      .payer("...")
+      .payee("...")
+      .currency("USD")
+      .amountMinor(1000)
+      .attachPayNote(template))`
+  - typed payload builder also supports ACH/SEPA/wire/card/token/credit-line/internal-ledger/crypto subtype fields.
   - validates required `processor` field at authoring time.
 - Document authoring is separate from bootstrap bindings.
 - Lock plans fail fast if no unlock path is configured.
@@ -153,6 +181,17 @@ These show:
 
 ---
 
+## JS template safety
+
+Use placeholder-safe templates in JS snippets:
+
+- `steps.jsTemplate("name", "... {{CAPTURE_FUNDS_REQUESTED}} ...")`
+- `JsProgram.Builder.linesTemplate(...)` for line-based programs
+
+Unknown placeholders fail fast during authoring (`Unknown JS template token: ...`), preventing silent runtime string drift.
+
+---
+
 ## Cookbook examples (24 scenarios)
 
 See:
@@ -168,6 +207,22 @@ These include:
 - subscriptions and BNPL,
 - factoring/FX/insurance flows,
 - voucher + credit-line + ACH + crypto + internal-ledger payment request examples.
+
+---
+
+## Cookbook V2 (25 ticket implementation)
+
+See:
+
+- `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamplesV2.java`
+- `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamplesV2Test.java`
+- `docs/paynote-usecase-tracker.md`
+
+Structure:
+
+- Tier 1: 10 tiny patterns
+- Tier 2: 10 medium patterns
+- Tier 3: 5 JS-heavy patterns
 
 ---
 

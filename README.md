@@ -2,6 +2,10 @@
 
 This repository contains the Blue Language Java runtime plus sample DSL authoring for MyOS + PayNote flows.
 
+## Runtime baseline
+
+- Java 17 is the project baseline for build and tests.
+
 ## Authoring principles
 
 - Author documents with `MyOsDsl.bootstrap()` + `DocumentBuilder` (or wrappers built on top of it).
@@ -30,11 +34,37 @@ Key behavior:
 - participant-first API (channel-key based; no role framework required)
 - capture-first API:
   - `capture().lockOnInit()`
+  - `capture().lockOnEvent(...)`
+  - `capture().lockOnOperation(...)`
+  - `capture().lockOnDocPathChange(...)`
   - `capture().unlockOnEvent(...)`
   - `capture().unlockOnOperation(...)`
+  - `capture().unlockOnDocPathChange(...)`
+  - `capture().requestOnInit()`
+  - `capture().requestOnEvent(...)`
+  - `capture().requestOnOperation(...)`
+  - `capture().requestOnDocPathChange(...)`
+  - `capture().requestPartialOnEvent(..., amountExpr)`
+  - `capture().requestPartialOnOperation(..., amountExpr, op -> ...)`
+  - `capture().requestPartialOnDocPathChange(..., amountExpr)`
+  - `capture().refundOnEvent(...)`
+  - `capture().refundOnOperation(...)`
+  - `capture().refundOnDocPathChange(...)`
+  - `capture().refundPartialOnEvent(..., amountExpr)`
+  - `capture().refundPartialOnOperation(..., amountExpr, op -> ...)`
+  - `capture().refundPartialOnDocPathChange(..., amountExpr)`
   - atomic helpers: `captureLockedUntilOperation(...)`, `captureLockedUntilEvent(...)`, `captureLockedUntilDocPathChanges(...)`
+- participant event ingress:
+  - `acceptsEventsFrom("inspector")`
+  - `acceptsEventsFrom("guarantor", FundsReserved.class, FundsCaptured.class)`
 - payment trigger helper:
-  - `steps.triggerPayment(PaymentType.class, payload -> ...)`
+  - `steps.triggerPayment(PaymentType.class, pay -> pay
+      .processor("...")
+      .payer("...")
+      .payee("...")
+      .currency("USD")
+      .amountMinor(1000)
+      .attachPayNote(template))`
   - authoring-time validation requires `processor`
 - money ergonomics:
   - `currency(IsoCurrency)`
@@ -54,6 +84,10 @@ Key behavior:
   - `src/test/java/blue/language/samples/paynote/examples/voucher/`
 - Cookbook scenarios (24 complete examples):
   - `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamples.java`
+- Tiered cookbook V2 (25 tickets: 10 tiny + 10 medium + 5 JS-heavy):
+  - `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamplesV2.java`
+  - `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamplesV2Test.java`
+  - `docs/paynote-usecase-tracker.md`
 
 ## Operation invocation shape
 

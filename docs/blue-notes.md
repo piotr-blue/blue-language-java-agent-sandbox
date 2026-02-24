@@ -22,6 +22,9 @@ message:
 SDK implication:
 
 - operation DSL should expose request typing (`requestType(...)`) for clarity and runtime safety.
+- participant ingress can be modeled as operation-based event pass-through:
+  - `acceptsEventsFrom("participant")`
+  - `acceptsEventsFrom("participant", AllowedEventA.class, AllowedEventB.class)`
 
 ## 2) Contract typing and channels
 
@@ -48,6 +51,7 @@ Important patterns used by the SDK:
 SDK implication:
 
 - expose one-liner helpers for common trigger patterns (capture lock/unlock, reserve/capture, refund/release, child issuance).
+- canonical capture API should follow `{action}On{Trigger}` shape only (no duplicate alias naming surface).
 
 ## 4) Policies
 
@@ -65,3 +69,20 @@ SDK implication:
 
 - use `JsProgram` + `JsOutputBuilder` + `JsPatchBuilder` + `JsArrayBuilder` + `JsObjectBuilder`.
 - keep examples deterministic for testability.
+- use placeholder-safe JS templates (`{{TOKEN}}`) via:
+  - `steps.jsTemplate(...)`
+  - `JsProgram.Builder.linesTemplate(...)`
+  - with fail-fast unknown token detection.
+
+## 6) Triggered payment event authoring
+
+`triggerPayment(...)` payloads should be authored with typed builder methods for base fields:
+
+- `processor(...)`
+- `payer(...)`
+- `payee(...)`
+- `currency(...)`
+- `amountMinor(...)`
+- `attachPayNote(...)`
+
+Subtype-specific methods (ACH/SEPA/wire/card/token/credit-line/internal-ledger/crypto) should be additive and deterministic.
