@@ -21,7 +21,12 @@ public final class ProcessorHarness {
     }
 
     public ProcessorSession start(Node document) {
-        Objects.requireNonNull(document, "document");
-        return new ProcessorSession(processor, document.clone());
+        BootstrapResolver.ResolvedInput resolvedInput = BootstrapResolver.resolve(
+                Objects.requireNonNull(document, "document"));
+        ProcessorSession session = new ProcessorSession(processor, resolvedInput.document());
+        for (Participant participant : resolvedInput.participants().values()) {
+            session.registerParticipant(participant.key(), participant.timelineId());
+        }
+        return session;
     }
 }
