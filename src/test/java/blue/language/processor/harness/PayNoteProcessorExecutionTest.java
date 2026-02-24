@@ -14,6 +14,7 @@ import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,6 +22,94 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PayNoteProcessorExecutionTest {
+
+    @Test
+    void satisfactionGateOperationAcceptsShortParticipantNameAndRunsThroughProcessorHarness() {
+        Node satisfactionGate = PayNotes.payNote("Satisfaction Gate")
+                .capture()
+                    .lockOnInit()
+                    .requestOnOperation("confirmSatisfaction", op -> op
+                            .channel("payer")
+                            .description("Confirm you are satisfied with the delivery/service.")
+                            .noRequest())
+                    .done()
+                .buildDocument();
+
+        Node contracts = satisfactionGate.getProperties().get("contracts");
+        assertEquals("payerChannel",
+                contracts.getProperties().get("confirmSatisfaction").getProperties().get("channel").getValue());
+        assertEquals("confirmSatisfaction",
+                contracts.getProperties().get("confirmSatisfactionImpl").getProperties().get("operation").getValue());
+
+        ProcessorSession session = new ProcessorHarness().start(satisfactionGate).initSession();
+        assertTrue(session.participants().containsKey("payer"));
+        assertTrue(session.participants().containsKey("payee"));
+        assertTrue(session.participants().containsKey("guarantor"));
+        assertTrue(session.participants().containsKey("payerChannel"));
+        assertEquals(session.participants().get("payer").timelineId(),
+                session.participants().get("payerChannel").timelineId());
+
+        session.callOperation("payer", "confirmSatisfaction");
+        int processed = session.runUntilIdle();
+        assertTrue(processed > 0);
+        assertTrue(containsEventType(session.emittedEvents(), PayNoteAliases.CAPTURE_LOCK_REQUESTED));
+        assertTrue(containsEventType(session.emittedEvents(), PayNoteAliases.CAPTURE_FUNDS_REQUESTED));
+        assertEquals(1, session.timelineStore().entries(session.participants().get("payer").timelineId()).size());
+    }
+
+    @Test
+    void milestoneContractorOperationsEmitReservationReleaseRequestedForEveryApproval() {
+        Node milestoneContractor = PayNotes.payNote("Cookbook Milestone Contractor")
+                .currency(IsoCurrency.USD)
+                .amountTotalMajor("1000.00")
+                .reserveOnInit()
+                .operation("approveMilestoneOne")
+                    .channel("guarantorChannel")
+                    .description("Approve milestone 1 (25%).")
+                    .noRequest()
+                    .steps(steps -> steps.capture().requestPartial("25000"))
+                    .done()
+                .operation("approveMilestoneTwo")
+                    .channel("guarantorChannel")
+                    .description("Approve milestone 2 (25%).")
+                    .noRequest()
+                    .steps(steps -> steps.capture().requestPartial("25000"))
+                    .done()
+                .operation("approveMilestoneThree")
+                    .channel("guarantorChannel")
+                    .description("Approve milestone 3 (25%).")
+                    .noRequest()
+                    .steps(steps -> steps.capture().requestPartial("25000"))
+                    .done()
+                .operation("approveMilestoneFour")
+                    .channel("guarantorChannel")
+                    .description("Approve milestone 4 (25%).")
+                    .noRequest()
+                    .steps(steps -> steps.capture().requestPartial("25000"))
+                    .done()
+                .buildDocument();
+
+        ProcessorSession session = new ProcessorHarness().start(milestoneContractor).initSession();
+        for (String operation : Arrays.asList(
+                "approveMilestoneOne",
+                "approveMilestoneTwo",
+                "approveMilestoneThree",
+                "approveMilestoneFour")) {
+            session.callOperation("guarantor", operation);
+        }
+        int processed = session.runUntilIdle();
+        assertEquals(4, processed);
+
+        int reservationReleaseEvents = 0;
+        for (Node event : session.emittedEvents()) {
+            if (PayNoteAliases.RESERVATION_RELEASE_REQUESTED.equals(eventType(event))) {
+                reservationReleaseEvents++;
+                assertEquals(new BigInteger("25000"), event.getProperties().get("amount").getValue());
+            }
+        }
+        assertEquals(4, reservationReleaseEvents);
+        assertEquals(4, session.timelineStore().entries(session.participants().get("guarantor").timelineId()).size());
+    }
 
     @Test
     void docTemplateShipmentChainCanBeExtendedWithExecutableTypedOperation() {

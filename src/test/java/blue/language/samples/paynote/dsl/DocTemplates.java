@@ -168,11 +168,12 @@ public final class DocTemplates {
                                        Class<?> requestTypeClass,
                                        String description,
                                        Consumer<StepsBuilder> implementation) {
-            ensureParticipantChannel(channelKey);
+            String resolvedChannelKey = ensureParticipantChannel(channelKey);
             if (requestTypeClass != null) {
-                contractsBuilder().operation(key, channelKey, requestTypeClass, description);
+                contractsBuilder().operation(key, resolvedChannelKey, requestTypeClass, description);
             } else {
-                contractsBuilder().operation(key, channelKey, description);
+                contractsBuilder().operation(key, resolvedChannelKey, description, request -> {
+                });
             }
             contractsBuilder().implementOperation(key + "Impl", key, implementation);
             return this;
@@ -203,8 +204,8 @@ public final class DocTemplates {
                                                        String channelKey,
                                                        String description,
                                                        String... allowedPaths) {
-            ensureParticipantChannel(channelKey);
-            contractsBuilder().changeOperation(operationName, channelKey, description, request -> {
+            String resolvedChannelKey = ensureParticipantChannel(channelKey);
+            contractsBuilder().changeOperation(operationName, resolvedChannelKey, description, request -> {
             });
             contractsBuilder().changeWorkflowOperation(operationName + "Impl", operationName, steps -> steps
                     .js("CollectChangeset", BlueDocDsl.js(js -> js
@@ -288,10 +289,33 @@ public final class DocTemplates {
             return existing.getAsText("/type/value");
         }
 
-        private void ensureParticipantChannel(String channelKey) {
-            if (!contractsMap().containsKey(channelKey)) {
-                participant(channelKey);
+        private String ensureParticipantChannel(String channelKey) {
+            String resolved = resolveOperationChannelKey(channelKey);
+            if (resolved == null || resolved.trim().isEmpty()) {
+                throw new IllegalArgumentException("operation channel key is required");
             }
+            if (!contractsMap().containsKey(resolved)) {
+                participant(resolved);
+            }
+            return resolved;
+        }
+
+        private String resolveOperationChannelKey(String channelKey) {
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                return null;
+            }
+            String trimmed = channelKey.trim();
+            if (contractsMap().containsKey(trimmed)) {
+                return trimmed;
+            }
+            if (trimmed.endsWith("Channel")) {
+                return trimmed;
+            }
+            String suffixed = trimmed + "Channel";
+            if (contractsMap().containsKey(suffixed)) {
+                return suffixed;
+            }
+            return suffixed;
         }
 
         private boolean isTypeCompatible(String existingAlias, String nextAlias) {

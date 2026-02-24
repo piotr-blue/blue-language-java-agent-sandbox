@@ -124,6 +124,10 @@ public final class ProcessorSession {
         return pushEvent(event);
     }
 
+    public ProcessorSession callOperation(String participantKey, String operation) {
+        return callOperation(participantKey, operation, new Node().properties(new LinkedHashMap<String, Node>()));
+    }
+
     public boolean runOne() {
         if (!initialized) {
             throw new IllegalStateException("Session document is not initialized");

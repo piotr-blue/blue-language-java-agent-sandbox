@@ -160,11 +160,13 @@ public final class ContractsBuilder {
     }
 
     public ContractsBuilder changeOperation(String key, String channel, String description) {
-        return changeOperation(key, channel, description, null);
+        return changeOperation(key, channel, description, request -> {
+        });
     }
 
     public ContractsBuilder operation(String key, String channel, String description) {
-        return operation(key, channel, description, null);
+        return operation(key, channel, description, request -> {
+        });
     }
 
     public ContractsBuilder operation(String key,

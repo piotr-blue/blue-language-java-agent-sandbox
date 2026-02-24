@@ -302,12 +302,13 @@ public final class PayNoteBuilder {
                                     Class<?> requestTypeClass,
                                     String description,
                                     Consumer<StepsBuilder> implementation) {
-        ensureParticipantChannel(channelKey);
+        String resolvedChannelKey = ensureParticipantChannel(channelKey);
         document.contracts(c -> {
             if (requestTypeClass != null) {
-                c.operation(key, channelKey, requestTypeClass, description);
+                c.operation(key, resolvedChannelKey, requestTypeClass, description);
             } else {
-                c.operation(key, channelKey, description);
+                c.operation(key, resolvedChannelKey, description, request -> {
+                });
             }
             c.implementOperation(key + "Impl", key, implementation);
         });
@@ -322,9 +323,9 @@ public final class PayNoteBuilder {
                                                     String channelKey,
                                                     String description,
                                                     String... allowedPaths) {
-        ensureParticipantChannel(channelKey);
+        String resolvedChannelKey = ensureParticipantChannel(channelKey);
         document.contracts(c -> {
-            c.changeOperation(operationName, channelKey, description, request -> {
+            c.changeOperation(operationName, resolvedChannelKey, description, request -> {
             });
             c.changeWorkflowOperation(operationName + "Impl", operationName, steps -> steps
                     .js("CollectChangeset", BlueDocDsl.js(js -> js
@@ -612,13 +613,33 @@ public final class PayNoteBuilder {
         return false;
     }
 
-    private void ensureParticipantChannel(String channelKey) {
-        if (channelKey == null || channelKey.trim().isEmpty()) {
+    private String ensureParticipantChannel(String channelKey) {
+        String resolvedChannelKey = resolveOperationChannelKey(channelKey);
+        if (resolvedChannelKey == null || resolvedChannelKey.trim().isEmpty()) {
             throw new IllegalArgumentException("operation channel key is required");
         }
-        if (!participantTypeByKey.containsKey(channelKey)) {
-            participant(channelKey);
+        if (!participantTypeByKey.containsKey(resolvedChannelKey)) {
+            participant(resolvedChannelKey);
         }
+        return resolvedChannelKey;
+    }
+
+    private String resolveOperationChannelKey(String channelKey) {
+        if (channelKey == null || channelKey.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = channelKey.trim();
+        if (participantTypeByKey.containsKey(trimmed)) {
+            return trimmed;
+        }
+        if (trimmed.endsWith("Channel")) {
+            return trimmed;
+        }
+        String suffixed = trimmed + "Channel";
+        if (participantTypeByKey.containsKey(suffixed)) {
+            return suffixed;
+        }
+        return suffixed;
     }
 
     private String buildAcceptEventsIngressJs(Class<?>... allowedEventTypes) {

@@ -396,7 +396,7 @@ public final class StepsBuilder {
         }
 
         public StepsBuilder requestPartial(String amountExpression) {
-            return parent.triggerEvent("RequestCapture", PayNoteEvents.captureFundsRequested(
+            return parent.triggerEvent("RequestCapture", PayNoteEvents.reservationReleaseRequested(
                     new Node().value(BlueDocDsl.expr(amountExpression))));
         }
 
