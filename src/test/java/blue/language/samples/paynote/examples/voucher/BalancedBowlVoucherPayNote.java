@@ -1,8 +1,6 @@
 package blue.language.samples.paynote.examples.voucher;
 
 import blue.language.samples.paynote.dsl.BlueDocDsl;
-import blue.language.samples.paynote.dsl.JsOutputBuilder;
-import blue.language.samples.paynote.dsl.JsProgram;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.sdk.IsoCurrency;
 import blue.language.samples.paynote.sdk.PayNotes;
@@ -40,21 +38,24 @@ public final class BalancedBowlVoucherPayNote {
                                         .put("scope", "merchant-only")
                                         .put("subject", "payeeChannel")))
                 .onEvent("onRestaurantTxn", VoucherEvents.RestaurantTransactionReported.class, steps -> steps
-                        .js("CaptureUpToRemaining", captureUpToRemainingProgram()))
+                        .jsRaw("CaptureUpToRemaining", captureUpToRemainingCode()))
                 .buildDocument();
     }
 
-    private static JsProgram captureUpToRemainingProgram() {
-        return BlueDocDsl.js(js -> js
-                .line("const spent = event.message.amount;")
-                .line("const total = document('/amount/total') || 0;")
-                .line("const captured = document('/amount/captured') || 0;")
-                .line("const remaining = total - captured;")
-                .line("if (remaining <= 0) {")
-                .line("  return { events: [] };")
-                .line("}")
-                .line("const toCapture = Math.min(spent, remaining);")
-                .returnOutput(JsOutputBuilder.output()
-                        .eventsRaw("[{ type: '" + PayNoteAliases.CAPTURE_FUNDS_REQUESTED + "', amount: toCapture }]")));
+    private static String captureUpToRemainingCode() {
+        return ""
+                + "const spent = event.message.amount;\n"
+                + "const total = document('/amount/total') || 0;\n"
+                + "const captured = document('/amount/captured') || 0;\n"
+                + "const remaining = total - captured;\n"
+                + "if (remaining <= 0) {\n"
+                + "  return { events: [] };\n"
+                + "}\n"
+                + "const toCapture = Math.min(spent, remaining);\n"
+                + "return {\n"
+                + "  events: [\n"
+                + "    { type: '" + PayNoteAliases.CAPTURE_FUNDS_REQUESTED + "', amount: toCapture }\n"
+                + "  ]\n"
+                + "};";
     }
 }

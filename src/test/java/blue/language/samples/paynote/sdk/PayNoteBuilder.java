@@ -148,7 +148,7 @@ public final class PayNoteBuilder {
                                                       Class<?> emittedEventType) {
         return capture()
                 .lockOnInit()
-                .unlockExternalOnOperation(operationKey, op -> op
+                .unlockOnOperation(operationKey, op -> op
                         .channel(channelKey)
                         .description(description)
                         .steps(steps -> {
@@ -162,14 +162,14 @@ public final class PayNoteBuilder {
     public PayNoteBuilder captureLockedUntilEvent(Class<?> eventTypeClass) {
         return capture()
                 .lockOnInit()
-                .unlockExternalWhenEventArrives(eventTypeClass)
+                .unlockOnEvent(eventTypeClass)
                 .done();
     }
 
     public PayNoteBuilder captureLockedUntilDocPathChanges(String path) {
         return capture()
                 .lockOnInit()
-                .unlockExternalWhenDocPathChanges(path)
+                .unlockOnChange(path)
                 .done();
     }
 
@@ -607,6 +607,10 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public CaptureBuilder unlockOnEvent(Class<?> eventTypeClass) {
+            return unlockExternalWhenEventArrives(eventTypeClass);
+        }
+
         public CaptureBuilder unlockExternalWhenEventArrives(Class<?> eventTypeClass) {
             parent.captureResolutionPaths++;
             parent.onEvent("unlockCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
@@ -615,8 +619,12 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public CaptureBuilder requestOnEvent(Class<?> eventTypeClass) {
+            return requestCaptureWhenEventArrives(eventTypeClass);
+        }
+
         public CaptureBuilder unlockWhenEventArrives(Class<?> eventTypeClass) {
-            return unlockExternalWhenEventArrives(eventTypeClass);
+            return unlockOnEvent(eventTypeClass);
         }
 
         public CaptureBuilder requestCaptureWhenEventArrives(Class<?> eventTypeClass) {
@@ -627,14 +635,22 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public CaptureBuilder unlockOnChange(String path) {
+            return unlockExternalWhenDocPathChanges(path);
+        }
+
         public CaptureBuilder unlockExternalWhenDocPathChanges(String path) {
             parent.captureResolutionPaths++;
             parent.onDocChange("unlockCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().unlock());
             return this;
         }
 
+        public CaptureBuilder requestOnChange(String path) {
+            return requestCaptureWhenDocPathChanges(path);
+        }
+
         public CaptureBuilder unlockWhenDocPathChanges(String path) {
-            return unlockExternalWhenDocPathChanges(path);
+            return unlockOnChange(path);
         }
 
         public CaptureBuilder requestCaptureWhenDocPathChanges(String path) {
@@ -643,7 +659,7 @@ public final class PayNoteBuilder {
             return this;
         }
 
-        public CaptureBuilder unlockExternalOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+        public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
             parent.captureResolutionPaths++;
             CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
             customizer.accept(operationBuilder);
@@ -651,8 +667,12 @@ public final class PayNoteBuilder {
             return this;
         }
 
-        public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
-            return unlockExternalOnOperation(operationKey, customizer);
+        public CaptureBuilder unlockExternalOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return unlockOnOperation(operationKey, customizer);
+        }
+
+        public CaptureBuilder requestOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return requestCaptureOnOperation(operationKey, customizer);
         }
 
         public CaptureBuilder requestCaptureOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {

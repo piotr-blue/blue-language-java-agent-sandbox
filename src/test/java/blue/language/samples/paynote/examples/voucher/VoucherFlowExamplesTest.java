@@ -20,7 +20,7 @@ class VoucherFlowExamplesTest {
                 doc.getAsText("/contracts/onInitCaptureLock/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
                 doc.getAsText("/contracts/confirmSatisfactionImpl/steps/1/event/type/value"));
-        assertEquals(TypeAliases.SYNCHRONY_CREDIT_LINE_PAYMENT_REQUESTED,
+        assertEquals(TypeAliases.PAYMENTS_CREDIT_LINE_MERCHANT_TO_CARDHOLDER_PAYMENT_REQUESTED,
                 doc.getAsText("/contracts/requestVoucherPayment/steps/0/event/type/value"));
     }
 

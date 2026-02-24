@@ -2,8 +2,7 @@ package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.DocTemplates;
-import blue.language.processor.model.JsonPatch;
-import blue.language.samples.paynote.dsl.PayNoteAliases;
+import blue.language.samples.paynote.types.common.CommonTypes;
 
 public final class AliceBobShipmentPayNote {
 
@@ -20,27 +19,13 @@ public final class AliceBobShipmentPayNote {
 
         return DocTemplates.extend(instantiated, mutator -> mutator
                 .putDocumentObject("extra", extra -> extra.put("createdBy", "AliceBobShipmentPayNote"))
-                .applyPatch(JsonPatch.add("/document/contracts/customerSupportChannel",
-                        new Node().type("Conversation/Timeline Channel")))
-                .applyPatch(JsonPatch.add("/document/contracts/cancel",
-                        new Node()
-                                .type("Conversation/Operation")
-                                .properties("channel", new Node().value("payerChannel"))
-                                .properties("description", new Node().value("Cancel before shipment confirmation"))))
-                .applyPatch(JsonPatch.add("/document/contracts/cancelImpl",
-                        new Node()
-                                .type("Conversation/Sequential Workflow Operation")
-                                .properties("operation", new Node().value("cancel"))
-                                .properties("steps", new Node().items(
-                                        new Node()
-                                                .type("Conversation/Trigger Event")
-                                                .properties("event", new Node()
-                                                        .type("Common/Named Event")
-                                                        .properties("name", new Node().value("Cancellation Requested"))),
-                                        new Node()
-                                                .type("Conversation/Trigger Event")
-                                                .properties("event", new Node()
-                                                        .type(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED))
-                                )))));
+                .participant("customerSupportChannel", "Customer support")
+                .operation("cancel",
+                        "payerChannel",
+                        "Cancel before shipment confirmation",
+                        steps -> steps
+                                .emitType("CancellationRequested", CommonTypes.NamedEvent.class,
+                                        payload -> payload.put("name", "Cancellation Requested"))
+                                .capture().unlock()));
     }
 }

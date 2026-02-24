@@ -30,9 +30,12 @@ Key behavior:
 - participant-first API (channel-key based; no role framework required)
 - capture-first API:
   - `capture().lockOnInit()`
-  - `capture().unlockWhenEventArrives(...)`
+  - `capture().unlockOnEvent(...)`
   - `capture().unlockOnOperation(...)`
   - atomic helpers: `captureLockedUntilOperation(...)`, `captureLockedUntilEvent(...)`, `captureLockedUntilDocPathChanges(...)`
+- payment trigger helper:
+  - `steps.triggerPayment(PaymentType.class, payload -> ...)`
+  - authoring-time validation requires `processor`
 - money ergonomics:
   - `currency(IsoCurrency)`
   - `amountTotalMinor(long)`
@@ -49,6 +52,8 @@ Key behavior:
   - `src/test/java/blue/language/samples/paynote/examples/shipment/`
 - Voucher scenarios:
   - `src/test/java/blue/language/samples/paynote/examples/voucher/`
+- Cookbook scenarios (24 complete examples):
+  - `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamples.java`
 
 ## Operation invocation shape
 

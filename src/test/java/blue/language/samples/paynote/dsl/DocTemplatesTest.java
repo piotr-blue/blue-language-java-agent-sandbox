@@ -90,4 +90,29 @@ class DocTemplatesTest {
         assertEquals("acc_bob_1234", instanceNode.getAsText("/channelBindings/payeeChannel/accountId/value"));
         assertEquals("acc_bank_1", instanceNode.getAsText("/channelBindings/guarantorChannel/accountId/value"));
     }
+
+    @Test
+    void extensionBuilderSupportsCreationStyleParticipantAndOperationApis() {
+        Node base = MyOsDsl.bootstrap()
+                .documentName("Creation-style Extension")
+                .documentType(PayNoteAliases.PAYNOTE)
+                .build();
+
+        Node extended = DocTemplates.extend(base, ext -> ext
+                .participant("shipmentCompanyChannel", "Shipment company")
+                .operation("confirmShipment",
+                        "shipmentCompanyChannel",
+                        "Shipment company confirms shipment",
+                        steps -> steps.capture().unlock())
+                .set("/shipment/status", "confirmed"));
+
+        assertEquals(TypeAliases.CONVERSATION_TIMELINE_CHANNEL,
+                extended.getAsText("/document/contracts/shipmentCompanyChannel/type/value"));
+        assertEquals(TypeAliases.CONVERSATION_OPERATION,
+                extended.getAsText("/document/contracts/confirmShipment/type/value"));
+        assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
+                extended.getAsText("/document/contracts/confirmShipmentImpl/steps/0/event/type/value"));
+        assertEquals("confirmed",
+                extended.getAsText("/document/shipment/status/value"));
+    }
 }

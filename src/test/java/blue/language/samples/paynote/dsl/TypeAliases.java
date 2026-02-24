@@ -3,11 +3,13 @@ package blue.language.samples.paynote.dsl;
 import blue.language.samples.paynote.types.conversation.ConversationTypes;
 import blue.language.samples.paynote.types.common.CommonTypes;
 import blue.language.samples.paynote.types.core.CoreTypes;
+import blue.language.samples.paynote.types.domain.CookbookEvents;
 import blue.language.samples.paynote.types.domain.PayNoteDemoEvents;
 import blue.language.samples.paynote.types.domain.RecruitmentEvents;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
 import blue.language.samples.paynote.types.myos.MyOsTypes;
+import blue.language.samples.paynote.types.payments.PaymentRequests;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
 import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
@@ -57,6 +59,25 @@ public final class TypeAliases {
     public static final String VOUCHER_MONITORING_APPROVED = "Voucher/Monitoring Approved";
     public static final String VOUCHER_START_MONITORING_REQUESTED = "Voucher/Start Monitoring Requested";
     public static final String VOUCHER_RESTAURANT_TRANSACTION_REPORTED = "Voucher/Restaurant Transaction Reported";
+    public static final String COOKBOOK_DELIVERY_CONFIRMED = "Cookbook/Delivery Confirmed";
+    public static final String COOKBOOK_DISPUTE_OPENED = "Cookbook/Dispute Opened";
+    public static final String COOKBOOK_INSTALLMENT_DUE = "Cookbook/Installment Due";
+    public static final String COOKBOOK_TRIAL_ENDED = "Cookbook/Trial Ended";
+    public static final String COOKBOOK_USAGE_REPORTED = "Cookbook/Usage Reported";
+    public static final String COOKBOOK_KYC_APPROVED = "Cookbook/Kyc Approved";
+    public static final String COOKBOOK_FX_QUOTE_ACCEPTED = "Cookbook/Fx Quote Accepted";
+    public static final String COOKBOOK_EVENT_DATE_REACHED = "Cookbook/Event Date Reached";
+    public static final String COOKBOOK_INSPECTION_PASSED = "Cookbook/Inspection Passed";
+    public static final String PAYMENTS_PAYMENT_REQUESTED = "Payments/Payment Requested";
+    public static final String PAYMENTS_ACH_TRANSFER_REQUESTED = "Payments/Ach Transfer Requested";
+    public static final String PAYMENTS_CARD_CHARGE_REQUESTED = "Payments/Card Charge Requested";
+    public static final String PAYMENTS_CARD_STORED_CREDENTIAL_CHARGE_REQUESTED =
+            "Payments/Card Stored Credential Charge Requested";
+    public static final String PAYMENTS_CREDIT_LINE_MERCHANT_TO_CARDHOLDER_PAYMENT_REQUESTED =
+            "Payments/Credit Line Merchant To Cardholder Payment Requested";
+    public static final String PAYMENTS_INTERNAL_LEDGER_TRANSFER_REQUESTED =
+            "Payments/Internal Ledger Transfer Requested";
+    public static final String PAYMENTS_CRYPTO_TRANSFER_REQUESTED = "Payments/Crypto Transfer Requested";
 
     // MyOS
     public static final String MYOS_DOCUMENT_SESSION_BOOTSTRAP = "MyOS/Document Session Bootstrap";
@@ -113,6 +134,24 @@ public final class TypeAliases {
         aliases.put(VoucherEvents.MonitoringApproved.class, VOUCHER_MONITORING_APPROVED);
         aliases.put(VoucherEvents.StartMonitoringRequested.class, VOUCHER_START_MONITORING_REQUESTED);
         aliases.put(VoucherEvents.RestaurantTransactionReported.class, VOUCHER_RESTAURANT_TRANSACTION_REPORTED);
+        aliases.put(CookbookEvents.DeliveryConfirmed.class, COOKBOOK_DELIVERY_CONFIRMED);
+        aliases.put(CookbookEvents.DisputeOpened.class, COOKBOOK_DISPUTE_OPENED);
+        aliases.put(CookbookEvents.InstallmentDue.class, COOKBOOK_INSTALLMENT_DUE);
+        aliases.put(CookbookEvents.TrialEnded.class, COOKBOOK_TRIAL_ENDED);
+        aliases.put(CookbookEvents.UsageReported.class, COOKBOOK_USAGE_REPORTED);
+        aliases.put(CookbookEvents.KycApproved.class, COOKBOOK_KYC_APPROVED);
+        aliases.put(CookbookEvents.FxQuoteAccepted.class, COOKBOOK_FX_QUOTE_ACCEPTED);
+        aliases.put(CookbookEvents.EventDateReached.class, COOKBOOK_EVENT_DATE_REACHED);
+        aliases.put(CookbookEvents.InspectionPassed.class, COOKBOOK_INSPECTION_PASSED);
+        aliases.put(PaymentRequests.PaymentRequested.class, PAYMENTS_PAYMENT_REQUESTED);
+        aliases.put(PaymentRequests.AchTransferRequested.class, PAYMENTS_ACH_TRANSFER_REQUESTED);
+        aliases.put(PaymentRequests.CardChargeRequested.class, PAYMENTS_CARD_CHARGE_REQUESTED);
+        aliases.put(PaymentRequests.CardStoredCredentialChargeRequested.class,
+                PAYMENTS_CARD_STORED_CREDENTIAL_CHARGE_REQUESTED);
+        aliases.put(PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
+                PAYMENTS_CREDIT_LINE_MERCHANT_TO_CARDHOLDER_PAYMENT_REQUESTED);
+        aliases.put(PaymentRequests.InternalLedgerTransferRequested.class, PAYMENTS_INTERNAL_LEDGER_TRANSFER_REQUESTED);
+        aliases.put(PaymentRequests.CryptoTransferRequested.class, PAYMENTS_CRYPTO_TRANSFER_REQUESTED);
 
         // MyOS
         aliases.put(MyOsTypes.DocumentSessionBootstrap.class, MYOS_DOCUMENT_SESSION_BOOTSTRAP);

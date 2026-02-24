@@ -6,6 +6,7 @@ import blue.language.samples.paynote.types.common.CommonTypes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public final class StepsBuilder {
@@ -19,6 +20,16 @@ public final class StepsBuilder {
             step.name(name);
         }
         step.properties("code", new Node().value(program.code()));
+        steps.add(step);
+        return this;
+    }
+
+    public StepsBuilder jsRaw(String name, String code) {
+        Node step = new Node().type(TypeAliases.CONVERSATION_JAVASCRIPT_CODE);
+        if (name != null) {
+            step.name(name);
+        }
+        step.properties("code", new Node().value(code));
         steps.add(step);
         return this;
     }
@@ -107,6 +118,35 @@ public final class StepsBuilder {
 
     public StepsBuilder namedEvent(String name, String eventName) {
         return emitAdHocEvent(name, eventName, null);
+    }
+
+    public StepsBuilder triggerPayment(String name,
+                                       Class<?> paymentEventTypeClass,
+                                       Consumer<NodeObjectBuilder> payloadCustomizer) {
+        Node event = new Node().type(TypeRef.of(paymentEventTypeClass).asTypeNode());
+        if (payloadCustomizer != null) {
+            NodeObjectBuilder builder = NodeObjectBuilder.create();
+            payloadCustomizer.accept(builder);
+            Node payload = builder.build();
+            if (payload.getProperties() != null) {
+                for (Map.Entry<String, Node> entry : payload.getProperties().entrySet()) {
+                    event.properties(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        Node processorNode = event.getProperties() != null ? event.getProperties().get("processor") : null;
+        String processor = processorNode != null && processorNode.getValue() != null
+                ? String.valueOf(processorNode.getValue())
+                : null;
+        if (processor == null || processor.trim().isEmpty()) {
+            throw new IllegalArgumentException("triggerPayment requires non-empty processor field");
+        }
+        return triggerEvent(name, event);
+    }
+
+    public StepsBuilder triggerPayment(Class<?> paymentEventTypeClass,
+                                       Consumer<NodeObjectBuilder> payloadCustomizer) {
+        return triggerPayment(null, paymentEventTypeClass, payloadCustomizer);
     }
 
     public StepsBuilder replaceValue(String name, String path, Object value) {

@@ -47,7 +47,7 @@ class PayNoteBuilderTest {
                         "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockExternalOnOperation("confirmShipment", op -> op
+                    .unlockOnOperation("confirmShipment", op -> op
                             .channel("shipmentCompanyChannel")
                             .description("Confirm shipment")
                             .requestType(String.class)
@@ -94,11 +94,11 @@ class PayNoteBuilderTest {
     }
 
     @Test
-    void distinguishesUnlockExternalAndRequestCaptureSemantics() {
+    void distinguishesUnlockAndRequestCaptureSemantics() {
         Node externalUnlock = PayNotes.payNote("External unlock")
                 .capture()
                     .lockOnInit()
-                    .unlockExternalOnOperation("confirm", op -> op
+                    .unlockOnOperation("confirm", op -> op
                             .channel("payerChannel")
                             .description("External unlock"))
                     .done()

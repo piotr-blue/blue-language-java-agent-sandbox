@@ -34,7 +34,7 @@ public final class PayNoteComplexityLadderExamples {
                 .amountTotalMajor("19.99")
                 .capture()
                     .lockOnInit()
-                    .unlockExternalOnOperation("approveCapture", op -> op
+                    .unlockOnOperation("approveCapture", op -> op
                             .channel("payerChannel")
                             .description("Buyer approves capture.")
                             .requestType(String.class))
@@ -100,7 +100,7 @@ public final class PayNoteComplexityLadderExamples {
                         "payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockExternalOnOperation("confirmShipment", op -> op
+                    .unlockOnOperation("confirmShipment", op -> op
                             .channel("shipmentCompanyChannel")
                             .description("Shipment company confirms shipment.")
                             .steps(steps -> steps

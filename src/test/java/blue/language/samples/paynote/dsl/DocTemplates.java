@@ -5,6 +5,7 @@ import blue.language.processor.model.JsonPatch;
 import blue.language.processor.util.PointerUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -25,11 +26,11 @@ public final class DocTemplates {
         return template.clone();
     }
 
-    public static Node extend(Node template, Consumer<DocumentMutator> customizer) {
+    public static Node extend(Node template, Consumer<ExtendBuilder> customizer) {
         Node cloned = clone(template);
-        DocumentMutator mutator = new DocumentMutator(cloned);
-        customizer.accept(mutator);
-        return mutator.node();
+        ExtendBuilder extender = new ExtendBuilder(cloned);
+        customizer.accept(extender);
+        return extender.node();
     }
 
     public static Node applyPatch(Node template, List<JsonPatch> patchEntries) {
@@ -43,45 +44,47 @@ public final class DocTemplates {
         return cloned;
     }
 
-    public static final class DocumentMutator {
+    public static class ExtendBuilder {
         private final Node root;
+        private final Map<String, String> participantTypeByKey = new LinkedHashMap<String, String>();
 
-        private DocumentMutator(Node root) {
+        private ExtendBuilder(Node root) {
             this.root = root;
         }
 
-        public DocumentMutator putDocumentValue(String key, Object value) {
+        public ExtendBuilder putDocumentValue(String key, Object value) {
+            Node document = documentNode();
             if (value instanceof Node) {
-                root.getAsNode("/document").properties(key, (Node) value);
+                document.properties(key, (Node) value);
             } else {
-                root.getAsNode("/document").properties(key, new Node().value(value));
+                document.properties(key, new Node().value(value));
             }
             return this;
         }
 
-        public DocumentMutator putDocumentObject(String key, Consumer<NodeObjectBuilder> customizer) {
+        public ExtendBuilder putDocumentObject(String key, Consumer<NodeObjectBuilder> customizer) {
             NodeObjectBuilder builder = NodeObjectBuilder.create();
             customizer.accept(builder);
-            root.getAsNode("/document").properties(key, builder.build());
+            documentNode().properties(key, builder.build());
             return this;
         }
 
-        public DocumentMutator bindAccount(String channelKey, String accountId) {
+        public ExtendBuilder bindAccount(String channelKey, String accountId) {
             ensureChannelBinding(channelKey).properties("accountId", new Node().value(accountId));
             return this;
         }
 
-        public DocumentMutator bindEmail(String channelKey, String email) {
+        public ExtendBuilder bindEmail(String channelKey, String email) {
             ensureChannelBinding(channelKey).properties("email", new Node().value(email));
             return this;
         }
 
-        public DocumentMutator applyPatch(JsonPatch patch) {
+        public ExtendBuilder applyPatch(JsonPatch patch) {
             applySinglePatch(root, patch);
             return this;
         }
 
-        public DocumentMutator applyPatches(List<JsonPatch> patches) {
+        public ExtendBuilder applyPatches(List<JsonPatch> patches) {
             if (patches == null) {
                 return this;
             }
@@ -91,8 +94,169 @@ public final class DocTemplates {
             return this;
         }
 
+        public ExtendBuilder set(String pointer, Object value) {
+            String path = normalizeDocumentPath(pointer);
+            applySinglePatch(root, JsonPatch.replace(path, valueNode(value)));
+            return this;
+        }
+
+        public ExtendBuilder participant(String channelKey) {
+            return participant(channelKey, null, null);
+        }
+
+        public ExtendBuilder participant(String channelKey, String description) {
+            return participant(channelKey, description, null);
+        }
+
+        public ExtendBuilder participant(String channelKey, String description, Node channel) {
+            if (channelKey == null || channelKey.trim().isEmpty()) {
+                throw new IllegalArgumentException("participant channel key is required");
+            }
+            Node nextChannel = channel == null
+                    ? new Node().type(TypeAliases.CONVERSATION_TIMELINE_CHANNEL)
+                    : channel;
+            String nextTypeAlias = nextChannel.getAsText("/type/value");
+            if (nextTypeAlias == null) {
+                throw new IllegalArgumentException("participant channel type is required for: " + channelKey);
+            }
+            String existingAlias = existingChannelType(channelKey);
+            if (existingAlias != null && !isTypeCompatible(existingAlias, nextTypeAlias)) {
+                throw new IllegalArgumentException("Participant override is not type-compatible for channel: "
+                        + channelKey + " (" + existingAlias + " -> " + nextTypeAlias + ")");
+            }
+            contractsMap().put(channelKey, nextChannel.clone());
+            participantTypeByKey.put(channelKey, nextTypeAlias);
+            if (description != null && !description.trim().isEmpty()) {
+                Node labels = documentNode().getProperties() != null
+                        ? documentNode().getProperties().get("participantLabels")
+                        : null;
+                if (labels == null) {
+                    labels = new Node().properties(new LinkedHashMap<String, Node>());
+                    documentNode().properties("participantLabels", labels);
+                } else if (labels.getProperties() == null) {
+                    labels.properties(new LinkedHashMap<String, Node>());
+                }
+                labels.getProperties().put(channelKey, new Node().value(description));
+            }
+            return this;
+        }
+
+        public ExtendBuilder participants(String... channelKeys) {
+            if (channelKeys == null) {
+                return this;
+            }
+            for (String channelKey : channelKeys) {
+                participant(channelKey);
+            }
+            return this;
+        }
+
+        public ExtendBuilder participantsUnion(String compositeChannelKey, String... channelKeys) {
+            contractsBuilder().compositeTimelineChannel(compositeChannelKey, channelKeys);
+            return this;
+        }
+
+        public ExtendBuilder operation(String key,
+                                       String channelKey,
+                                       String description,
+                                       Consumer<StepsBuilder> implementation) {
+            return operation(key, channelKey, null, description, implementation);
+        }
+
+        public ExtendBuilder operation(String key,
+                                       String channelKey,
+                                       Class<?> requestTypeClass,
+                                       String description,
+                                       Consumer<StepsBuilder> implementation) {
+            ensureParticipantChannel(channelKey);
+            if (requestTypeClass != null) {
+                contractsBuilder().operation(key, channelKey, requestTypeClass, description);
+            } else {
+                contractsBuilder().operation(key, channelKey, description);
+            }
+            contractsBuilder().implementOperation(key + "Impl", key, implementation);
+            return this;
+        }
+
+        public ExtendBuilder onEvent(String workflowKey, Class<?> eventTypeClass, Consumer<StepsBuilder> customizer) {
+            contractsBuilder().onTriggered(workflowKey, eventTypeClass, customizer);
+            return this;
+        }
+
+        public ExtendBuilder onInit(String workflowKey, Consumer<StepsBuilder> customizer) {
+            contractsBuilder().lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
+            contractsBuilder().onLifecycle(workflowKey, "initLifecycleChannel", customizer);
+            return this;
+        }
+
+        public ExtendBuilder onDocChange(String workflowKey, String path, Consumer<StepsBuilder> customizer) {
+            String channelKey = workflowKey + "Channel";
+            contractsBuilder().documentUpdateChannel(channelKey, path);
+            contractsBuilder().sequentialWorkflow(workflowKey,
+                    channelKey,
+                    new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE),
+                    customizer);
+            return this;
+        }
+
+        public ExtendBuilder directChangeWithAllowList(String operationName,
+                                                       String channelKey,
+                                                       String description,
+                                                       String... allowedPaths) {
+            operation(operationName, channelKey, description, steps -> steps
+                    .js("CollectChangeset", BlueDocDsl.js(js -> js
+                            .readRequest("request")
+                            .returnOutput(JsOutputBuilder.output()
+                                    .changesetRaw("request.changeset ?? []")
+                                    .emptyEvents())))
+                    .updateDocumentFromExpression("ApplyChangeset", "steps.CollectChangeset.changeset"));
+            policiesBuilder().contractsChangePolicy("allow-listed-direct-change",
+                    "operation constrained by explicit allow list");
+            policiesBuilder().changesetAllowList(operationName, allowedPaths);
+            return this;
+        }
+
         public Node node() {
             return root;
+        }
+
+        protected Node documentNode() {
+            if (root.getProperties() != null && root.getProperties().containsKey("document")) {
+                return root.getAsNode("/document");
+            }
+            return root;
+        }
+
+        private ContractsBuilder contractsBuilder() {
+            return new ContractsBuilder(contractsMap());
+        }
+
+        private PoliciesBuilder policiesBuilder() {
+            return new PoliciesBuilder(policiesMap());
+        }
+
+        private Map<String, Node> contractsMap() {
+            Node document = documentNode();
+            Node contracts = document.getProperties() != null ? document.getProperties().get("contracts") : null;
+            if (contracts == null) {
+                contracts = new Node().properties(new LinkedHashMap<String, Node>());
+                document.properties("contracts", contracts);
+            } else if (contracts.getProperties() == null) {
+                contracts.properties(new LinkedHashMap<String, Node>());
+            }
+            return contracts.getProperties();
+        }
+
+        private Map<String, Node> policiesMap() {
+            Node document = documentNode();
+            Node policies = document.getProperties() != null ? document.getProperties().get("policies") : null;
+            if (policies == null) {
+                policies = new Node().properties(new LinkedHashMap<String, Node>());
+                document.properties("policies", policies);
+            } else if (policies.getProperties() == null) {
+                policies.properties(new LinkedHashMap<String, Node>());
+            }
+            return policies.getProperties();
         }
 
         private Node ensureChannelBinding(String channelKey) {
@@ -107,6 +271,73 @@ public final class DocTemplates {
                 bindings.properties(channelKey, binding);
             }
             return binding;
+        }
+
+        private String existingChannelType(String channelKey) {
+            String alias = participantTypeByKey.get(channelKey);
+            if (alias != null) {
+                return alias;
+            }
+            Node existing = contractsMap().get(channelKey);
+            if (existing == null) {
+                return null;
+            }
+            return existing.getAsText("/type/value");
+        }
+
+        private void ensureParticipantChannel(String channelKey) {
+            if (!contractsMap().containsKey(channelKey)) {
+                participant(channelKey);
+            }
+        }
+
+        private boolean isTypeCompatible(String existingAlias, String nextAlias) {
+            if (existingAlias == null || nextAlias == null) {
+                return false;
+            }
+            if (existingAlias.equals(nextAlias)) {
+                return true;
+            }
+            if (TypeAliases.CORE_CHANNEL.equals(existingAlias)) {
+                return TypeAliases.CONVERSATION_TIMELINE_CHANNEL.equals(nextAlias)
+                        || TypeAliases.MYOS_TIMELINE_CHANNEL.equals(nextAlias);
+            }
+            if (TypeAliases.CONVERSATION_TIMELINE_CHANNEL.equals(existingAlias)) {
+                return TypeAliases.MYOS_TIMELINE_CHANNEL.equals(nextAlias);
+            }
+            return false;
+        }
+
+        private String normalizeDocumentPath(String pointer) {
+            if (pointer == null || pointer.trim().isEmpty()) {
+                throw new IllegalArgumentException("Document pointer cannot be empty");
+            }
+            String trimmed = pointer.trim();
+            boolean bootstrap = root.getProperties() != null && root.getProperties().containsKey("document");
+            if (trimmed.startsWith("/document/") || trimmed.equals("/document")) {
+                return trimmed;
+            }
+            if (!trimmed.startsWith("/")) {
+                trimmed = "/" + trimmed;
+            }
+            return bootstrap ? "/document" + trimmed : trimmed;
+        }
+
+        private Node valueNode(Object value) {
+            if (value instanceof Node) {
+                return (Node) value;
+            }
+            return new Node().value(value);
+        }
+    }
+
+    /**
+     * Backward-compatible alias for previous naming.
+     */
+    @Deprecated
+    public static final class DocumentMutator extends ExtendBuilder {
+        private DocumentMutator(Node root) {
+            super(root);
         }
     }
 

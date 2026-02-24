@@ -3,6 +3,7 @@ package blue.language.samples.paynote.examples.voucher;
 import blue.language.model.Node;
 import blue.language.samples.paynote.sdk.PayNotes;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
+import blue.language.samples.paynote.types.payments.PaymentRequests;
 
 public final class ArmchairProtectionWithVoucherPayNote {
 
@@ -16,7 +17,7 @@ public final class ArmchairProtectionWithVoucherPayNote {
                         "Payer confirms satisfaction, then capture is unblocked and voucher payment is requested.")
                 .capture()
                     .lockOnInit()
-                    .unlockExternalOnOperation("confirmSatisfaction", op -> op
+                    .unlockOnOperation("confirmSatisfaction", op -> op
                             .channel("payerChannel")
                             .description("Confirm armchair is satisfactory and allow capture.")
                             .noRequest()
@@ -24,16 +25,17 @@ public final class ArmchairProtectionWithVoucherPayNote {
                                     VoucherEvents.SatisfactionConfirmed.class,
                                     payload -> payload.put("by", "payerChannel"))))
                     .done()
-                .onFundsCaptured("requestVoucherPayment", steps -> steps.emitType(
+                .onFundsCaptured("requestVoucherPayment", steps -> steps.triggerPayment(
                         "SynchronyCreditLinePaymentRequested",
-                        VoucherEvents.CreditLinePaymentRequested.class,
+                        PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
                         payload -> payload
+                                .put("processor", "guarantorChannel")
                                 .put("payer", "payeeChannel")
                                 .put("payee", "payerChannel")
                                 .put("currency", "USD")
-                                .put("amountMinor", 10000)
-                                .put("bootstrapRecipient", "guarantorChannel")
-                                .putNode("attachedPayNoteTemplate", BalancedBowlVoucherPayNote.templateDoc())))
+                                .put("amount", 10000)
+                                .put("creditLineId", "synchrony-facility-001")
+                                .putNode("attachedPayNote", BalancedBowlVoucherPayNote.templateDoc())))
                 .buildDocument();
     }
 }

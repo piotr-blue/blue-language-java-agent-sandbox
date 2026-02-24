@@ -61,13 +61,19 @@ Use:
   - `participants("a", "b", "c")`
 - Capture helpers use capture terminology only:
   - `capture().lockOnInit()`
-  - `capture().unlockExternalWhenEventArrives(...)`
-  - `capture().unlockExternalOnOperation(...)`
+  - `capture().unlockOnEvent(...)`
+  - `capture().unlockOnOperation(...)`
+  - `capture().unlockOnChange(...)`
   - `capture().requestCaptureOnOperation(...)`
+  - `capture().requestOnEvent(...)`
+  - `capture().requestOnChange(...)`
   - atomic one-liners like `captureLockedUntilOperation(...)`.
 - Reserve/refund helper symmetry:
   - `reserveLockedUntilOperation(...)`, `reserveLockedUntilEvent(...)`, `reserveLockedUntilDocPathChanges(...)`
   - `refundLockedUntilOperation(...)`, `refundLockedUntilEvent(...)`, `refundLockedUntilDocPathChanges(...)`
+- Payment event trigger helper:
+  - `steps.triggerPayment(PaymentType.class, payload -> payload.put("processor", "...")...)`
+  - validates required `processor` field at authoring time.
 - Document authoring is separate from bootstrap bindings.
 - Lock plans fail fast if no unlock path is configured.
 
@@ -144,6 +150,37 @@ These show:
 1. capture locked until satisfaction,
 2. funds-captured trigger emits credit-line payment request,
 3. monitoring approval flow with budgeted partial captures (`min(spent, remaining)` JS).
+
+---
+
+## Cookbook examples (24 scenarios)
+
+See:
+
+- `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamples.java`
+- `src/test/java/blue/language/samples/paynote/examples/paynote/PayNoteCookbookExamplesTest.java`
+
+These include:
+
+- shipment escrow variants,
+- marketplace split,
+- milestone contractors,
+- subscriptions and BNPL,
+- factoring/FX/insurance flows,
+- voucher + credit-line + ACH + crypto + internal-ledger payment request examples.
+
+---
+
+## Extension parity (creation-style `extend`)
+
+`DocTemplates.extend(existing, ext -> ...)` now supports creation-style methods directly:
+
+- `participant(...)`, `participants(...)`, `participantsUnion(...)`
+- `operation(..., steps -> ...)`
+- `onEvent(...)`, `onInit(...)`, `onDocChange(...)`
+- `set(...)`
+
+This allows extending existing templates using the same fluent authoring shape as creation.
 
 ---
 
