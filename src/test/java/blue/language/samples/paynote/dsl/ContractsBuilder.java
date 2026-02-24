@@ -141,6 +141,28 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder changeOperation(String key,
+                                            String channel,
+                                            String description,
+                                            Consumer<NodeObjectBuilder> requestCustomizer) {
+        Node operation = new Node().type(TypeAliases.CONVERSATION_CHANGE_OPERATION);
+        if (description != null) {
+            operation.properties("description", new Node().value(description));
+        }
+        operation.properties("channel", new Node().value(channel));
+        if (requestCustomizer != null) {
+            NodeObjectBuilder requestBuilder = NodeObjectBuilder.create();
+            requestCustomizer.accept(requestBuilder);
+            operation.properties("request", requestBuilder.build());
+        }
+        contracts.put(key, operation);
+        return this;
+    }
+
+    public ContractsBuilder changeOperation(String key, String channel, String description) {
+        return changeOperation(key, channel, description, null);
+    }
+
     public ContractsBuilder operation(String key, String channel, String description) {
         return operation(key, channel, description, null);
     }
@@ -174,6 +196,19 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder changeWorkflowOperation(String key,
+                                                    String operationName,
+                                                    Consumer<StepsBuilder> customizer) {
+        StepsBuilder stepsBuilder = new StepsBuilder();
+        customizer.accept(stepsBuilder);
+
+        Node workflow = new Node().type(TypeAliases.CONVERSATION_CHANGE_WORKFLOW);
+        workflow.properties("operation", new Node().value(operationName));
+        workflow.properties("steps", new Node().items(stepsBuilder.build()));
+        contracts.put(key, workflow);
+        return this;
+    }
+
     public ContractsBuilder implementOperation(String key,
                                                String operationName,
                                                Consumer<StepsBuilder> customizer) {
@@ -200,12 +235,14 @@ public final class ContractsBuilder {
     public ContractsBuilder onTriggered(String key,
                                         Node event,
                                         Consumer<StepsBuilder> customizer) {
+        triggeredEventChannel("triggeredEventChannel");
         return sequentialWorkflow(key, "triggeredEventChannel", event, customizer);
     }
 
     public ContractsBuilder onTriggered(String key,
                                         Class<?> eventTypeClass,
                                         Consumer<StepsBuilder> customizer) {
+        triggeredEventChannel("triggeredEventChannel");
         return sequentialWorkflow(key,
                 "triggeredEventChannel",
                 new Node().type(TypeRef.of(eventTypeClass).asTypeNode()),

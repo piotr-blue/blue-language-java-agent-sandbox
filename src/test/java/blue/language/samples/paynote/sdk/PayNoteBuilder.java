@@ -322,13 +322,18 @@ public final class PayNoteBuilder {
                                                     String channelKey,
                                                     String description,
                                                     String... allowedPaths) {
-        operation(operationName, channelKey, description, steps -> steps
-                .js("CollectChangeset", BlueDocDsl.js(js -> js
-                        .readRequest("request")
-                        .returnOutput(JsOutputBuilder.output()
-                                .changesetRaw("request.changeset ?? []")
-                                .emptyEvents())))
-                .updateDocumentFromExpression("ApplyChangeset", "steps.CollectChangeset.changeset"));
+        ensureParticipantChannel(channelKey);
+        document.contracts(c -> {
+            c.changeOperation(operationName, channelKey, description, request -> {
+            });
+            c.changeWorkflowOperation(operationName + "Impl", operationName, steps -> steps
+                    .js("CollectChangeset", BlueDocDsl.js(js -> js
+                            .readRequest("request")
+                            .returnOutput(JsOutputBuilder.output()
+                                    .changesetRaw("request.changeset ?? []")
+                                    .emptyEvents())))
+                    .updateDocumentFromExpression("ApplyChangeset", "steps.CollectChangeset.changeset"));
+        });
 
         document.policies(p -> p
                 .contractsChangePolicy("allow-listed-direct-change", "operation constrained by explicit allow list")

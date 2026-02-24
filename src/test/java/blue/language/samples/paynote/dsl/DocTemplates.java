@@ -203,7 +203,10 @@ public final class DocTemplates {
                                                        String channelKey,
                                                        String description,
                                                        String... allowedPaths) {
-            operation(operationName, channelKey, description, steps -> steps
+            ensureParticipantChannel(channelKey);
+            contractsBuilder().changeOperation(operationName, channelKey, description, request -> {
+            });
+            contractsBuilder().changeWorkflowOperation(operationName + "Impl", operationName, steps -> steps
                     .js("CollectChangeset", BlueDocDsl.js(js -> js
                             .readRequest("request")
                             .returnOutput(JsOutputBuilder.output()

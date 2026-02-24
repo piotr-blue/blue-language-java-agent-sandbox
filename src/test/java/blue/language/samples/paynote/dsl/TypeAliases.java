@@ -32,11 +32,13 @@ public final class TypeAliases {
 
     // Conversation
     public static final String CONVERSATION_OPERATION = "Conversation/Operation";
+    public static final String CONVERSATION_CHANGE_OPERATION = "Conversation/Change Operation";
     public static final String CONVERSATION_TIMELINE_CHANNEL = "Conversation/Timeline Channel";
     public static final String CONVERSATION_COMPOSITE_TIMELINE_CHANNEL = "Conversation/Composite Timeline Channel";
     public static final String CONVERSATION_CHANNEL_SOURCE_BINDING = "Conversation/Channel Source Binding";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW = "Conversation/Sequential Workflow";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION = "Conversation/Sequential Workflow Operation";
+    public static final String CONVERSATION_CHANGE_WORKFLOW = "Conversation/Change Workflow";
     public static final String CONVERSATION_JAVASCRIPT_CODE = "Conversation/JavaScript Code";
     public static final String CONVERSATION_UPDATE_DOCUMENT = "Conversation/Update Document";
     public static final String CONVERSATION_TRIGGER_EVENT = "Conversation/Trigger Event";
