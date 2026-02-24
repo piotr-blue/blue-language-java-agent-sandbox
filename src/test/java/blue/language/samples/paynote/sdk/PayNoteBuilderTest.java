@@ -109,7 +109,7 @@ class PayNoteBuilderTest {
         Node captureRequest = PayNotes.payNote("Capture request")
                 .capture()
                     .lockOnInit()
-                    .requestCaptureOnOperation("confirm", op -> op
+                    .requestOnOperation("confirm", op -> op
                             .channel("payerChannel")
                             .description("Request capture"))
                     .done()

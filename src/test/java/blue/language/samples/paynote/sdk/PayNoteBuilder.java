@@ -169,7 +169,7 @@ public final class PayNoteBuilder {
     public PayNoteBuilder captureLockedUntilDocPathChanges(String path) {
         return capture()
                 .lockOnInit()
-                .unlockOnChange(path)
+                .unlockOnDocPathChange(path)
                 .done();
     }
 
@@ -607,94 +607,157 @@ public final class PayNoteBuilder {
             return this;
         }
 
+        public CaptureBuilder lockOnEvent(Class<?> eventTypeClass) {
+            return onEventAction("lockCaptureWhen", eventTypeClass, steps -> steps.capture().lock(), false);
+        }
+
+        public CaptureBuilder lockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return onOperationAction(operationKey, customizer, steps -> steps.capture().lock(), false);
+        }
+
+        public CaptureBuilder lockOnDocPathChange(String path) {
+            return onDocPathAction("lockCaptureOnDocChange", path, steps -> steps.capture().lock(), false);
+        }
+
         public CaptureBuilder unlockOnEvent(Class<?> eventTypeClass) {
-            return unlockExternalWhenEventArrives(eventTypeClass);
-        }
-
-        public CaptureBuilder unlockExternalWhenEventArrives(Class<?> eventTypeClass) {
-            parent.captureResolutionPaths++;
-            parent.onEvent("unlockCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
-                    eventTypeClass,
-                    steps -> steps.capture().unlock());
-            return this;
-        }
-
-        public CaptureBuilder requestOnEvent(Class<?> eventTypeClass) {
-            return requestCaptureWhenEventArrives(eventTypeClass);
-        }
-
-        public CaptureBuilder unlockWhenEventArrives(Class<?> eventTypeClass) {
-            return unlockOnEvent(eventTypeClass);
-        }
-
-        public CaptureBuilder requestCaptureWhenEventArrives(Class<?> eventTypeClass) {
-            parent.captureResolutionPaths++;
-            parent.onEvent("requestCaptureWhen" + sanitizeKey(eventTypeClass.getSimpleName()),
-                    eventTypeClass,
-                    steps -> steps.capture().requestNow());
-            return this;
-        }
-
-        public CaptureBuilder unlockOnChange(String path) {
-            return unlockExternalWhenDocPathChanges(path);
-        }
-
-        public CaptureBuilder unlockExternalWhenDocPathChanges(String path) {
-            parent.captureResolutionPaths++;
-            parent.onDocChange("unlockCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().unlock());
-            return this;
-        }
-
-        public CaptureBuilder requestOnChange(String path) {
-            return requestCaptureWhenDocPathChanges(path);
-        }
-
-        public CaptureBuilder unlockWhenDocPathChanges(String path) {
-            return unlockOnChange(path);
-        }
-
-        public CaptureBuilder requestCaptureWhenDocPathChanges(String path) {
-            parent.captureResolutionPaths++;
-            parent.onDocChange("requestCaptureOnDocChange" + sanitizeKey(path), path, steps -> steps.capture().requestNow());
-            return this;
+            return onEventAction("unlockCaptureWhen", eventTypeClass, steps -> steps.capture().unlock(), true);
         }
 
         public CaptureBuilder unlockOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return onOperationAction(operationKey, customizer, steps -> steps.capture().unlock(), true);
+        }
+
+        public CaptureBuilder unlockOnDocPathChange(String path) {
+            return onDocPathAction("unlockCaptureOnDocChange", path, steps -> steps.capture().unlock(), true);
+        }
+
+        public CaptureBuilder requestOnInit() {
             parent.captureResolutionPaths++;
-            CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
-            customizer.accept(operationBuilder);
-            operationBuilder.doneWithExternalUnlock();
-            return this;
-        }
-
-        public CaptureBuilder unlockExternalOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
-            return unlockOnOperation(operationKey, customizer);
-        }
-
-        public CaptureBuilder requestOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
-            return requestCaptureOnOperation(operationKey, customizer);
-        }
-
-        public CaptureBuilder requestCaptureOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
-            parent.captureResolutionPaths++;
-            CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
-            customizer.accept(operationBuilder);
-            operationBuilder.doneWithCaptureRequest();
-            return this;
-        }
-
-        public CaptureBuilder requestNow() {
             parent.onInit("onInitCaptureRequest", steps -> steps.capture().requestNow());
             return this;
         }
 
-        public CaptureBuilder requestPartial(String amountExpression) {
-            parent.onInit("onInitCapturePartialRequest", steps -> steps.capture().requestPartial(amountExpression));
-            return this;
+        public CaptureBuilder requestOnEvent(Class<?> eventTypeClass) {
+            return onEventAction("requestCaptureWhen", eventTypeClass, steps -> steps.capture().requestNow(), true);
+        }
+
+        public CaptureBuilder requestOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return onOperationAction(operationKey, customizer, steps -> steps.capture().requestNow(), true);
+        }
+
+        public CaptureBuilder requestOnDocPathChange(String path) {
+            return onDocPathAction("requestCaptureOnDocChange", path, steps -> steps.capture().requestNow(), true);
+        }
+
+        public CaptureBuilder requestPartialOnEvent(Class<?> eventTypeClass, String amountExpression) {
+            String expression = requireAmountExpression(amountExpression);
+            return onEventAction("requestPartialCaptureWhen",
+                    eventTypeClass,
+                    steps -> steps.capture().requestPartial(expression),
+                    true);
+        }
+
+        public CaptureBuilder requestPartialOnOperation(String operationKey,
+                                                        String amountExpression,
+                                                        Consumer<CaptureOperationBuilder> customizer) {
+            String expression = requireAmountExpression(amountExpression);
+            return onOperationAction(operationKey,
+                    customizer,
+                    steps -> steps.capture().requestPartial(expression),
+                    true);
+        }
+
+        public CaptureBuilder requestPartialOnDocPathChange(String path, String amountExpression) {
+            String expression = requireAmountExpression(amountExpression);
+            return onDocPathAction("requestPartialCaptureOnDocChange",
+                    path,
+                    steps -> steps.capture().requestPartial(expression),
+                    true);
+        }
+
+        public CaptureBuilder refundOnEvent(Class<?> eventTypeClass) {
+            return onEventAction("refundWhen", eventTypeClass, steps -> steps.capture().refundFull(), true);
+        }
+
+        public CaptureBuilder refundOnOperation(String operationKey, Consumer<CaptureOperationBuilder> customizer) {
+            return onOperationAction(operationKey, customizer, steps -> steps.capture().refundFull(), true);
+        }
+
+        public CaptureBuilder refundOnDocPathChange(String path) {
+            return onDocPathAction("refundOnDocChange", path, steps -> steps.capture().refundFull(), true);
+        }
+
+        public CaptureBuilder refundPartialOnEvent(Class<?> eventTypeClass, String amountExpression) {
+            String expression = requireAmountExpression(amountExpression);
+            return onEventAction("refundPartialWhen",
+                    eventTypeClass,
+                    partialRefundAction(expression),
+                    true);
+        }
+
+        public CaptureBuilder refundPartialOnOperation(String operationKey,
+                                                       String amountExpression,
+                                                       Consumer<CaptureOperationBuilder> customizer) {
+            String expression = requireAmountExpression(amountExpression);
+            return onOperationAction(operationKey, customizer, partialRefundAction(expression), true);
+        }
+
+        public CaptureBuilder refundPartialOnDocPathChange(String path, String amountExpression) {
+            String expression = requireAmountExpression(amountExpression);
+            return onDocPathAction("refundPartialOnDocChange", path, partialRefundAction(expression), true);
         }
 
         public PayNoteBuilder done() {
             return parent;
+        }
+
+        private CaptureBuilder onEventAction(String workflowPrefix,
+                                             Class<?> eventTypeClass,
+                                             Consumer<StepsBuilder> action,
+                                             boolean captureResolutionPath) {
+            if (captureResolutionPath) {
+                parent.captureResolutionPaths++;
+            }
+            parent.onEvent(workflowPrefix + sanitizeKey(eventTypeClass.getSimpleName()), eventTypeClass, action);
+            return this;
+        }
+
+        private CaptureBuilder onDocPathAction(String workflowPrefix,
+                                               String path,
+                                               Consumer<StepsBuilder> action,
+                                               boolean captureResolutionPath) {
+            if (captureResolutionPath) {
+                parent.captureResolutionPaths++;
+            }
+            parent.onDocChange(workflowPrefix + sanitizeKey(path), path, action);
+            return this;
+        }
+
+        private CaptureBuilder onOperationAction(String operationKey,
+                                                 Consumer<CaptureOperationBuilder> customizer,
+                                                 Consumer<StepsBuilder> action,
+                                                 boolean captureResolutionPath) {
+            if (captureResolutionPath) {
+                parent.captureResolutionPaths++;
+            }
+            CaptureOperationBuilder operationBuilder = new CaptureOperationBuilder(parent, operationKey);
+            if (customizer != null) {
+                customizer.accept(operationBuilder);
+            }
+            operationBuilder.doneWithAction(action);
+            return this;
+        }
+
+        private Consumer<StepsBuilder> partialRefundAction(String amountExpression) {
+            return steps -> steps.triggerEvent("RequestPartialRefund",
+                    PayNoteEvents.reservationReleaseRequested(new Node().value(BlueDocDsl.expr(amountExpression))));
+        }
+
+        private String requireAmountExpression(String amountExpression) {
+            if (amountExpression == null || amountExpression.trim().isEmpty()) {
+                throw new IllegalArgumentException("amountExpression is required");
+            }
+            return amountExpression.trim();
         }
     }
 
@@ -790,30 +853,17 @@ public final class PayNoteBuilder {
             return this;
         }
 
-        private PayNoteBuilder doneWithExternalUnlock() {
+        private PayNoteBuilder doneWithAction(Consumer<StepsBuilder> action) {
             if (channelKey == null || channelKey.trim().isEmpty()) {
                 throw new IllegalStateException("Operation channel must be configured for: " + key);
             }
-            Consumer<StepsBuilder> withUnlock = steps -> {
+            Consumer<StepsBuilder> withAction = steps -> {
                 if (implementation != null) {
                     implementation.accept(steps);
                 }
-                steps.capture().unlock();
+                action.accept(steps);
             };
-            return parent.operation(key, channelKey, requestTypeClass, description, withUnlock);
-        }
-
-        private PayNoteBuilder doneWithCaptureRequest() {
-            if (channelKey == null || channelKey.trim().isEmpty()) {
-                throw new IllegalStateException("Operation channel must be configured for: " + key);
-            }
-            Consumer<StepsBuilder> withCaptureRequest = steps -> {
-                if (implementation != null) {
-                    implementation.accept(steps);
-                }
-                steps.capture().requestNow();
-            };
-            return parent.operation(key, channelKey, requestTypeClass, description, withCaptureRequest);
+            return parent.operation(key, channelKey, requestTypeClass, description, withAction);
         }
     }
 }
