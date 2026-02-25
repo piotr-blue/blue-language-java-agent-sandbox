@@ -3,6 +3,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+tools/quickjs-sidecar/node_modules
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
