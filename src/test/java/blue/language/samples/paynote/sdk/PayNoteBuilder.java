@@ -2,22 +2,18 @@ package blue.language.samples.paynote.sdk;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
-import blue.language.samples.paynote.dsl.BlueDocumentBuilder;
-import blue.language.samples.paynote.dsl.ChannelKey;
 import blue.language.samples.paynote.dsl.DocTemplate;
 import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
 import blue.language.samples.paynote.dsl.JsOutputBuilder;
 import blue.language.samples.paynote.dsl.JsPatchBuilder;
-import blue.language.samples.paynote.dsl.MyOsBootstrapBuilder;
-import blue.language.samples.paynote.dsl.MyOsDsl;
+import blue.language.samples.paynote.dsl.PayNoteAliases;
 import blue.language.samples.paynote.dsl.PayNoteEvents;
 import blue.language.samples.paynote.dsl.StepsBuilder;
 import blue.language.samples.paynote.dsl.TypeAliases;
 import blue.language.samples.paynote.dsl.TypeRef;
 import blue.language.samples.paynote.types.paynote.PayNoteTypes;
-import blue.language.samples.paynote.types.paynote.PayNoteV2Types;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -27,18 +23,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public final class PayNoteBuilder {
+public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
 
-    private final BlueDocumentBuilder document;
     private final Map<String, String> participantTypeByKey = new LinkedHashMap<String, String>();
-    private final Map<String, Node> participantLabels = new LinkedHashMap<String, Node>();
     private IsoCurrency configuredCurrency;
     private boolean captureLockedOnInit;
     private int captureResolutionPaths;
 
     private PayNoteBuilder(String name) {
-        this.document = BlueDocDsl.document(PayNoteV2Types.PayNoteDocument.class)
-                .name(name);
+        super();
+        type(PayNoteAliases.PAYNOTE);
+        withName(name);
         ensureImplicitParticipants();
     }
 
@@ -48,12 +43,12 @@ public final class PayNoteBuilder {
 
     public PayNoteBuilder currency(IsoCurrency currency) {
         this.configuredCurrency = currency;
-        document.putValue("currency", currency.code());
+        set("/currency", currency.code());
         return this;
     }
 
     public PayNoteBuilder amountTotalMinor(long amountMinor) {
-        document.putNode("amount", new Node().properties("total", new Node().value(amountMinor)));
+        set("/amount", new Node().properties("total", new Node().value(amountMinor)));
         return this;
     }
 
@@ -77,7 +72,7 @@ public final class PayNoteBuilder {
         if (path == null || path.trim().isEmpty()) {
             throw new IllegalArgumentException("reference transaction path is required");
         }
-        document.putValue("referenceTransactionPath", path);
+        set("/referenceTransactionPath", path);
         return this;
     }
 
@@ -85,61 +80,26 @@ public final class PayNoteBuilder {
         if (referenceTransaction == null) {
             throw new IllegalArgumentException("reference transaction node is required");
         }
-        document.putNode("referenceTransaction", referenceTransaction);
+        set("/referenceTransaction", referenceTransaction);
         return this;
     }
 
-    public PayNoteBuilder participant(String channelKey) {
-        return participant(channelKey, null, null);
-    }
-
-    public PayNoteBuilder participant(String channelKey, String description) {
-        return participant(channelKey, description, null);
-    }
-
+    @Override
     public PayNoteBuilder participant(String channelKey, String description, Node channel) {
         if (channelKey == null || channelKey.trim().isEmpty()) {
             throw new IllegalArgumentException("participant channel key is required");
         }
+        String normalizedChannelKey = channelKey.trim();
         String nextTypeAlias = channel == null
                 ? TypeAliases.CONVERSATION_TIMELINE_CHANNEL
                 : channel.getAsText("/type/value");
-        String existingTypeAlias = participantTypeByKey.get(channelKey);
+        String existingTypeAlias = participantTypeByKey.get(normalizedChannelKey);
         if (existingTypeAlias != null && !isTypeCompatible(existingTypeAlias, nextTypeAlias)) {
-            throw new IllegalArgumentException("Participant override is not type-compatible for channel: " + channelKey
+            throw new IllegalArgumentException("Participant override is not type-compatible for channel: " + normalizedChannelKey
                     + " (" + existingTypeAlias + " -> " + nextTypeAlias + ")");
         }
-
-        if (channel == null) {
-            document.contracts(c -> c.timelineChannel(channelKey));
-        } else {
-            document.contracts(c -> c.putRaw(channelKey, channel));
-        }
-        participantTypeByKey.put(channelKey, nextTypeAlias);
-        if (description != null && !description.trim().isEmpty()) {
-            participantLabels.put(channelKey, new Node().value(description));
-            document.putNode("participantLabels", new Node().properties(new LinkedHashMap<String, Node>(participantLabels)));
-        }
-        return this;
-    }
-
-    public PayNoteBuilder participants(String... channelKeys) {
-        if (channelKeys == null) {
-            return this;
-        }
-        for (String key : channelKeys) {
-            participant(key);
-        }
-        return this;
-    }
-
-    public PayNoteBuilder participantsUnion(String compositeChannelKey, String... channelKeys) {
-        return participantsUnion(ChannelKey.of(compositeChannelKey), channelKeys);
-    }
-
-    public PayNoteBuilder participantsUnion(ChannelKey compositeChannelKey, String... channelKeys) {
-        document.contracts(c -> c.compositeTimelineChannel(compositeChannelKey.value(), channelKeys));
-        return this;
+        participantTypeByKey.put(normalizedChannelKey, nextTypeAlias);
+        return super.participant(normalizedChannelKey, description, channel);
     }
 
     public PayNoteBuilder acceptsEventsFrom(String participantName, Class<?>... allowedEventTypes) {
@@ -151,7 +111,7 @@ public final class PayNoteBuilder {
         String implementationKey = operationKey + "Impl";
         String jsCode = buildAcceptEventsIngressJs(allowedEventTypes);
 
-        document.contracts(c -> {
+        contracts(c -> {
             c.operation(operationKey,
                     channelKey,
                     "Allow " + participantKey + " to emit events into this document.");
@@ -290,57 +250,9 @@ public final class PayNoteBuilder {
         });
     }
 
-    public PayNoteBuilder operation(String key,
-                                    String channelKey,
-                                    String description,
-                                    Consumer<StepsBuilder> implementation) {
-        return operation(key, channelKey, null, description, implementation);
-    }
-
-    public PayNoteBuilder operation(String key,
-                                    String channelKey,
-                                    Class<?> requestTypeClass,
-                                    String description,
-                                    Consumer<StepsBuilder> implementation) {
+    @Override
+    protected void beforeOperation(String channelKey) {
         ensureParticipantChannel(channelKey);
-        document.contracts(c -> {
-            if (requestTypeClass != null) {
-                c.operation(key, channelKey, requestTypeClass, description);
-            } else {
-                c.operation(key, channelKey, description);
-            }
-            c.implementOperation(key + "Impl", key, implementation);
-        });
-        return this;
-    }
-
-    public OperationBuilder operation(String key) {
-        return new OperationBuilder(this, key);
-    }
-
-    public PayNoteBuilder directChangeWithAllowList(String operationName,
-                                                    String channelKey,
-                                                    String description,
-                                                    String... allowedPaths) {
-        operation(operationName, channelKey, description, steps -> steps
-                .js("CollectChangeset", BlueDocDsl.js(js -> js
-                        .readRequest("request")
-                        .returnOutput(JsOutputBuilder.output()
-                                .changesetRaw("request.changeset ?? []")
-                                .emptyEvents())))
-                .updateDocumentFromExpression("ApplyChangeset", "steps.CollectChangeset.changeset"));
-
-        document.policies(p -> p
-                .contractsChangePolicy("allow-listed-direct-change", "operation constrained by explicit allow list")
-                .changesetAllowList(operationName, allowedPaths));
-        return this;
-    }
-
-    public PayNoteBuilder allowListDirectChange(String operationName,
-                                                String channelKey,
-                                                String description,
-                                                String... allowedPaths) {
-        return directChangeWithAllowList(operationName, channelKey, description, allowedPaths);
     }
 
     public PayNoteBuilder captureOnEvent(Class<?> triggerEventType, String workflowKey) {
@@ -384,10 +296,6 @@ public final class PayNoteBuilder {
                         new Node().value(BlueDocDsl.expr("document('/amount/total')")))));
     }
 
-    public PayNoteBuilder releaseOperation(String operationKey, String channelKey) {
-        return releaseReservationOperation(operationKey, channelKey);
-    }
-
     public PayNoteBuilder requestCancellationOperation(String channelKey) {
         return operation("requestCancellation",
                 channelKey,
@@ -395,54 +303,33 @@ public final class PayNoteBuilder {
                 steps -> steps.replaceValue("SetCancellationRequested", "/status", "cancellation-requested"));
     }
 
-    public PayNoteBuilder cancelOperation(String channelKey) {
-        return requestCancellationOperation(channelKey);
-    }
-
     public PayNoteBuilder issueChildPayNoteOnEvent(String workflowKey,
                                                    Class<?> triggerEventType,
                                                    String childPointerExpression) {
-        document.contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> steps
+        contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> steps
                 .emitType("IssueChildPayNote", PayNoteTypes.IssueChildPayNoteRequested.class,
                         payload -> payload.putExpression("childPayNote", childPointerExpression))));
         return this;
     }
 
     public PayNoteBuilder onFundsReserved(String workflowKey, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, PayNoteTypes.FundsReserved.class, customizer));
-        return this;
+        return onEvent(workflowKey, PayNoteTypes.FundsReserved.class, customizer);
     }
 
     public PayNoteBuilder onCaptureRequested(String workflowKey, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, PayNoteTypes.CaptureFundsRequested.class, customizer));
-        return this;
+        return onEvent(workflowKey, PayNoteTypes.CaptureFundsRequested.class, customizer);
     }
 
     public PayNoteBuilder onFundsCaptured(String workflowKey, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, PayNoteTypes.FundsCaptured.class, customizer));
-        return this;
+        return onEvent(workflowKey, PayNoteTypes.FundsCaptured.class, customizer);
     }
 
     public PayNoteBuilder onReleased(String workflowKey, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, PayNoteTypes.ReservationReleased.class, customizer));
-        return this;
+        return onEvent(workflowKey, PayNoteTypes.ReservationReleased.class, customizer);
     }
 
     public PayNoteBuilder onRefunded(String workflowKey, Consumer<StepsBuilder> customizer) {
         return onReleased(workflowKey, customizer);
-    }
-
-    public PayNoteBuilder onInit(String workflowKey, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> {
-            c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
-            c.onLifecycle(workflowKey, "initLifecycleChannel", customizer);
-        });
-        return this;
-    }
-
-    public PayNoteBuilder onEvent(String workflowKey, Class<?> eventTypeClass, Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, eventTypeClass, customizer));
-        return this;
     }
 
     public PayNoteBuilder onEventEmit(String workflowKey,
@@ -453,23 +340,11 @@ public final class PayNoteBuilder {
                 steps -> steps.emitType("EmitEventAction", emittedEventTypeClass, null));
     }
 
-    public PayNoteBuilder onDocChange(String workflowKey, String path, Consumer<StepsBuilder> customizer) {
-        String channelKey = workflowKey + "Channel";
-        document.contracts(c -> {
-            c.documentUpdateChannel(channelKey, path);
-            c.sequentialWorkflow(workflowKey,
-                    channelKey,
-                    new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE),
-                    customizer);
-        });
-        return this;
-    }
-
     public PayNoteBuilder once(String workflowKey,
                                Class<?> triggerEventType,
                                String guardPath,
                                Consumer<StepsBuilder> customizer) {
-        document.contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> {
+        contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> {
             steps.js("OnceGuard", BlueDocDsl.js(js -> js
                     .constVar("alreadyDone", "document('" + guardPath + "') === true")
                     .ifBlock("alreadyDone", done -> done.returnOutput(JsOutputBuilder.output().emptyEvents()
@@ -489,7 +364,7 @@ public final class PayNoteBuilder {
                                   String signalExpression,
                                   List<String> requiredSignals,
                                   Consumer<StepsBuilder> onSatisfied) {
-        document.contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> {
+        contracts(c -> c.onTriggered(workflowKey, triggerEventType, steps -> {
             steps.js("CollectBarrierSignal", BlueDocDsl.js(js -> js
                     .constVar("signal", signalExpression)
                     .constVar("state", "document('" + statePath + "') ?? {}")
@@ -510,7 +385,7 @@ public final class PayNoteBuilder {
     }
 
     public PayNoteBuilder initialStateDescription(String summary, String details) {
-        document.putNode("payNoteInitialStateDescription", new Node()
+        set("/payNoteInitialStateDescription", new Node()
                 .properties("summary", new Node().value(summary))
                 .properties("details", new Node().value(details)));
         return this;
@@ -540,17 +415,10 @@ public final class PayNoteBuilder {
         return this;
     }
 
+    @Override
     public Node buildDocument() {
         validateCapturePlan();
-        return document.build();
-    }
-
-    public Node build() {
-        return buildDocument();
-    }
-
-    public MyOsBootstrapBuilder bootstrap() {
-        return MyOsDsl.bootstrap(buildDocument());
+        return super.buildDocument();
     }
 
     public DocTemplate template() {
@@ -568,7 +436,7 @@ public final class PayNoteBuilder {
     }
 
     private void ensureImplicitParticipants() {
-        document.contracts(c -> c.timelineChannels(
+        contracts(c -> c.timelineChannels(
                 "payerChannel",
                 "payeeChannel",
                 "guarantorChannel"));
@@ -611,8 +479,9 @@ public final class PayNoteBuilder {
         if (channelKey == null || channelKey.trim().isEmpty()) {
             throw new IllegalArgumentException("operation channel key is required");
         }
-        if (!participantTypeByKey.containsKey(channelKey)) {
-            participant(channelKey);
+        String normalizedChannelKey = channelKey.trim();
+        if (!participantTypeByKey.containsKey(normalizedChannelKey)) {
+            participant(normalizedChannelKey);
         }
     }
 
@@ -824,60 +693,6 @@ public final class PayNoteBuilder {
                 throw new IllegalArgumentException("amountExpression is required");
             }
             return amountExpression.trim();
-        }
-    }
-
-    public static final class OperationBuilder {
-        private final PayNoteBuilder parent;
-        private final String key;
-        private String channelKey;
-        private String description;
-        private Class<?> requestTypeClass;
-        private Consumer<StepsBuilder> implementation;
-
-        private OperationBuilder(PayNoteBuilder parent, String key) {
-            this.parent = parent;
-            this.key = key;
-        }
-
-        public OperationBuilder channel(String channelKey) {
-            this.channelKey = channelKey;
-            return this;
-        }
-
-        public OperationBuilder channel(ChannelKey channelKey) {
-            this.channelKey = channelKey.value();
-            return this;
-        }
-
-        public OperationBuilder description(String description) {
-            this.description = description;
-            return this;
-        }
-
-        public OperationBuilder requestType(Class<?> requestTypeClass) {
-            this.requestTypeClass = requestTypeClass;
-            return this;
-        }
-
-        public OperationBuilder noRequest() {
-            this.requestTypeClass = null;
-            return this;
-        }
-
-        public OperationBuilder steps(Consumer<StepsBuilder> implementation) {
-            this.implementation = implementation;
-            return this;
-        }
-
-        public PayNoteBuilder done() {
-            if (channelKey == null || channelKey.trim().isEmpty()) {
-                throw new IllegalStateException("Operation channel must be configured for: " + key);
-            }
-            if (implementation == null) {
-                throw new IllegalStateException("Operation steps must be configured for: " + key);
-            }
-            return parent.operation(key, channelKey, requestTypeClass, description, implementation);
         }
     }
 

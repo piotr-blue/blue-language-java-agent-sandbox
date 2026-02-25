@@ -26,7 +26,7 @@ public final class ArmchairProtectionWithVoucherPayNote {
                                     payload -> payload.put("by", "payerChannel"))))
                     .done()
                 .onFundsCaptured("requestVoucherPayment", steps -> steps.triggerPayment(
-                        "SynchronyCreditLinePaymentRequested",
+                        "DemoBankCreditLinePaymentRequested",
                         PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
                         payload -> payload
                                 .processor("guarantorChannel")
@@ -34,7 +34,7 @@ public final class ArmchairProtectionWithVoucherPayNote {
                                 .payee("payerChannel")
                                 .currency("USD")
                                 .amountMinor(10000)
-                                .creditLineId("synchrony-facility-001")
+                                .creditLineId("demoBank-facility-001")
                                 .attachPayNote(BalancedBowlVoucherPayNote.templateDoc())))
                 .buildDocument();
     }

@@ -10,15 +10,16 @@ This repo now keeps **one latest SDK surface** (no `v1` / `v2` / `vnext` package
 
 ### 1) Generic document builder (non-PayNote)
 
-Use `BlueDoc`:
+Use `SimpleDocBuilder` (base class is `DocBuilder`):
 
-- `src/test/java/blue/language/samples/paynote/sdk/BlueDoc.java`
-- `src/test/java/blue/language/samples/paynote/sdk/BlueDocTest.java`
+- `src/test/java/blue/language/samples/paynote/sdk/DocBuilder.java`
+- `src/test/java/blue/language/samples/paynote/sdk/SimpleDocBuilder.java`
+- `src/test/java/blue/language/samples/paynote/sdk/SimpleDocBuilderTest.java`
 
 Example shape:
 
 ```java
-Node doc = BlueDoc.name("Counter #1")
+Node doc = SimpleDocBuilder.name("Counter #1")
   .type("MyCompany/Counter")
   .description("Demo counter")
   .participants("owner", "observer")

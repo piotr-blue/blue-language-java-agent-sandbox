@@ -16,7 +16,7 @@ This repository contains the Blue Language Java runtime plus sample DSL authorin
 
 ## Generic docs
 
-Use `BlueDoc` for any document type:
+Use `SimpleDocBuilder` for generic documents (`DocBuilder` is the reusable base):
 
 - `name/type/description`
 - `participant(...)`, `participants(...)`

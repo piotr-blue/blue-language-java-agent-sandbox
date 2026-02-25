@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class StepsBuilder {
 
@@ -169,6 +170,21 @@ public final class StepsBuilder {
 
     public CaptureStepBuilder capture() {
         return new CaptureStepBuilder(this);
+    }
+
+    public <E> E ext(Function<StepsBuilder, E> extensionFactory) {
+        if (extensionFactory == null) {
+            throw new IllegalArgumentException("extensionFactory cannot be null");
+        }
+        E extension = extensionFactory.apply(this);
+        if (extension == null) {
+            throw new IllegalArgumentException("extensionFactory cannot return null");
+        }
+        return extension;
+    }
+
+    public MyOsSteps myOs() {
+        return ext(MyOsSteps::new);
     }
 
     List<Node> build() {

@@ -15,8 +15,8 @@ public final class VoucherEvents {
         public String by;
     }
 
-    @TypeAlias("Synchrony/Credit Line Payment Requested")
-    @TypeBlueId("Voucher-Synchrony-Credit-Line-Payment-Requested-BlueId")
+    @TypeAlias("DemoBank/Credit Line Payment Requested")
+    @TypeBlueId("Voucher-DemoBank-Credit-Line-Payment-Requested-BlueId")
     public static class CreditLinePaymentRequested {
         public String payer;
         public String payee;

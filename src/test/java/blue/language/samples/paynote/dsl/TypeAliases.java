@@ -55,7 +55,7 @@ public final class TypeAliases {
     public static final String RECRUITMENT_CV_CLASSIFICATION_REQUESTED = "Recruitment/CV Classification Requested";
     public static final String RECRUITMENT_SENIOR_CANDIDATE_DETECTED = "Recruitment/Senior Candidate Detected";
     public static final String DEMO_SATISFACTION_CONFIRMED = "Demo/Satisfaction Confirmed";
-    public static final String SYNCHRONY_CREDIT_LINE_PAYMENT_REQUESTED = "Synchrony/Credit Line Payment Requested";
+    public static final String DEMOBANK_CREDIT_LINE_PAYMENT_REQUESTED = "DemoBank/Credit Line Payment Requested";
     public static final String VOUCHER_MONITORING_APPROVED = "Voucher/Monitoring Approved";
     public static final String VOUCHER_START_MONITORING_REQUESTED = "Voucher/Start Monitoring Requested";
     public static final String VOUCHER_RESTAURANT_TRANSACTION_REPORTED = "Voucher/Restaurant Transaction Reported";
@@ -94,6 +94,9 @@ public final class TypeAliases {
     public static final String MYOS_SUBSCRIPTION_UPDATE = "MyOS/Subscription Update";
     public static final String MYOS_SESSION_EPOCH_ADVANCED = "MyOS/Session Epoch Advanced";
     public static final String MYOS_CALL_OPERATION_REQUESTED = "MyOS/Call Operation Requested";
+    public static final String MYOS_ADDING_PARTICIPANT_REQUESTED = "MyOS/Adding Participant Requested";
+    public static final String MYOS_REMOVING_PARTICIPANT_REQUESTED = "MyOS/Removing Participant Requested";
+    public static final String MYOS_START_WORKER_SESSION_REQUESTED = "MyOS/Start Worker Session Requested";
     public static final String PAYNOTE_DOCUMENT = PayNoteAliases.PAYNOTE;
 
     // Basic types
@@ -131,7 +134,7 @@ public final class TypeAliases {
         aliases.put(RecruitmentEvents.CvClassificationRequested.class, RECRUITMENT_CV_CLASSIFICATION_REQUESTED);
         aliases.put(RecruitmentEvents.SeniorCandidateDetected.class, RECRUITMENT_SENIOR_CANDIDATE_DETECTED);
         aliases.put(VoucherEvents.SatisfactionConfirmed.class, DEMO_SATISFACTION_CONFIRMED);
-        aliases.put(VoucherEvents.CreditLinePaymentRequested.class, SYNCHRONY_CREDIT_LINE_PAYMENT_REQUESTED);
+        aliases.put(VoucherEvents.CreditLinePaymentRequested.class, DEMOBANK_CREDIT_LINE_PAYMENT_REQUESTED);
         aliases.put(VoucherEvents.MonitoringApproved.class, VOUCHER_MONITORING_APPROVED);
         aliases.put(VoucherEvents.StartMonitoringRequested.class, VOUCHER_START_MONITORING_REQUESTED);
         aliases.put(VoucherEvents.RestaurantTransactionReported.class, VOUCHER_RESTAURANT_TRANSACTION_REPORTED);
@@ -171,6 +174,9 @@ public final class TypeAliases {
         aliases.put(MyOsTypes.SubscriptionUpdate.class, MYOS_SUBSCRIPTION_UPDATE);
         aliases.put(MyOsTypes.SessionEpochAdvanced.class, MYOS_SESSION_EPOCH_ADVANCED);
         aliases.put(MyOsTypes.CallOperationRequested.class, MYOS_CALL_OPERATION_REQUESTED);
+        aliases.put(MyOsTypes.AddingParticipantRequested.class, MYOS_ADDING_PARTICIPANT_REQUESTED);
+        aliases.put(MyOsTypes.RemovingParticipantRequested.class, MYOS_REMOVING_PARTICIPANT_REQUESTED);
+        aliases.put(MyOsTypes.StartWorkerSessionRequested.class, MYOS_START_WORKER_SESSION_REQUESTED);
 
         // PayNote
         aliases.put(PayNoteTypes.ReserveFundsRequested.class, PayNoteAliases.RESERVE_FUNDS_REQUESTED);

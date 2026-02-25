@@ -76,6 +76,7 @@ public final class MyOsTypes {
     @TypeBlueId("Ef7EvcR5He11JtgBFtswYTHEfUKnTHmFysMTo3ZsoQby")
     public static class SingleDocumentPermissionGrantRequested {
         public String onBehalfOf;
+        public String requestId;
         public String targetSessionId;
         public Node permissions;
     }
@@ -83,6 +84,7 @@ public final class MyOsTypes {
     @TypeBlueId("DBv2TLwytwBgvrSVeauLjTZYycf8hiXgdadoyRVDfjhS")
     public static class LinkedDocumentsPermissionGrantRequested {
         public String onBehalfOf;
+        public String requestId;
         public String targetSessionId;
         public Node links;
     }
@@ -99,5 +101,22 @@ public final class MyOsTypes {
         public String timestamp;
         public Integer epoch;
         public Node document;
+    }
+
+    @TypeBlueId("AZEL7GJEXVcSPp3mgbRtqHYCHAvfBpqqc1k8b2HhQh4T")
+    public static class AddingParticipantRequested {
+        public String channelKey;
+        public String email;
+    }
+
+    @TypeBlueId("Hfoh2g4jJo8Tmk43YX34wVW5YXtL1ncZs7weXVKtTm4b")
+    public static class RemovingParticipantRequested {
+        public String channelKey;
+    }
+
+    @TypeBlueId("3MNb8B84b9CkT5LY2qvxG9k86f5osYQwJ9TK4FFfCKmX")
+    public static class StartWorkerSessionRequested {
+        public String agentChannelKey;
+        public Node config;
     }
 }
