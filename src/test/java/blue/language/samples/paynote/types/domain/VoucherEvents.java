@@ -1,8 +1,7 @@
 package blue.language.samples.paynote.types.domain;
 
-import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
-import blue.language.samples.paynote.dsl.TypeAlias;
+import blue.language.types.TypeAlias;
 
 public final class VoucherEvents {
 
@@ -13,23 +12,22 @@ public final class VoucherEvents {
     @TypeBlueId("Voucher-Demo-Satisfaction-Confirmed-BlueId")
     public static class SatisfactionConfirmed {
         public String by;
-    }
 
-    @TypeAlias("DemoBank/Credit Line Payment Requested")
-    @TypeBlueId("Voucher-DemoBank-Credit-Line-Payment-Requested-BlueId")
-    public static class CreditLinePaymentRequested {
-        public String payer;
-        public String payee;
-        public String currency;
-        public Integer amountMinor;
-        public String bootstrapRecipient;
-        public Node attachedPayNoteTemplate;
+        public SatisfactionConfirmed by(String by) {
+            this.by = by;
+            return this;
+        }
     }
 
     @TypeAlias("Voucher/Monitoring Approved")
     @TypeBlueId("Voucher-Monitoring-Approved-BlueId")
     public static class MonitoringApproved {
         public String merchantId;
+
+        public MonitoringApproved merchantId(String merchantId) {
+            this.merchantId = merchantId;
+            return this;
+        }
     }
 
     @TypeAlias("Voucher/Start Monitoring Requested")
@@ -38,12 +36,20 @@ public final class VoucherEvents {
         public String merchantId;
         public String scope;
         public String subject;
-    }
 
-    @TypeAlias("Voucher/Restaurant Transaction Reported")
-    @TypeBlueId("Voucher-Restaurant-Transaction-Reported-BlueId")
-    public static class RestaurantTransactionReported {
-        public Integer amount;
-        public String merchantId;
+        public StartMonitoringRequested merchantId(String merchantId) {
+            this.merchantId = merchantId;
+            return this;
+        }
+
+        public StartMonitoringRequested scope(String scope) {
+            this.scope = scope;
+            return this;
+        }
+
+        public StartMonitoringRequested subject(String subject) {
+            this.subject = subject;
+            return this;
+        }
     }
 }
