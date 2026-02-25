@@ -2,6 +2,7 @@ package blue.language.samples.paynote.types.myos;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.samples.paynote.dsl.TypeAlias;
 import blue.language.samples.paynote.types.conversation.ConversationTypes;
 
 import java.util.Map;
@@ -51,6 +52,20 @@ public final class MyOsTypes {
         public String targetSessionId;
         public String operation;
         public Node request;
+    }
+
+    @TypeAlias("MyOS/Call Operation Responded")
+    @TypeBlueId("MyOS-Call-Operation-Responded-Placeholder-BlueId")
+    public static class CallOperationResponded {
+        public Node result;
+        public Node inResponseTo;
+    }
+
+    @TypeAlias("MyOS/Call Operation Failed")
+    @TypeBlueId("MyOS-Call-Operation-Failed-Placeholder-BlueId")
+    public static class CallOperationFailed {
+        public String reason;
+        public Node inResponseTo;
     }
 
     @TypeBlueId("BnrAcFrEHzoARE2yqKmRv7jrPWCbJsVBqSoXwWCaTtrk")
@@ -105,6 +120,13 @@ public final class MyOsTypes {
 
     @TypeBlueId("AZEL7GJEXVcSPp3mgbRtqHYCHAvfBpqqc1k8b2HhQh4T")
     public static class AddingParticipantRequested {
+        public String channelKey;
+        public String email;
+    }
+
+    @TypeAlias("MyOS/Adding Participant Responded")
+    @TypeBlueId("MyOS-Adding-Participant-Responded-Placeholder-BlueId")
+    public static class AddingParticipantResponded {
         public String channelKey;
         public String email;
     }

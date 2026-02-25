@@ -183,8 +183,8 @@ public final class StepsBuilder {
         return extension;
     }
 
-    public MyOsSteps myOs() {
-        return ext(MyOsSteps::new);
+    public blue.language.samples.paynote2.sdk.MyOsSteps myOs() {
+        return ext(blue.language.samples.paynote2.sdk.MyOsSteps::new);
     }
 
     List<Node> build() {
