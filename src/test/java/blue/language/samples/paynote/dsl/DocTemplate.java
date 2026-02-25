@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+@Deprecated(forRemoval = true)
 public final class DocTemplate {
 
     private final Node bootstrap;

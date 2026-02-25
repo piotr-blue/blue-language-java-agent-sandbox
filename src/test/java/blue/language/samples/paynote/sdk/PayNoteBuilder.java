@@ -2,8 +2,6 @@ package blue.language.samples.paynote.sdk;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
-import blue.language.samples.paynote.dsl.DocTemplate;
-import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
 import blue.language.samples.paynote.dsl.JsOutputBuilder;
@@ -124,37 +122,6 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
         return new CaptureBuilder(this);
     }
 
-    public PayNoteBuilder captureLockedUntilOperation(String operationKey,
-                                                      String channelKey,
-                                                      String description,
-                                                      Class<?> emittedEventType) {
-        return capture()
-                .lockOnInit()
-                .unlockOnOperation(operationKey, op -> op
-                        .channel(channelKey)
-                        .description(description)
-                        .steps(steps -> {
-                            if (emittedEventType != null) {
-                                steps.emitType("EmitUnlockSignal", emittedEventType, null);
-                            }
-                        }))
-                .done();
-    }
-
-    public PayNoteBuilder captureLockedUntilEvent(Class<?> eventTypeClass) {
-        return capture()
-                .lockOnInit()
-                .unlockOnEvent(eventTypeClass)
-                .done();
-    }
-
-    public PayNoteBuilder captureLockedUntilDocPathChanges(String path) {
-        return capture()
-                .lockOnInit()
-                .unlockOnDocPathChange(path)
-                .done();
-    }
-
     public PayNoteBuilder reserveOnInit() {
         onInit("onInitReserve", steps -> steps.triggerEvent("ReserveFundsRequested",
                 PayNoteEvents.reserveFundsRequested(new Node().value(
@@ -253,22 +220,6 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
     @Override
     protected void beforeOperation(String channelKey) {
         ensureParticipantChannel(channelKey);
-    }
-
-    public PayNoteBuilder captureOnEvent(Class<?> triggerEventType, String workflowKey) {
-        return captureOnEvent(triggerEventType, workflowKey, null);
-    }
-
-    public PayNoteBuilder captureOnEvent(Class<?> triggerEventType,
-                                         String workflowKey,
-                                         Consumer<StepsBuilder> captureHook) {
-        onEvent(workflowKey, triggerEventType, steps -> {
-            steps.capture().requestNow();
-            if (captureHook != null) {
-                captureHook.accept(steps);
-            }
-        });
-        return this;
     }
 
     public PayNoteBuilder refundFullOperation(String channelKey) {
@@ -419,10 +370,6 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
     public Node buildDocument() {
         validateCapturePlan();
         return super.buildDocument();
-    }
-
-    public DocTemplate template() {
-        return DocTemplates.template(bootstrap().build());
     }
 
     public static List<String> signals(String... values) {

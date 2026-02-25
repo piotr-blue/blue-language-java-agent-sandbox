@@ -18,7 +18,7 @@ class ChannelHierarchyDslTest {
                                 "payerChannel", "payeeChannel", "guarantorChannel"))
                 .build();
 
-        Node bootstrap = MyOs.bootstrap(portableDocument)
+        Node bootstrap = MyOsDsl.bootstrap(portableDocument)
                 .bindRole("payer").email("alice@gmail.com")
                 .bindRole("payee").accountId("1234")
                 .bindRole("guarantor").accountId("0")

@@ -38,4 +38,16 @@ class TriggerPaymentDslTest {
                 payload -> payload.amountMinor(500)));
         assertEquals("triggerPayment requires non-empty processor field", ex.getMessage());
     }
+
+    @Test
+    void triggerPaymentRejectsCustomProcessorOverride() {
+        StepsBuilder steps = new StepsBuilder();
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> steps.triggerPayment(
+                PaymentRequests.InternalLedgerTransferRequested.class,
+                payload -> payload
+                        .putCustom("processor", "guarantorChannel")
+                        .amountMinor(500)));
+        assertEquals("Use processor(...) to set processor", ex.getMessage());
+    }
 }

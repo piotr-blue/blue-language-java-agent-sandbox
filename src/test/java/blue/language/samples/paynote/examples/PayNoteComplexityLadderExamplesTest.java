@@ -33,7 +33,7 @@ class PayNoteComplexityLadderExamplesTest {
         assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
                 event.getAsText("/contracts/unlockCaptureWhenDeliveryReported/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.CAPTURE_FUNDS_REQUESTED,
-                reserveThenCapture.getAsText("/contracts/captureWhenShipmentConfirmed/steps/0/event/type/value"));
+                reserveThenCapture.getAsText("/contracts/requestCaptureWhenShipmentConfirmed/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,
                 refund.getAsText("/contracts/requestRefundImpl/steps/0/event/type/value"));
         assertEquals(PayNoteAliases.RESERVATION_RELEASE_REQUESTED,

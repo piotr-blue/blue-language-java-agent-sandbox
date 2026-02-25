@@ -84,7 +84,10 @@ class PayNoteBuilderTest {
         Node complete = PayNotes.payNote("Complete lock plan")
                 .currency(IsoCurrency.USD)
                 .amountTotalMinor(500)
-                .captureLockedUntilEvent(ShippingEvents.ShipmentConfirmed.class)
+                .capture()
+                    .lockOnInit()
+                    .unlockOnEvent(ShippingEvents.ShipmentConfirmed.class)
+                    .done()
                 .buildDocument();
         assertEquals(PayNoteAliases.CAPTURE_UNLOCK_REQUESTED,
                 complete.getAsText("/contracts/unlockCaptureWhenShipmentConfirmed/steps/0/event/type/value"));

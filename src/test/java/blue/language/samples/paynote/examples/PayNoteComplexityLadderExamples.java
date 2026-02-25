@@ -21,10 +21,13 @@ public final class PayNoteComplexityLadderExamples {
         return PayNotes.payNote("Tiny Capture After Shipment")
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("12.00")
-                .captureLockedUntilOperation("confirmShipment",
-                        "shipmentCompanyChannel",
-                        "Shipment company confirms delivery",
-                        ShippingEvents.ShipmentConfirmed.class)
+                .capture()
+                    .lockOnInit()
+                    .unlockOnOperation("confirmShipment", op -> op
+                            .channel("shipmentCompanyChannel")
+                            .description("Shipment company confirms delivery")
+                            .steps(steps -> steps.emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class, null)))
+                    .done()
                 .buildDocument();
     }
 
@@ -46,7 +49,10 @@ public final class PayNoteComplexityLadderExamples {
         return PayNotes.payNote("Tiny Capture After Tracking Change")
                 .currency(IsoCurrency.EUR)
                 .amountTotalMajor("15.00")
-                .captureLockedUntilDocPathChanges("/shipping/trackingNumber")
+                .capture()
+                    .lockOnInit()
+                    .unlockOnDocPathChange("/shipping/trackingNumber")
+                    .done()
                 .buildDocument();
     }
 
@@ -54,7 +60,10 @@ public final class PayNoteComplexityLadderExamples {
         return PayNotes.payNote("Tiny Capture After Event")
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("22.50")
-                .captureLockedUntilEvent(ShippingEvents.DeliveryReported.class)
+                .capture()
+                    .lockOnInit()
+                    .unlockOnEvent(ShippingEvents.DeliveryReported.class)
+                    .done()
                 .buildDocument();
     }
 
@@ -63,7 +72,9 @@ public final class PayNoteComplexityLadderExamples {
                 .currency(IsoCurrency.USD)
                 .amountTotalMajor("8.75")
                 .reserveOnInit()
-                .captureOnEvent(ShippingEvents.ShipmentConfirmed.class, "captureWhenShipmentConfirmed")
+                .capture()
+                    .requestOnEvent(ShippingEvents.ShipmentConfirmed.class)
+                    .done()
                 .buildDocument();
     }
 

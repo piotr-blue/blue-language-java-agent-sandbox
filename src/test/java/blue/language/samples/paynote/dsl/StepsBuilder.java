@@ -358,8 +358,8 @@ public final class StepsBuilder {
         }
 
         public PaymentRequestPayloadBuilder putCustom(String key, Object value) {
-            if ("processor".equals(key) && value != null) {
-                this.processor = String.valueOf(value);
+            if ("processor".equals(key)) {
+                throw new IllegalArgumentException("Use processor(...) to set processor");
             }
             if (value instanceof Node) {
                 payload.properties(key, (Node) value);
@@ -370,6 +370,9 @@ public final class StepsBuilder {
         }
 
         public PaymentRequestPayloadBuilder putCustomExpression(String key, String expression) {
+            if ("processor".equals(key)) {
+                throw new IllegalArgumentException("Use processor(...) to set processor");
+            }
             payload.properties(key, new Node().value(BlueDocDsl.expr(expression)));
             return this;
         }

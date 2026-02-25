@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
+@Deprecated(forRemoval = true)
 public final class DocumentBuilder {
 
     private final Node root = new Node();

@@ -1,7 +1,8 @@
 package blue.language.samples.paynote.examples.shipment;
 
 import blue.language.model.Node;
-import blue.language.samples.paynote.dsl.DocTemplates;
+import blue.language.samples.paynote.dsl.MyOsDsl;
+import blue.language.samples.paynote.sdk.DocBuilder;
 import blue.language.samples.paynote.types.common.CommonTypes;
 
 public final class AliceBobShipmentPayNote {
@@ -10,15 +11,8 @@ public final class AliceBobShipmentPayNote {
     }
 
     public static Node build(String timestamp) {
-        Node instantiated = DHLShipmentPayNote.template(timestamp)
-                .instantiate(i -> i
-                        .bindChannel("payerChannel").email("alice@gmail.com")
-                        .bindChannel("payeeChannel").accountId("acc_bob_1234")
-                        .bindChannel("guarantorChannel").accountId("acc_bank_1"))
-                .build();
-
-        return DocTemplates.extend(instantiated, mutator -> mutator
-                .putDocumentObject("extra", extra -> extra.put("createdBy", "AliceBobShipmentPayNote"))
+        Node document = DocBuilder.edit(DHLShipmentPayNote.template(timestamp))
+                .set("/extra/createdBy", "AliceBobShipmentPayNote")
                 .participant("customerSupportChannel", "Customer support")
                 .operation("cancel",
                         "payerChannel",
@@ -26,6 +20,14 @@ public final class AliceBobShipmentPayNote {
                         steps -> steps
                                 .emitType("CancellationRequested", CommonTypes.NamedEvent.class,
                                         payload -> payload.put("name", "Cancellation Requested"))
-                                .capture().unlock()));
+                                .capture().unlock())
+                .buildDocument();
+
+        return MyOsDsl.bootstrap(document)
+                .bind("shipmentCompanyChannel").accountId("acc_dhl_001")
+                .bind("payerChannel").email("alice@gmail.com")
+                .bind("payeeChannel").accountId("acc_bob_1234")
+                .bind("guarantorChannel").accountId("acc_bank_1")
+                .build();
     }
 }

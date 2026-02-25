@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+@Deprecated(forRemoval = true)
 public final class DocTemplates {
 
     private DocTemplates() {

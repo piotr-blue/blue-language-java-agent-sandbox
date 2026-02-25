@@ -1,6 +1,6 @@
 package blue.language.samples.paynote.examples.shipment;
 
-import blue.language.samples.paynote.dsl.DocTemplate;
+import blue.language.model.Node;
 import blue.language.samples.paynote.sdk.IsoCurrency;
 import blue.language.samples.paynote.sdk.PayNotes;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
@@ -10,7 +10,7 @@ public final class ShipmentPayNote {
     private ShipmentPayNote() {
     }
 
-    public static DocTemplate template(String timestamp) {
+    public static Node template(String timestamp) {
         return PayNotes.payNote("iPhone Purchase — Shipment Escrow Template " + timestamp)
                 .currency(IsoCurrency.USD)
                 .amountTotalMinor(80000)
@@ -37,6 +37,6 @@ public final class ShipmentPayNote {
                         .emitType("CaptureAudit", ShippingEvents.DeliveryReported.class, payload -> payload
                                 .putExpression("shipmentId", "document('/shipment/id')")
                                 .put("status", "captured")))
-                .template();
+                .buildDocument();
     }
 }

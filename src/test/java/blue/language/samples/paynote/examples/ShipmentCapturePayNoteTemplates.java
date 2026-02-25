@@ -2,15 +2,14 @@ package blue.language.samples.paynote.examples;
 
 import blue.language.model.Node;
 import blue.language.samples.paynote.dsl.BlueDocDsl;
-import blue.language.samples.paynote.dsl.DocTemplate;
-import blue.language.samples.paynote.dsl.DocTemplates;
 import blue.language.samples.paynote.dsl.JsArrayBuilder;
 import blue.language.samples.paynote.dsl.JsObjectBuilder;
 import blue.language.samples.paynote.dsl.JsOutputBuilder;
 import blue.language.samples.paynote.dsl.JsProgram;
 import blue.language.samples.paynote.dsl.MyOsDsl;
 import blue.language.samples.paynote.dsl.PayNoteAliases;
-import blue.language.samples.paynote.dsl.TypeAliases;
+import blue.language.samples.paynote.sdk.DocBuilder;
+import blue.language.samples.paynote.sdk.SimpleDocBuilder;
 import blue.language.samples.paynote.types.domain.ShippingEvents;
 
 public final class ShipmentCapturePayNoteTemplates {
@@ -19,63 +18,47 @@ public final class ShipmentCapturePayNoteTemplates {
     }
 
     public static Node captureOnShipmentTemplate(String timestamp) {
-        return MyOsDsl.bootstrap()
-                .documentName("Shipment Escrow Template - " + timestamp)
-                .documentType(PayNoteAliases.SHIPMENT_CAPTURE_PAYNOTE)
-                .putDocumentValue("currency", "EUR")
-                .putDocumentObject("amount", amount -> amount.put("total", 0))
-                .putDocumentObject("funding", funding -> funding.put("sourceCurrency", "EUR"))
-                .contracts(c -> {
-                    c.timelineChannel("payerChannel");
-                    c.timelineChannel("payeeChannel");
-                    c.timelineChannel("guarantorChannel");
-                    c.timelineChannel("shipmentCompanyChannel");
-
-                    c.lifecycleEventChannel("initLifecycleChannel", TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
-                    c.onLifecycle("onInitReserveFunds", "initLifecycleChannel", steps -> steps
-                            .js("ReserveFunds", reserveFundsProgram()));
-
-                    c.operation("confirmShipment", "shipmentCompanyChannel", "Confirm delivery; triggers capture.");
-                    c.implementOperation("confirmShipmentImpl", "confirmShipment", steps -> steps
-                            .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
-                                    payload -> payload.put("source", "shipmentCompanyChannel"))
-                            .js("CaptureFunds", captureFundsProgram()));
-                })
-                .build();
+        return SimpleDocBuilder.name("Shipment Escrow Template - " + timestamp)
+                .type(PayNoteAliases.SHIPMENT_CAPTURE_PAYNOTE)
+                .set("/currency", "EUR")
+                .set("/amount/total", 0)
+                .set("/funding/sourceCurrency", "EUR")
+                .participants("payerChannel", "payeeChannel", "guarantorChannel", "shipmentCompanyChannel")
+                .onInit("onInitReserveFunds", steps -> steps.js("ReserveFunds", reserveFundsProgram()))
+                .operation("confirmShipment",
+                        "shipmentCompanyChannel",
+                        "Confirm delivery; triggers capture.",
+                        steps -> steps
+                                .emitType("ShipmentConfirmed", ShippingEvents.ShipmentConfirmed.class,
+                                        payload -> payload.put("source", "shipmentCompanyChannel"))
+                                .js("CaptureFunds", captureFundsProgram()))
+                .buildDocument();
     }
 
-    public static DocTemplate shipmentEscrowTemplate(String timestamp) {
-        return DocTemplates.template(captureOnShipmentTemplate(timestamp));
+    public static Node shipmentEscrowTemplate(String timestamp) {
+        return captureOnShipmentTemplate(timestamp);
     }
 
-    public static DocTemplate eur200FromChfWithDhl(DocTemplate baseTemplate, String dhlAccountId) {
-        return baseTemplate.specialize(s -> s
-                .setCurrency("EUR")
-                .setAmountTotal(20000)
+    public static Node eur200FromChfWithDhl(Node baseTemplate) {
+        return DocBuilder.edit(baseTemplate)
+                .withName("Shipment Escrow — EUR 200 via DHL")
+                .set("/currency", "EUR")
+                .set("/amount/total", 20000)
                 .set("/funding/sourceCurrency", "CHF")
-                .bindRole("shipmentCompany").accountId(dhlAccountId));
-    }
-
-    public static Node instantiateForAliceBob(DocTemplate specializedTemplate,
-                                              String aliceAccountId,
-                                              String bobAccountId,
-                                              String bankAccountId) {
-        return specializedTemplate.instantiate(i -> i
-                .bindRole("payer").accountId(aliceAccountId)
-                .bindRole("payee").accountId(bobAccountId)
-                .bindRole("guarantor").accountId(bankAccountId))
-                .build();
-    }
-
-    public static Node eur200FromChfWithDhl(Node baseTemplate, String dhlAccountId) {
-        return eur200FromChfWithDhl(DocTemplates.template(baseTemplate), dhlAccountId).build();
+                .buildDocument();
     }
 
     public static Node instantiateForAliceBob(Node specializedTemplate,
+                                              String dhlAccountId,
                                               String aliceAccountId,
                                               String bobAccountId,
                                               String bankAccountId) {
-        return instantiateForAliceBob(DocTemplates.template(specializedTemplate), aliceAccountId, bobAccountId, bankAccountId);
+        return MyOsDsl.bootstrap(specializedTemplate)
+                .bind("shipmentCompanyChannel").accountId(dhlAccountId)
+                .bind("payerChannel").accountId(aliceAccountId)
+                .bind("payeeChannel").accountId(bobAccountId)
+                .bind("guarantorChannel").accountId(bankAccountId)
+                .build();
     }
 
     private static JsProgram reserveFundsProgram() {

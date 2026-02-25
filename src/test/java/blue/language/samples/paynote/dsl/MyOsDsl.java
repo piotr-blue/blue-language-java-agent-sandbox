@@ -12,7 +12,7 @@ public final class MyOsDsl {
     }
 
     public static MyOsBootstrapBuilder bootstrap(Node document) {
-        return MyOs.bootstrap(document);
+        return new MyOsBootstrapBuilder(document);
     }
 
     public static MyOsEvents.SinglePermissionGrantRequestedBuilder requestSingleDocumentPermission() {
