@@ -3,7 +3,7 @@ package blue.language.sdk;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
-import blue.language.sdk.internal.TypeAliases;
+import blue.language.types.conversation.TimelineChannel;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,18 +12,15 @@ class DocBuilderCounterIntegrationTest {
 
     @Test
     void buildsCounterDocumentAndProcessesIncrementOperation() {
-        Node ownerChannel = new Node()
-                .type(TypeAliases.CONVERSATION_TIMELINE_CHANNEL)
-                .properties("timelineId", new Node().value("{{PASTE_TIMELINE_ID_HERE}}"));
-
         Node built = DocBuilder.doc()
                 .name("Counter")
                 .set("/counter", 0)
-                .channel("ownerChannel", null, ownerChannel)
+                .channel("ownerChannel", new TimelineChannel().timelineId("{{PASTE_TIMELINE_ID_HERE}}"))
                 .operation("increment")
                     .channel("ownerChannel")
                     .description("Increment the counter by the given number")
                     .requestType(Integer.class)
+                    .requestDescription("Represents a value by which counter will be incremented")
                     .steps(steps -> steps.replaceExpression(
                             "IncrementCounter",
                             "/counter",
@@ -33,14 +30,12 @@ class DocBuilderCounterIntegrationTest {
                     .channel("ownerChannel")
                     .description("Decrement the counter by the given number")
                     .requestType(Integer.class)
+                    .requestDescription("Value to subtract")
                     .steps(steps -> steps.replaceExpression(
                             "DecrementCounter",
                             "/counter",
                             "document('/counter') - event.message.request"))
                     .done()
-                .set("/contracts/increment/request/description",
-                        "Represents a value by which counter will be incremented")
-                .set("/contracts/decrement/request/description", "Value to subtract")
                 .buildDocument();
 
         assertEquals("Counter", built.getName());

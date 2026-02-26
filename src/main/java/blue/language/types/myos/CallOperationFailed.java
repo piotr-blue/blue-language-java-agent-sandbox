@@ -5,7 +5,7 @@ import blue.language.model.TypeBlueId;
 import blue.language.types.TypeAlias;
 
 @TypeAlias("MyOS/Call Operation Failed")
-@TypeBlueId("MyOS-Call-Operation-Failed-Placeholder-BlueId")
+@TypeBlueId("FoP5MR52cMWmDBNBNss2i7oVe9p3DrVCjQABk2Kj5Rgd")
 public class CallOperationFailed {
     public String reason;
     public Node inResponseTo;

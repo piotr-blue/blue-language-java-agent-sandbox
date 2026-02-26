@@ -4,7 +4,7 @@ import blue.language.model.TypeBlueId;
 import blue.language.types.TypeAlias;
 
 @TypeAlias("MyOS/Adding Participant Responded")
-@TypeBlueId("MyOS-Adding-Participant-Responded-Placeholder-BlueId")
+@TypeBlueId("7LwtCE6Urr6JC8bC2RF7PD8Eu8rmjF7rtUwqjAN49GGv")
 public class AddingParticipantResponded {
     public String channelKey;
     public String email;

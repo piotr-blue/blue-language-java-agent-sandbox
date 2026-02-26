@@ -5,7 +5,7 @@ import blue.language.model.TypeBlueId;
 import blue.language.types.TypeAlias;
 
 @TypeAlias("MyOS/Call Operation Responded")
-@TypeBlueId("MyOS-Call-Operation-Responded-Placeholder-BlueId")
+@TypeBlueId("BJQfo2Whut5K8YQG6Q3vK8kDrfhrf6Qf6KNbkA8M9A7e")
 public class CallOperationResponded {
     public Node result;
     public Node inResponseTo;

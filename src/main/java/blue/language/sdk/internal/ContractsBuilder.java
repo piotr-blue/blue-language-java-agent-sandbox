@@ -60,6 +60,20 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder operationRequestDescription(String key, String requestDescription) {
+        Node operation = contracts.get(key);
+        if (operation == null) {
+            return this;
+        }
+        Node request = operation.getProperties() == null ? null : operation.getProperties().get("request");
+        if (request == null) {
+            request = new Node();
+            operation.properties("request", request);
+        }
+        request.properties("description", new Node().value(requestDescription));
+        return this;
+    }
+
     public ContractsBuilder sequentialWorkflowOperation(String key,
                                                         String operationName,
                                                         Consumer<StepsBuilder> customizer) {

@@ -53,7 +53,7 @@ public final class PayNoteCookbookExamples {
                 .description("Shipment channel emits shipment confirmation, then the document captures funds.")
                 .currency("USD")
                 .amountMinor(90000)
-                .channel("shipmentCompanyChannel", "Shipment company")
+                .channel("shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
                     .unlockOnEvent(CookbookEvents.DeliveryConfirmed.class)

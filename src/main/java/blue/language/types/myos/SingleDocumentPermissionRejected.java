@@ -5,7 +5,7 @@ import blue.language.model.TypeBlueId;
 import blue.language.types.TypeAlias;
 
 @TypeAlias("MyOS/Single Document Permission Rejected")
-@TypeBlueId("MyOS-Single-Document-Permission-Rejected-Placeholder-BlueId")
+@TypeBlueId("9voKnwYf1f9YjQdYHthDKwA8cXEWqvEiF6uAydnYYvWr")
 public class SingleDocumentPermissionRejected {
     public String reason;
     public Node inResponseTo;

@@ -8,6 +8,7 @@ import blue.language.sdk.internal.PoliciesBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.sdk.internal.TypeAliases;
 import blue.language.sdk.internal.TypeRef;
+import blue.language.types.core.Channel;
 import blue.language.types.myos.SubscriptionUpdate;
 
 import java.util.ArrayList;
@@ -70,25 +71,18 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     public T channel(String channelKey) {
-        return channel(channelKey, null, null);
-    }
-
-    public T channel(String channelKey, String label) {
-        return channel(channelKey, label, null);
-    }
-
-    public T channel(String channelKey, String label, Node channel) {
         require(channelKey, "channel key");
-        ContractsBuilder contracts = contracts();
-        if (channel == null) {
-            contracts.timelineChannel(channelKey);
-        } else {
-            contracts.putRaw(channelKey, channel);
-        }
-        if (label != null && !label.trim().isEmpty()) {
-            ensureMap(document, "participantLabels")
-                    .put(channelKey, new Node().value(label.trim()));
-        }
+        contracts().timelineChannel(channelKey);
+        return self();
+    }
+
+    public T channel(String channelKey, Channel channelContract) {
+        require(channelKey, "channel key");
+        require(channelContract, "channel contract");
+        Node channelNode = BLUE.objectToNode(channelContract);
+        pruneEmptyEventProperty(channelNode);
+        channelNode.type(TypeRef.of(channelContract.getClass()).alias());
+        contracts().putRaw(channelKey, channelNode);
         return self();
     }
 
@@ -135,6 +129,13 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
     public OperationBuilder<T> operation(String key) {
         return new OperationBuilder<T>(self(), key);
+    }
+
+    public T requestDescription(String operationKey, String requestDescription) {
+        require(operationKey, "operation key");
+        require(requestDescription, "request description");
+        contracts().operationRequestDescription(operationKey, requestDescription);
+        return self();
     }
 
     public T onChannelEvent(String workflowKey,
@@ -185,7 +186,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
     public T myOsAdmin(String channelKey) {
         require(channelKey, "channel key");
-        channel(channelKey, "MyOS admin");
+        channel(channelKey);
         String operationKey = deriveAdminOperationKey(channelKey);
         operation(operationKey, channelKey, "Accept events from MyOS admin", steps ->
                 steps.jsRaw("EmitAdminEvents", "return { events: event?.message?.request ?? [] };"));
@@ -253,7 +254,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         ensureTriggeredChannel();
 
         Node matcher = matcherBean == null ? typeOnlyNode(eventClass) : BLUE.objectToNode(matcherBean);
-        matcher.type(TypeRef.of(eventClass).asTypeNode());
+        matcher.type(TypeRef.of(eventClass).alias());
         contracts().onTriggered(workflowKey, matcher, customizer);
         return self();
     }
@@ -502,6 +503,24 @@ public class DocBuilder<T extends DocBuilder<T>> {
         }
     }
 
+    private static void pruneEmptyEventProperty(Node channelNode) {
+        if (channelNode == null || channelNode.getProperties() == null) {
+            return;
+        }
+        Node event = channelNode.getProperties().get("event");
+        if (event == null) {
+            return;
+        }
+        boolean emptyObject = event.getValue() == null
+                && event.getType() == null
+                && event.getBlueId() == null
+                && event.getItems() == null
+                && (event.getProperties() == null || event.getProperties().isEmpty());
+        if (emptyObject) {
+            channelNode.getProperties().remove("event");
+        }
+    }
+
     private static final class TriggeredIdMatcher {
         public String requestId;
         public String subscriptionId;
@@ -523,6 +542,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         private String channelKey;
         private String description;
         private Class<?> requestTypeClass;
+        private String requestDescription;
         private Consumer<StepsBuilder> implementation;
 
         private OperationBuilder(P parent, String key) {
@@ -545,6 +565,12 @@ public class DocBuilder<T extends DocBuilder<T>> {
             return this;
         }
 
+        public OperationBuilder<P> requestDescription(String requestDescription) {
+            require(requestDescription, "request description");
+            this.requestDescription = requestDescription;
+            return this;
+        }
+
         public OperationBuilder<P> noRequest() {
             this.requestTypeClass = null;
             return this;
@@ -558,7 +584,11 @@ public class DocBuilder<T extends DocBuilder<T>> {
         public P done() {
             require(channelKey, "channel");
             require(implementation, "steps");
-            return parent.operation(key, channelKey, requestTypeClass, description, implementation);
+            P result = parent.operation(key, channelKey, requestTypeClass, description, implementation);
+            if (requestDescription != null) {
+                result.requestDescription(key, requestDescription);
+            }
+            return result;
         }
     }
 }

@@ -14,7 +14,7 @@ public final class BalancedBowlVoucherPayNote {
                 .description("Reserve voucher budget and capture spending reported by merchant monitoring.")
                 .currency("USD")
                 .amountMinor(10000)
-                .channel("merchantChannel", "Balanced Bowl")
+                .channel("merchantChannel")
                 .capture()
                     .lockOnInit()
                     .unlockOnEvent(VoucherEvents.MonitoringApproved.class)

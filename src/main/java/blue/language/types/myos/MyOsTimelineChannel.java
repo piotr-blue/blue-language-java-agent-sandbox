@@ -10,6 +10,12 @@ public class MyOsTimelineChannel extends TimelineChannel {
     public String accountId;
     public String email;
 
+    @Override
+    public MyOsTimelineChannel timelineId(String timelineId) {
+        super.timelineId(timelineId);
+        return this;
+    }
+
     public MyOsTimelineChannel accountId(String accountId) {
         this.accountId = accountId;
         return this;
