@@ -3,7 +3,7 @@ package blue.language.types.paynote;
 import blue.language.model.TypeBlueId;
 import blue.language.types.TypeAlias;
 
-@TypeAlias("PayNote/Capture Locked")
-@TypeBlueId("PayNote-Capture-Locked-Demo-BlueId")
+@TypeAlias("PayNote/Card Transaction Capture Locked")
+@TypeBlueId("EXoQHkYEDQdhGd3AeXBryzxmCTXsvTjXTfZmjwuqqbHt")
 public class CaptureLocked {
 }

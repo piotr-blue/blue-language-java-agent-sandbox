@@ -30,10 +30,10 @@ class DocBuilderVoucherPayNoteIntegrationTest {
         DocumentProcessingResult initializedBalanced = balancedProcessor.initializeDocument(balanced);
 
         assertTrue(
-                containsEventType(initializedArmchair.triggeredEvents(), "PayNote/Capture Lock Requested"),
+                containsEventType(initializedArmchair.triggeredEvents(), "PayNote/Card Transaction Capture Lock Requested"),
                 () -> "Armchair init events: " + eventTypes(initializedArmchair.triggeredEvents()));
         assertTrue(
-                containsEventType(initializedBalanced.triggeredEvents(), "PayNote/Capture Lock Requested"),
+                containsEventType(initializedBalanced.triggeredEvents(), "PayNote/Card Transaction Capture Lock Requested"),
                 () -> "Balanced init events: " + eventTypes(initializedBalanced.triggeredEvents()));
 
         DocumentProcessingResult armchairAfterSatisfaction = armchairProcessor.processDocument(
@@ -50,7 +50,7 @@ class DocBuilderVoucherPayNoteIntegrationTest {
                 containsEventType(armchairAfterSatisfaction.triggeredEvents(), "Demo/Satisfaction Confirmed"),
                 () -> "Armchair satisfaction events: " + eventTypes(armchairAfterSatisfaction.triggeredEvents()));
         assertTrue(
-                containsEventType(armchairAfterSatisfaction.triggeredEvents(), "PayNote/Capture Unlock Requested"),
+                containsEventType(armchairAfterSatisfaction.triggeredEvents(), "PayNote/Card Transaction Capture Unlock Requested"),
                 () -> "Armchair satisfaction events: " + eventTypes(armchairAfterSatisfaction.triggeredEvents()));
 
         DocumentProcessingResult armchairAfterFundsCaptured = armchairProcessor.processDocument(
@@ -94,7 +94,7 @@ class DocBuilderVoucherPayNoteIntegrationTest {
         assertTrue(
                 containsEventType(
                         balancedAfterMonitoringApproval.triggeredEvents(),
-                        "PayNote/Capture Unlock Requested"),
+                        "PayNote/Card Transaction Capture Unlock Requested"),
                 () -> "Balanced approval events: " + eventTypes(balancedAfterMonitoringApproval.triggeredEvents()));
 
         DocumentProcessingResult balancedAfterSpendCapture = balancedProcessor.processDocument(

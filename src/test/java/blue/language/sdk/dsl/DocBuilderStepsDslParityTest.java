@@ -32,10 +32,10 @@ class DocBuilderStepsDslParityTest {
 
         assertEquals("Conversation/Sequential Workflow", String.valueOf(built.get("/contracts/captureFlow/type/value")));
         assertEquals("initLifecycleChannel", String.valueOf(built.get("/contracts/captureFlow/channel/value")));
-        assertEquals("PayNote/Capture Lock Requested", String.valueOf(built.get("/contracts/captureFlow/steps/0/event/type/value")));
-        assertEquals("PayNote/Capture Unlock Requested", String.valueOf(built.get("/contracts/captureFlow/steps/1/event/type/value")));
-        assertEquals("PayNote/Capture Locked", String.valueOf(built.get("/contracts/captureFlow/steps/2/event/type/value")));
-        assertEquals("PayNote/Capture Unlocked", String.valueOf(built.get("/contracts/captureFlow/steps/3/event/type/value")));
+        assertEquals("PayNote/Card Transaction Capture Lock Requested", String.valueOf(built.get("/contracts/captureFlow/steps/0/event/type/value")));
+        assertEquals("PayNote/Card Transaction Capture Unlock Requested", String.valueOf(built.get("/contracts/captureFlow/steps/1/event/type/value")));
+        assertEquals("PayNote/Card Transaction Capture Locked", String.valueOf(built.get("/contracts/captureFlow/steps/2/event/type/value")));
+        assertEquals("PayNote/Card Transaction Capture Unlocked", String.valueOf(built.get("/contracts/captureFlow/steps/3/event/type/value")));
         assertEquals("PayNote/Capture Funds Requested", String.valueOf(built.get("/contracts/captureFlow/steps/4/event/type/value")));
         assertEquals("${document('/amount/total')}", String.valueOf(built.get("/contracts/captureFlow/steps/4/event/amount/value")));
         assertEquals("${document('/amount/partial')}", String.valueOf(built.get("/contracts/captureFlow/steps/5/event/amount/value")));

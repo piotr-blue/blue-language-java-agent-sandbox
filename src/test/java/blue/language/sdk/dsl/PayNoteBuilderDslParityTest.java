@@ -117,11 +117,11 @@ class PayNoteBuilderDslParityTest {
         assertTrue(contracts.containsKey("requestCapturePartialByOperation"));
         assertTrue(contracts.containsKey("capturePartialOnFundsCaptured"));
 
-        assertEquals("PayNote/Capture Lock Requested",
+        assertEquals("PayNote/Card Transaction Capture Lock Requested",
                 built.getAsText("/contracts/captureLockOnInit/steps/0/event/type/value"));
-        assertEquals("PayNote/Capture Unlock Requested",
+        assertEquals("PayNote/Card Transaction Capture Unlock Requested",
                 built.getAsText("/contracts/captureUnlockOnFundsCaptured/steps/0/event/type/value"));
-        assertEquals("PayNote/Capture Unlock Requested",
+        assertEquals("PayNote/Card Transaction Capture Unlock Requested",
                 built.getAsText("/contracts/unlockCaptureBySimpleOperationImpl/steps/0/event/type/value"));
         assertEquals("PayNote/Capture Funds Requested",
                 built.getAsText("/contracts/requestCaptureByOperationImpl/steps/0/event/type/value"));
