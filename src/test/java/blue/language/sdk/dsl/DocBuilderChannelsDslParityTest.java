@@ -1,21 +1,15 @@
 package blue.language.sdk.dsl;
 
-import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.sdk.DocBuilder;
 import blue.language.types.core.Channel;
 import blue.language.types.myos.MyOsTimelineChannel;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.sdk.dsl.DslParityAssertions.assertDslMatchesYaml;
 
 class DocBuilderChannelsDslParityTest {
-
-    private static final Blue BLUE = new Blue();
 
     @Test
     void channelDefaultMatchesYamlDefinition() {
@@ -148,17 +142,5 @@ class DocBuilderChannelsDslParityTest {
                     accountId: acc-42
                     email: admin@company.com
                 """);
-    }
-
-    private static void assertDslMatchesYaml(Node fromDsl, String yaml) {
-        Node fromYaml = BLUE.preprocess(BLUE.yamlToNode(yaml).clone());
-        Node normalizedDsl = BLUE.preprocess(fromDsl.clone());
-        String expectedBlueId = BLUE.calculateBlueId(fromYaml);
-        String actualBlueId = BLUE.calculateBlueId(normalizedDsl);
-        assertNotNull(expectedBlueId);
-        assertNotNull(actualBlueId);
-        JsonNode expectedTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(fromYaml));
-        JsonNode actualTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(normalizedDsl));
-        assertEquals(expectedTree, actualTree);
     }
 }
