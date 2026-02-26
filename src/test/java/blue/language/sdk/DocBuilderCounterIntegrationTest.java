@@ -3,8 +3,6 @@ package blue.language.sdk;
 import blue.language.model.Node;
 import blue.language.processor.DocumentProcessingResult;
 import blue.language.processor.DocumentProcessor;
-import blue.language.processor.contracts.ConversationOperationProcessor;
-import blue.language.processor.contracts.ConversationTimelineChannelProcessor;
 import blue.language.sdk.internal.TypeAliases;
 import org.junit.jupiter.api.Test;
 
@@ -74,23 +72,17 @@ class DocBuilderCounterIntegrationTest {
                 built.getAsText("/contracts/decrementImpl/steps/0/changeset/0/val/value"));
 
         DocumentProcessor processor = new DocumentProcessor();
-        processor.registerContractProcessor(new ConversationTimelineChannelProcessor());
-        processor.registerContractProcessor(new ConversationOperationProcessor());
 
-        Node runtimeDoc = built.clone();
-        Node contracts = runtimeDoc.getProperties().get("contracts");
-        contracts.getProperties().get("ownerChannel").getType().blueId("Conversation/Timeline Channel");
-        contracts.getProperties().get("increment").getType().blueId("Conversation/Operation");
-        contracts.getProperties().get("decrement").getType().blueId("Conversation/Operation");
-        contracts.getProperties().get("incrementImpl").getType().blueId("Conversation/Sequential Workflow Operation");
-        contracts.getProperties().get("decrementImpl").getType().blueId("Conversation/Sequential Workflow Operation");
-
-        DocumentProcessingResult initialized = processor.initializeDocument(runtimeDoc);
+        DocumentProcessingResult initialized = processor.initializeDocument(built);
 
         Node incrementRequestEvent = new Node()
-                .properties("channel", new Node().value("ownerChannel"))
-                .properties("operation", new Node().value("increment"))
+                .type(new Node().blueId("Conversation/Timeline Entry"))
+                .properties("eventId", new Node().value("evt-op-1"))
+                .properties("timeline", new Node()
+                        .properties("timelineId", new Node().value("{{PASTE_TIMELINE_ID_HERE}}")))
                 .properties("message", new Node()
+                        .type(new Node().blueId("Conversation/Operation Request"))
+                        .properties("operation", new Node().value("increment"))
                         .properties("request", new Node().value(10)));
 
         DocumentProcessingResult processed = processor.processDocument(
