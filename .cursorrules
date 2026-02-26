@@ -1,0 +1,11 @@
+- Always author documents via MyOsDsl.bootstrap() + DocumentBuilder; avoid raw Node trees unless unavoidable.
+- Channels in contracts are abstract by default. Concrete identities belong in channelBindings (bindAccount / bindEmail).
+- Use TypeAliases + PayNoteAliases + domain event builders (MyOsEvents / PayNoteEvents) for all event type construction.
+- Prefer JsProgram + JsOutputBuilder + JsPatchBuilder + JsArrayBuilder/JsObjectBuilder for JavaScript step authoring.
+- Every new example must include a matching test asserting:
+  - document type/name
+  - key channels/operations/workflows
+  - at least one generated JS fragment for critical behavior
+- If an operation allows broad mutation (for example directChange), attach policies with explicit changeset allow-lists.
+- Keep minor units and human-readable amount text consistent in payment docs.
+- Favor template -> specializer -> instance flow using DocTemplates.clone/extend/applyPatch for production-shaped PayNote issuance.
