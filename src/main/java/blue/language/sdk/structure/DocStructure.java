@@ -2,8 +2,8 @@ package blue.language.sdk.structure;
 
 import blue.language.Blue;
 import blue.language.model.Node;
-import blue.language.utils.Base58;
 import blue.language.utils.Base58Sha256Provider;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -11,10 +11,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
+
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 public class DocStructure {
 
     private static final Blue BLUE = new Blue();
+    private static final Base58Sha256Provider HASH_PROVIDER = new Base58Sha256Provider();
 
     public static final Set<String> RESERVED_ROOT_KEYS = new LinkedHashSet<String>(List.of(
             "name", "description", "type", "itemType", "keyType", "valueType",
@@ -40,12 +44,11 @@ public class DocStructure {
 
         Map<String, Node> properties = document.getProperties();
         if (properties != null) {
-            for (Map.Entry<String, Node> entry : properties.entrySet()) {
-                String key = entry.getKey();
+            for (String key : new TreeSet<String>(properties.keySet())) {
                 if (isReservedRootKey(key)) {
                     continue;
                 }
-                FieldEntry fieldEntry = buildFieldEntry(key, entry.getValue());
+                FieldEntry fieldEntry = buildFieldEntry(key, properties.get(key));
                 structure.rootFields.put(fieldEntry.path, fieldEntry);
             }
         }
@@ -56,9 +59,8 @@ public class DocStructure {
             return structure;
         }
 
-        for (Map.Entry<String, Node> contractMapEntry : contractNodes.entrySet()) {
-            String key = contractMapEntry.getKey();
-            Node contractNode = contractMapEntry.getValue();
+        for (String key : new TreeSet<String>(contractNodes.keySet())) {
+            Node contractNode = contractNodes.get(key);
             ContractEntry contractEntry = buildContractEntry(key, contractNode);
             structure.contracts.put(key, contractEntry);
             if (contractEntry.kind == ContractKind.SECTION) {
@@ -284,9 +286,8 @@ public class DocStructure {
         if (contractNode == null) {
             return null;
         }
-        String canonicalJson = canonicalSimpleJson(contractNode);
-        byte[] hash = Base58Sha256Provider.sha256(canonicalJson);
-        return Base58.encode(hash);
+        JsonNode canonicalTree = JSON_MAPPER.readTree(canonicalSimpleJson(contractNode));
+        return HASH_PROVIDER.apply(canonicalTree);
     }
 
     private static String canonicalSimpleJson(Node node) {

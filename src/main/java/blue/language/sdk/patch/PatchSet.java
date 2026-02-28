@@ -4,6 +4,7 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.sdk.structure.DocStructure;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.LinkedHashMap;
+
+import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
 
 public class PatchSet {
 
@@ -152,7 +155,9 @@ public class PatchSet {
     }
 
     private static boolean canonicalDifferent(Node left, Node right) {
-        return !canonicalSimpleJson(left).equals(canonicalSimpleJson(right));
+        JsonNode leftTree = JSON_MAPPER.readTree(canonicalSimpleJson(left));
+        JsonNode rightTree = JSON_MAPPER.readTree(canonicalSimpleJson(right));
+        return !leftTree.equals(rightTree);
     }
 
     private static String canonicalSimpleJson(Node node) {
