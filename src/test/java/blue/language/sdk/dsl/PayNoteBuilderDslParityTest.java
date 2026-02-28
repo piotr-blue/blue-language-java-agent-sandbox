@@ -134,8 +134,8 @@ class PayNoteBuilderDslParityTest {
     }
 
     @Test
-    void reserveAndRefundActionBuildersSupportAllTriggers() {
-        Node built = PayNotes.payNote("Reserve + refund action parity")
+    void reserveAndReleaseActionBuildersSupportAllTriggers() {
+        Node built = PayNotes.payNote("Reserve + release action parity")
                 .currency("USD")
                 .amountMinor(10000)
                 .reserve()
@@ -154,19 +154,19 @@ class PayNoteBuilderDslParityTest {
                             "event.message.request.amount")
                     .requestPartialOnEvent(FundsReserved.class, "event.amountReserved")
                     .done()
-                .refund()
+                .release()
                     .lockOnInit()
                     .unlockOnEvent(FundsCaptured.class)
-                    .unlockOnDocPathChange("/refund/open")
-                    .unlockOnOperation("unlockRefund", "guarantorChannel", "Unlock refund")
+                    .unlockOnDocPathChange("/release/open")
+                    .unlockOnOperation("unlockRelease", "guarantorChannel", "Unlock release")
                     .requestOnInit()
                     .requestOnEvent(FundsCaptured.class)
-                    .requestOnDocPathChange("/refund/open")
-                    .requestOnOperation("requestRefund", "payerChannel", "Request refund")
+                    .requestOnDocPathChange("/release/open")
+                    .requestOnOperation("requestRelease", "payerChannel", "Request release")
                     .requestPartialOnOperation(
-                            "requestRefundPartial",
+                            "requestReleasePartial",
                             "payerChannel",
-                            "Request partial refund",
+                            "Request partial release",
                             "event.message.request.amount")
                     .requestPartialOnEvent(FundsCaptured.class, "event.amountCaptured")
                     .done()
@@ -179,11 +179,11 @@ class PayNoteBuilderDslParityTest {
         assertTrue(contracts.containsKey("requestReservePartial"));
         assertTrue(contracts.containsKey("reservePartialOnFundsReserved"));
 
-        assertTrue(contracts.containsKey("refundLockOnInit"));
-        assertTrue(contracts.containsKey("refundUnlockOnFundsCaptured"));
-        assertTrue(contracts.containsKey("refundUnlockOnDocrefundopen"));
-        assertTrue(contracts.containsKey("requestRefundPartial"));
-        assertTrue(contracts.containsKey("refundPartialOnFundsCaptured"));
+        assertTrue(contracts.containsKey("releaseLockOnInit"));
+        assertTrue(contracts.containsKey("releaseUnlockOnFundsCaptured"));
+        assertTrue(contracts.containsKey("releaseUnlockOnDocreleaseopen"));
+        assertTrue(contracts.containsKey("requestReleasePartial"));
+        assertTrue(contracts.containsKey("releasePartialOnFundsCaptured"));
 
         assertEquals("PayNote/Reserve Lock Requested",
                 built.getAsText("/contracts/reserveLockOnInit/steps/0/event/type/value"));
@@ -196,16 +196,16 @@ class PayNoteBuilderDslParityTest {
         assertEquals("${event.amountReserved}",
                 built.getAsText("/contracts/reservePartialOnFundsReserved/steps/0/event/amount/value"));
 
-        assertEquals("PayNote/Refund Lock Requested",
-                built.getAsText("/contracts/refundLockOnInit/steps/0/event/type/value"));
-        assertEquals("PayNote/Refund Unlock Requested",
-                built.getAsText("/contracts/refundUnlockOnFundsCaptured/steps/0/event/type/value"));
+        assertEquals("PayNote/Reservation Release Lock Requested",
+                built.getAsText("/contracts/releaseLockOnInit/steps/0/event/type/value"));
+        assertEquals("PayNote/Reservation Release Unlock Requested",
+                built.getAsText("/contracts/releaseUnlockOnFundsCaptured/steps/0/event/type/value"));
         assertEquals("PayNote/Reservation Release Requested",
-                built.getAsText("/contracts/requestRefundImpl/steps/0/event/type/value"));
+                built.getAsText("/contracts/requestReleaseImpl/steps/0/event/type/value"));
         assertEquals("${event.message.request.amount}",
-                built.getAsText("/contracts/requestRefundPartialImpl/steps/0/event/amount/value"));
+                built.getAsText("/contracts/requestReleasePartialImpl/steps/0/event/amount/value"));
         assertEquals("${event.amountCaptured}",
-                built.getAsText("/contracts/refundPartialOnFundsCaptured/steps/0/event/amount/value"));
+                built.getAsText("/contracts/releasePartialOnFundsCaptured/steps/0/event/amount/value"));
     }
 
     @Test
@@ -226,13 +226,13 @@ class PayNoteBuilderDslParityTest {
                         .buildDocument());
         assertEquals("reserve locked on init but no unlock path configured", reserveFailure.getMessage());
 
-        IllegalStateException refundFailure = assertThrows(IllegalStateException.class, () ->
-                PayNotes.payNote("Refund lock only")
+        IllegalStateException releaseFailure = assertThrows(IllegalStateException.class, () ->
+                PayNotes.payNote("Release lock only")
                         .currency("USD")
                         .amountMinor(100)
-                        .refund().lockOnInit().done()
+                        .release().lockOnInit().done()
                         .buildDocument());
-        assertEquals("refund locked on init but no unlock path configured", refundFailure.getMessage());
+        assertEquals("release locked on init but no unlock path configured", releaseFailure.getMessage());
     }
 
     @Test

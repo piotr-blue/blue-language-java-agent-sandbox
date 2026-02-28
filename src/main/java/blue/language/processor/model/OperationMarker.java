@@ -16,7 +16,12 @@ public class OperationMarker extends MarkerContract {
         return channel;
     }
 
-    public void setChannel(String channel) {
+    public OperationMarker setChannel(String channel) {
         this.channel = channel;
+        return this;
+    }
+
+    public OperationMarker channel(String channel) {
+        return setChannel(channel);
     }
 }

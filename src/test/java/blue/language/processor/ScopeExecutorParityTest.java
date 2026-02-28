@@ -30,7 +30,7 @@ class ScopeExecutorParityTest {
 
         assertEquals(1, initialized.triggeredEvents().size());
         Node lifecycle = initialized.triggeredEvents().get(0);
-        assertEquals("Core/Document Processing Initiated",
+        assertEquals("Document Processing Initiated",
                 String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/type").getValue()));
         assertNotNull(ProcessorEngine.nodeAt(lifecycle, "/documentId"));
     }
@@ -75,7 +75,7 @@ class ScopeExecutorParityTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  rootTimeline:\n" +

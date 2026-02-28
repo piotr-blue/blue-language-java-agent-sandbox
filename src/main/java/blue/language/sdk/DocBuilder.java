@@ -8,7 +8,6 @@ import blue.language.sdk.internal.PoliciesBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.sdk.internal.TypeAliases;
 import blue.language.sdk.internal.TypeRef;
-import blue.language.types.core.Channel;
 import blue.language.types.myos.SubscriptionUpdate;
 
 import java.util.ArrayList;
@@ -42,7 +41,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     public static SimpleDocBuilder from(Node existingDocument) {
-        return edit(existingDocument);
+        return SimpleDocBuilder.from(existingDocument);
     }
 
     @SuppressWarnings("unchecked")
@@ -107,7 +106,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return self();
     }
 
-    public T channel(String channelKey, Channel channelContract) {
+    public T channel(String channelKey, Object channelContract) {
         require(channelKey, "channel key");
         require(channelContract, "channel contract");
         Node channelNode = BLUE.objectToNode(channelContract);
@@ -144,19 +143,33 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
     public T operation(String key,
                        String channelKey,
+                       String description) {
+        return operation(key, channelKey, null, description, null);
+    }
+
+    public T operation(String key,
+                       String channelKey,
+                       Class<?> requestTypeClass,
+                       String description) {
+        return operation(key, channelKey, requestTypeClass, description, null);
+    }
+
+    public T operation(String key,
+                       String channelKey,
                        Class<?> requestTypeClass,
                        String description,
                        Consumer<StepsBuilder> implementation) {
         require(key, "operation key");
         require(channelKey, "channel key");
-        require(implementation, "steps");
         ContractsBuilder contracts = contracts();
         if (requestTypeClass == null) {
             contracts.operation(key, channelKey, description);
         } else {
             contracts.operation(key, channelKey, requestTypeClass, description);
         }
-        contracts.implementOperation(key + "Impl", key, implementation);
+        if (implementation != null) {
+            contracts.implementOperation(key + "Impl", key, implementation);
+        }
         addContractToActiveSection(key);
         addContractToActiveSection(key + "Impl");
         return self();
@@ -219,12 +232,76 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return self();
     }
 
+    public T myOsAdmin() {
+        contracts().putRaw("myOsAdminChannel", new Node().type("MyOS/MyOS Timeline"));
+        canEmit("myOsAdminChannel", "myOsEmit");
+        return self();
+    }
+
     public T myOsAdmin(String channelKey) {
         require(channelKey, "channel key");
-        channel(channelKey);
-        String operationKey = deriveAdminOperationKey(channelKey);
-        operation(operationKey, channelKey, "Accept events from MyOS admin", steps ->
-                steps.jsRaw("EmitAdminEvents", "return { events: event?.message?.request ?? [] };"));
+        contracts().putRaw(channelKey, new Node().type("MyOS/MyOS Timeline"));
+        canEmit(channelKey, deriveEmitOperationKey(channelKey));
+        return self();
+    }
+
+    public T myOs() {
+        return myOsAdmin();
+    }
+
+    public T canEmit(String channelKey) {
+        return canEmit(channelKey, deriveEmitOperationKey(channelKey));
+    }
+
+    public T canEmit(String channelKey, Class<?>... allowedEventTypes) {
+        Node request = listRequestSchema();
+        if (allowedEventTypes != null && allowedEventTypes.length > 0) {
+            List<Node> allowed = new ArrayList<Node>();
+            for (Class<?> eventType : allowedEventTypes) {
+                if (eventType == null) {
+                    continue;
+                }
+                allowed.add(new Node().type(TypeRef.of(eventType).asTypeNode()));
+            }
+            if (!allowed.isEmpty()) {
+                request.properties("items", new Node().items(allowed));
+            }
+        }
+        return canEmit(channelKey, deriveEmitOperationKey(channelKey), request);
+    }
+
+    public T canEmit(String channelKey, Object... allowedEventShapes) {
+        Node request = listRequestSchema();
+        if (allowedEventShapes != null && allowedEventShapes.length > 0) {
+            List<Node> allowed = new ArrayList<Node>();
+            for (Object shape : allowedEventShapes) {
+                if (shape == null) {
+                    continue;
+                }
+                allowed.add(toRequestNode(shape));
+            }
+            if (!allowed.isEmpty()) {
+                request.properties("items", new Node().items(allowed));
+            }
+        }
+        return canEmit(channelKey, deriveEmitOperationKey(channelKey), request);
+    }
+
+    private T canEmit(String channelKey, String operationKey) {
+        return canEmit(channelKey, operationKey, listRequestSchema());
+    }
+
+    private T canEmit(String channelKey, String operationKey, Node requestSchema) {
+        require(channelKey, "channel key");
+        require(operationKey, "operation key");
+        applyOperationFromBuilder(
+                operationKey,
+                channelKey,
+                null,
+                null,
+                requestSchema,
+                false,
+                steps -> steps.jsRaw("EmitEvents", "return { events: event };"));
         return self();
     }
 
@@ -370,6 +447,17 @@ public class DocBuilder<T extends DocBuilder<T>> {
             return (Node) value;
         }
         return new Node().value(value);
+    }
+
+    private static Node toRequestNode(Object value) {
+        if (value instanceof Node) {
+            return ((Node) value).clone();
+        }
+        return BLUE.objectToNode(value);
+    }
+
+    private static Node listRequestSchema() {
+        return new Node().type("List");
     }
 
     private void ensureTriggeredChannel() {
@@ -593,12 +681,56 @@ public class DocBuilder<T extends DocBuilder<T>> {
         }
     }
 
-    private static String deriveAdminOperationKey(String channelKey) {
+    protected T applyOperationFromBuilder(String key,
+                                          String channelKey,
+                                          String description,
+                                          Class<?> requestTypeClass,
+                                          Object requestSchema,
+                                          boolean clearRequest,
+                                          Consumer<StepsBuilder> implementation) {
+        Map<String, Node> contractsMap = ensureMap(document, "contracts");
+        Node operation = contractsMap.get(key);
+        if (operation == null) {
+            operation = new Node().type(TypeAliases.CONVERSATION_OPERATION);
+            contractsMap.put(key, operation);
+        } else {
+            operation.type(TypeAliases.CONVERSATION_OPERATION);
+        }
+
+        String resolvedChannel = channelKey;
+        if (resolvedChannel == null || resolvedChannel.trim().isEmpty()) {
+            resolvedChannel = operation.getProperties() != null && operation.getProperties().get("channel") != null
+                    ? String.valueOf(operation.getProperties().get("channel").getValue())
+                    : null;
+        }
+        require(resolvedChannel, "channel");
+        operation.properties("channel", new Node().value(resolvedChannel.trim()));
+
+        if (description != null) {
+            operation.properties("description", new Node().value(description));
+        }
+
+        if (requestSchema != null) {
+            operation.properties("request", toRequestNode(requestSchema));
+        } else if (requestTypeClass != null) {
+            operation.properties("request", new Node().type(TypeRef.of(requestTypeClass).asTypeNode()));
+        } else if (clearRequest && operation.getProperties() != null) {
+            operation.getProperties().remove("request");
+        }
+
+        contractsMap.put(key, operation);
+        if (implementation != null) {
+            contracts().implementOperation(key + "Impl", key, implementation);
+        }
+        return self();
+    }
+
+    private static String deriveEmitOperationKey(String channelKey) {
         String trimmed = channelKey.trim();
         if (trimmed.endsWith("Channel") && trimmed.length() > "Channel".length()) {
-            return trimmed.substring(0, trimmed.length() - "Channel".length()) + "Update";
+            return trimmed.substring(0, trimmed.length() - "Channel".length()) + "Emit";
         }
-        return trimmed + "Update";
+        return trimmed + "Emit";
     }
 
     private static Node typeOnlyNode(Class<?> typeClass) {
@@ -649,6 +781,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
         private String channelKey;
         private String description;
         private Class<?> requestTypeClass;
+        private Object requestSchema;
+        private boolean clearRequest;
         private String requestDescription;
         private Consumer<StepsBuilder> implementation;
 
@@ -669,6 +803,16 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
         public OperationBuilder<P> requestType(Class<?> requestTypeClass) {
             this.requestTypeClass = requestTypeClass;
+            this.requestSchema = null;
+            this.clearRequest = false;
+            return this;
+        }
+
+        public OperationBuilder<P> request(Object requestSchema) {
+            require(requestSchema, "request");
+            this.requestSchema = requestSchema;
+            this.requestTypeClass = null;
+            this.clearRequest = false;
             return this;
         }
 
@@ -680,6 +824,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
         public OperationBuilder<P> noRequest() {
             this.requestTypeClass = null;
+            this.requestSchema = null;
+            this.clearRequest = true;
             return this;
         }
 
@@ -689,9 +835,14 @@ public class DocBuilder<T extends DocBuilder<T>> {
         }
 
         public P done() {
-            require(channelKey, "channel");
-            require(implementation, "steps");
-            P result = parent.operation(key, channelKey, requestTypeClass, description, implementation);
+            P result = parent.applyOperationFromBuilder(
+                    key,
+                    channelKey,
+                    description,
+                    requestTypeClass,
+                    requestSchema,
+                    clearRequest,
+                    implementation);
             if (requestDescription != null) {
                 result.requestDescription(key, requestDescription);
             }

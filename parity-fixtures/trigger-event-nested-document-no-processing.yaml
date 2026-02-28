@@ -8,7 +8,7 @@ document: |
       timelineId: admin
     triggered:
       type:
-        blueId: Core/Triggered Event Channel
+        blueId: Triggered Event Channel
     onTimeline:
       type:
         blueId: Conversation/Sequential Workflow

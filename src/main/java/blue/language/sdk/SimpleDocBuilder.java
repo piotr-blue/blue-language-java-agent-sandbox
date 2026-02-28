@@ -21,6 +21,9 @@ public final class SimpleDocBuilder extends DocBuilder<SimpleDocBuilder> {
     }
 
     public static SimpleDocBuilder from(Node existingDocument) {
-        return edit(existingDocument);
+        if (existingDocument == null) {
+            throw new IllegalArgumentException("existing document is required");
+        }
+        return new SimpleDocBuilder(existingDocument.clone());
     }
 }

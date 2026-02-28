@@ -22,10 +22,10 @@ public final class PayNoteCookbookExamples {
         docs.put("captureTriggeredFromChannelEvent", captureTriggeredFromChannelEvent());
         docs.put("captureTriggeredFromDocUpdate", captureTriggeredFromDocUpdate());
         docs.put("reserveOnApprovalThenCaptureOnConfirmation", reserveOnApprovalThenCaptureOnConfirmation());
-        docs.put("reserveImmediatelyRefundOnDispute", reserveImmediatelyRefundOnDispute());
+        docs.put("reserveImmediatelyReleaseOnDispute", reserveImmediatelyReleaseOnDispute());
         docs.put("milestoneReservePartialCapture", milestoneReservePartialCapture());
         docs.put("reserveLockedUntilKycThenCaptureOnSettlement", reserveLockedUntilKycThenCaptureOnSettlement());
-        docs.put("refundLockedUntilWindowOpens", refundLockedUntilWindowOpens());
+        docs.put("releaseLockedUntilWindowOpens", releaseLockedUntilWindowOpens());
         docs.put("armchairProtectionWithVoucher", ArmchairProtectionWithVoucherPayNote.templateDoc());
         docs.put("balancedBowlVoucher", BalancedBowlVoucherPayNote.templateDoc());
         return docs;
@@ -109,9 +109,9 @@ public final class PayNoteCookbookExamples {
                 .buildDocument();
     }
 
-    public static Node reserveImmediatelyRefundOnDispute() {
-        return PayNotes.payNote("Reserve Immediately Refund On Dispute")
-                .description("Reserve on init; payer can open dispute for full refund.")
+    public static Node reserveImmediatelyReleaseOnDispute() {
+        return PayNotes.payNote("Reserve Immediately Release On Dispute")
+                .description("Reserve on init; payer can open dispute for full reservation release.")
                 .currency("EUR")
                 .amountMinor(75000)
                 .reserve()
@@ -123,11 +123,11 @@ public final class PayNoteCookbookExamples {
                             "guarantorChannel",
                             "Capture after service rendered.")
                     .done()
-                .refund()
+                .release()
                     .requestOnOperation(
                             "openDispute",
                             "payerChannel",
-                            "Payer opens dispute for full refund.")
+                            "Payer opens dispute for full release.")
                     .done()
                 .buildDocument();
     }
@@ -154,11 +154,11 @@ public final class PayNoteCookbookExamples {
                             "approveMilestone4", "guarantorChannel",
                             "Approve milestone 4 (25%)", "500000")
                     .done()
-                .refund()
+                .release()
                     .requestPartialOnOperation(
-                            "refundUnfinishedWork",
+                            "releaseUnfinishedWork",
                             "payerChannel",
-                            "Refund unfinished work.",
+                            "Release unfinished work.",
                             "event.message.request.amount")
                     .done()
                 .buildDocument();
@@ -179,18 +179,18 @@ public final class PayNoteCookbookExamples {
                     .unlockOnDocPathChange("/settlement/confirmed")
                     .requestOnDocPathChange("/settlement/confirmed")
                     .done()
-                .refund()
+                .release()
                     .requestOnOperation(
                             "rejectKyc",
                             "guarantorChannel",
-                            "Reject and refund if KYC fails.")
+                            "Reject and release if KYC fails.")
                     .done()
                 .buildDocument();
     }
 
-    public static Node refundLockedUntilWindowOpens() {
-        return PayNotes.payNote("Refund Locked Until Window Opens")
-                .description("Capture runs on init; refund unlocks only after guarantor opens a window.")
+    public static Node releaseLockedUntilWindowOpens() {
+        return PayNotes.payNote("Release Locked Until Window Opens")
+                .description("Capture runs on init; release unlocks only after guarantor opens a window.")
                 .currency("USD")
                 .amountMinor(19900)
                 .reserve()
@@ -199,16 +199,16 @@ public final class PayNoteCookbookExamples {
                 .capture()
                     .requestOnInit()
                     .done()
-                .refund()
+                .release()
                     .lockOnInit()
                     .unlockOnOperation(
-                            "openRefundWindow",
+                            "openReleaseWindow",
                             "guarantorChannel",
-                            "Guarantor opens refund window.")
+                            "Guarantor opens release window.")
                     .requestOnOperation(
-                            "requestRefund",
+                            "requestRelease",
                             "payerChannel",
-                            "Payer requests full refund.")
+                            "Payer requests full release.")
                     .done()
                 .buildDocument();
     }

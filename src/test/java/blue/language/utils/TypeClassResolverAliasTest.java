@@ -113,21 +113,21 @@ class TypeClassResolverAliasTest {
         TypeClassResolver resolver = new TypeClassResolver("blue.language.processor.model");
 
         assertSame(DocumentUpdateChannel.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Document Update Channel"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Document Update Channel"))));
         assertSame(EmbeddedNodeChannel.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Embedded Node Channel"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Embedded Node Channel"))));
         assertSame(LifecycleChannel.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Lifecycle Event Channel"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Lifecycle Event Channel"))));
         assertSame(TriggeredEventChannel.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Triggered Event Channel"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Triggered Event Channel"))));
         assertSame(ProcessEmbedded.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Process Embedded"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Process Embedded"))));
         assertSame(InitializationMarker.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Processing Initialized Marker"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Processing Initialized Marker"))));
         assertSame(ProcessingTerminatedMarker.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Processing Terminated Marker"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Processing Terminated Marker"))));
         assertSame(ChannelEventCheckpoint.class,
-                resolver.resolveClass(new Node().type(new Node().blueId("Core/Channel Event Checkpoint"))));
+                resolver.resolveClass(new Node().type(new Node().blueId("Channel Event Checkpoint"))));
         assertSame(DocumentAnchorsMarker.class,
                 resolver.resolveClass(new Node().type(new Node().blueId("MyOS/Document Anchors"))));
         assertSame(DocumentLinksMarker.class,

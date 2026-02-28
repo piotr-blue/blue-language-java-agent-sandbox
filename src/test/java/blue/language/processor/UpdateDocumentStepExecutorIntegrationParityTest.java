@@ -18,14 +18,14 @@ class UpdateDocumentStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  handler:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: SeedStatus\n" +
                 "        type:\n" +
@@ -49,14 +49,14 @@ class UpdateDocumentStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  handler:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: Compute\n" +
                 "        type:\n" +
@@ -85,14 +85,14 @@ class UpdateDocumentStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  handler:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: Apply\n" +
                 "        type:\n" +
@@ -113,14 +113,14 @@ class UpdateDocumentStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  handler:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: Prepare\n" +
                 "        type:\n" +

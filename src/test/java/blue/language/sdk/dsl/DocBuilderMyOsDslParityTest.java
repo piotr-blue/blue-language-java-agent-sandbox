@@ -72,7 +72,11 @@ class DocBuilderMyOsDslParityTest {
                         .myOs().subscribeToSession(
                                 DocBuilder.expr("document('/targetSessionId')"),
                                 "SUB_1")
-                        .myOs().startWorkerSession("agentChannel", workerConfig))
+                        .myOs().startWorkerSession("agentChannel", workerConfig)
+                        .myOs().bootstrapDocument(
+                                "BootstrapChild",
+                                new Node().name("Child document"),
+                                Map.of("payerChannel", "ownerChannel")))
                 .buildDocument();
 
         String stepsPath = "/contracts/bootstrap/steps";
@@ -117,6 +121,12 @@ class DocBuilderMyOsDslParityTest {
                 built.getAsText(stepsPath + "/6/event/type/value"));
         assertEquals("agentChannel", built.getAsText(stepsPath + "/6/event/agentChannelKey/value"));
         assertEquals("safe", built.getAsText(stepsPath + "/6/event/config/mode/value"));
+
+        assertEquals("Conversation/Document Bootstrap Requested",
+                built.getAsText(stepsPath + "/7/event/type/value"));
+        assertEquals("Child document", built.getAsText(stepsPath + "/7/event/document/name/value"));
+        assertEquals("ownerChannel", built.getAsText(stepsPath + "/7/event/channelBindings/payerChannel/value"));
+        assertEquals("myOsAdminChannel", built.getAsText(stepsPath + "/7/event/bootstrapAssignee/value"));
     }
 
     @Test
@@ -138,6 +148,81 @@ class DocBuilderMyOsDslParityTest {
         assertNull(requestNode.getValue());
         assertNull(requestNode.getType());
         assertNull(requestNode.getProperties());
+    }
+
+    @Test
+    void myOsRevokeAndWorkerAgencyMethodsProduceExpectedEventContracts() {
+        Node built = DocBuilder.doc()
+                .name("MyOS revoke and worker-agency parity")
+                .set("/targetSessionId", "session-77")
+                .onInit("bootstrap", steps -> steps
+                        .myOs().revokeSingleDocPermission(
+                                "ownerChannel",
+                                "REQ_REVOKE_SINGLE",
+                                DocBuilder.expr("document('/targetSessionId')"))
+                        .myOs().revokeLinkedDocsPermission(
+                                "ownerChannel",
+                                "REQ_REVOKE_LINKS",
+                                DocBuilder.expr("document('/targetSessionId')"))
+                        .myOs().grantWorkerAgencyPermission(
+                                "ownerChannel",
+                                "REQ_WORKER_GRANT",
+                                DocBuilder.expr("document('/targetSessionId')"),
+                                MyOsPermissions.create().read(true).singleOps("run"))
+                        .myOs().revokeWorkerAgencyPermission(
+                                "ownerChannel",
+                                "REQ_WORKER_REVOKE",
+                                DocBuilder.expr("document('/targetSessionId')")))
+                .buildDocument();
+
+        String stepsPath = "/contracts/bootstrap/steps";
+
+        assertEquals("MyOS/Single Document Permission Revoke Requested",
+                built.getAsText(stepsPath + "/0/event/type/value"));
+        assertEquals("ownerChannel", built.getAsText(stepsPath + "/0/event/onBehalfOf/value"));
+        assertEquals("REQ_REVOKE_SINGLE", built.getAsText(stepsPath + "/0/event/requestId/value"));
+        assertEquals("${document('/targetSessionId')}", built.getAsText(stepsPath + "/0/event/targetSessionId/value"));
+
+        assertEquals("MyOS/Linked Documents Permission Revoke Requested",
+                built.getAsText(stepsPath + "/1/event/type/value"));
+        assertEquals("REQ_REVOKE_LINKS", built.getAsText(stepsPath + "/1/event/requestId/value"));
+        assertEquals("${document('/targetSessionId')}", built.getAsText(stepsPath + "/1/event/targetSessionId/value"));
+
+        assertEquals("MyOS/Worker Agency Permission Grant Requested",
+                built.getAsText(stepsPath + "/2/event/type/value"));
+        assertEquals("REQ_WORKER_GRANT", built.getAsText(stepsPath + "/2/event/requestId/value"));
+        assertEquals("${document('/targetSessionId')}", built.getAsText(stepsPath + "/2/event/targetSessionId/value"));
+        assertEquals(Boolean.TRUE, built.get(stepsPath + "/2/event/workerAgencyPermissions/read/value"));
+        assertEquals("run", built.getAsText(stepsPath + "/2/event/workerAgencyPermissions/singleOps/0/value"));
+
+        assertEquals("MyOS/Worker Agency Permission Revoke Requested",
+                built.getAsText(stepsPath + "/3/event/type/value"));
+        assertEquals("REQ_WORKER_REVOKE", built.getAsText(stepsPath + "/3/event/requestId/value"));
+        assertEquals("${document('/targetSessionId')}", built.getAsText(stepsPath + "/3/event/targetSessionId/value"));
+    }
+
+    @Test
+    void myOsBootstrapDocumentSupportsOptions() {
+        Node built = DocBuilder.doc()
+                .name("MyOS bootstrap options")
+                .onInit("bootstrap", steps -> steps
+                        .myOs().bootstrapDocument(
+                                "BootstrapDeal",
+                                new Node().name("Deal Document"),
+                                Map.of("buyerChannel", "ownerChannel"),
+                                options -> options
+                                        .defaultMessage("A new deal has been created.")
+                                        .channelMessage("buyerChannel", "You have a new purchase to review.")))
+                .buildDocument();
+
+        String eventPath = "/contracts/bootstrap/steps/0/event";
+        assertEquals("Conversation/Document Bootstrap Requested",
+                built.getAsText(eventPath + "/type/value"));
+        assertEquals("myOsAdminChannel", built.getAsText(eventPath + "/bootstrapAssignee/value"));
+        assertEquals("A new deal has been created.",
+                built.getAsText(eventPath + "/initialMessages/defaultMessage/value"));
+        assertEquals("You have a new purchase to review.",
+                built.getAsText(eventPath + "/initialMessages/perChannel/buyerChannel/value"));
     }
 
     @Test

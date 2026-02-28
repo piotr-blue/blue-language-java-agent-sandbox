@@ -26,7 +26,7 @@ document: |
       timelineId: root
     embedded:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /child
     removeEmbeddedPath:

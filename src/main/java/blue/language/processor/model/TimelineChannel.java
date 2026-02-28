@@ -13,15 +13,25 @@ public class TimelineChannel extends ChannelContract {
         return timelineId;
     }
 
-    public void setTimelineId(String timelineId) {
+    public TimelineChannel setTimelineId(String timelineId) {
         this.timelineId = timelineId;
+        return this;
+    }
+
+    public TimelineChannel timelineId(String timelineId) {
+        return setTimelineId(timelineId);
     }
 
     public Node getEvent() {
         return event;
     }
 
-    public void setEvent(Node event) {
+    public TimelineChannel setEvent(Node event) {
         this.event = event;
+        return this;
+    }
+
+    public TimelineChannel event(Node event) {
+        return setEvent(event);
     }
 }

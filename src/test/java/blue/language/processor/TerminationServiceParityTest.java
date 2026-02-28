@@ -59,7 +59,7 @@ class TerminationServiceParityTest {
         assertTrue(runtime.isRunTerminated());
         assertEquals(1, runtime.rootEmissions().size());
         Node lifecycle = runtime.rootEmissions().get(0);
-        assertEquals("Core/Document Processing Terminated", lifecycle.getType().getBlueId());
+        assertEquals("Document Processing Terminated", lifecycle.getType().getBlueId());
         assertEquals("fatal", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/cause").getValue()));
         assertEquals("bad", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/reason").getValue()));
     }
@@ -89,7 +89,7 @@ class TerminationServiceParityTest {
 
         assertEquals(1, runtime.rootEmissions().size());
         Node lifecycle = runtime.rootEmissions().get(0);
-        assertEquals("Core/Document Processing Terminated", lifecycle.getType().getBlueId());
+        assertEquals("Document Processing Terminated", lifecycle.getType().getBlueId());
         assertEquals("graceful", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/cause").getValue()));
         assertEquals("done", String.valueOf(ProcessorEngine.nodeAt(lifecycle, "/reason").getValue()));
     }

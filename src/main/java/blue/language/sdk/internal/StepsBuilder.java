@@ -4,6 +4,16 @@ import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.sdk.MyOsSteps;
 import blue.language.types.common.NamedEvent;
+import blue.language.types.conversation.DocumentBootstrapRequested;
+import blue.language.types.payments.PaymentRequests;
+import blue.language.types.payments.fields.AchPaymentFields;
+import blue.language.types.payments.fields.CardPaymentFields;
+import blue.language.types.payments.fields.CardTokenPaymentFields;
+import blue.language.types.payments.fields.CreditLinePaymentFields;
+import blue.language.types.payments.fields.CryptoPaymentFields;
+import blue.language.types.payments.fields.LedgerPaymentFields;
+import blue.language.types.payments.fields.SepaPaymentFields;
+import blue.language.types.payments.fields.WirePaymentFields;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -116,28 +126,55 @@ public final class StepsBuilder {
     public StepsBuilder triggerPayment(String name,
                                        Class<?> paymentEventTypeClass,
                                        Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
-        Node event = new Node().type(TypeRef.of(paymentEventTypeClass).asTypeNode());
-        PaymentRequestPayloadBuilder payloadBuilder = new PaymentRequestPayloadBuilder();
-        if (payloadCustomizer != null) {
-            payloadCustomizer.accept(payloadBuilder);
-            Node payload = payloadBuilder.build();
-            if (payload.getProperties() != null) {
-                for (Map.Entry<String, Node> entry : payload.getProperties().entrySet()) {
-                    event.properties(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-
-        String processor = payloadBuilder.processor();
-        if (processor == null || processor.trim().isEmpty()) {
-            throw new IllegalArgumentException("triggerPayment requires non-empty processor field");
-        }
-        return triggerEvent(name, event);
+        return emitPaymentRequest(name, paymentEventTypeClass, payloadCustomizer);
     }
 
     public StepsBuilder triggerPayment(Class<?> paymentEventTypeClass,
                                        Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
         return triggerPayment(null, paymentEventTypeClass, payloadCustomizer);
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings) {
+        return bootstrapDocument(stepName, document, channelBindings, null);
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings,
+                                          Consumer<BootstrapOptionsBuilder> options) {
+        if (document == null) {
+            throw new IllegalArgumentException("document cannot be null");
+        }
+        return emitType(stepName, DocumentBootstrapRequested.class, payload -> {
+            payload.putNode("document", document);
+            payload.putStringMap("channelBindings", channelBindings);
+            applyBootstrapOptions(payload, options);
+        });
+    }
+
+    public StepsBuilder bootstrapDocumentExpr(String stepName,
+                                              String documentExpression,
+                                              Map<String, String> channelBindings,
+                                              Consumer<BootstrapOptionsBuilder> options) {
+        if (documentExpression == null || documentExpression.trim().isEmpty()) {
+            throw new IllegalArgumentException("documentExpression cannot be blank");
+        }
+        return emitType(stepName, DocumentBootstrapRequested.class, payload -> {
+            payload.putExpression("document", documentExpression);
+            payload.putStringMap("channelBindings", channelBindings);
+            applyBootstrapOptions(payload, options);
+        });
+    }
+
+    public StepsBuilder requestBackwardPayment(String name,
+                                               Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        return emitPaymentRequest(name, PaymentRequests.BackwardPaymentRequested.class, payloadCustomizer);
+    }
+
+    public StepsBuilder requestBackwardPayment(Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        return requestBackwardPayment(null, payloadCustomizer);
     }
 
     public StepsBuilder replaceValue(String name, String path, Object value) {
@@ -169,7 +206,43 @@ public final class StepsBuilder {
     }
 
     public MyOsSteps myOs() {
-        return ext(MyOsSteps::new);
+        return ext(steps -> new MyOsSteps(steps, "myOsAdminChannel"));
+    }
+
+    public MyOsSteps myOs(String adminChannelKey) {
+        return ext(steps -> new MyOsSteps(steps, adminChannelKey));
+    }
+
+    private StepsBuilder emitPaymentRequest(String name,
+                                            Class<?> paymentEventTypeClass,
+                                            Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        Node event = new Node().type(TypeRef.of(paymentEventTypeClass).asTypeNode());
+        PaymentRequestPayloadBuilder payloadBuilder = new PaymentRequestPayloadBuilder();
+        if (payloadCustomizer != null) {
+            payloadCustomizer.accept(payloadBuilder);
+            Node payload = payloadBuilder.build();
+            if (payload.getProperties() != null) {
+                for (Map.Entry<String, Node> entry : payload.getProperties().entrySet()) {
+                    event.properties(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        String processor = payloadBuilder.processor();
+        if (processor == null || processor.trim().isEmpty()) {
+            throw new IllegalArgumentException("triggerPayment requires non-empty processor field");
+        }
+        return triggerEvent(name, event);
+    }
+
+    private static void applyBootstrapOptions(NodeObjectBuilder payload,
+                                              Consumer<BootstrapOptionsBuilder> options) {
+        if (options == null) {
+            return;
+        }
+        BootstrapOptionsBuilder bootstrapOptions = new BootstrapOptionsBuilder();
+        options.accept(bootstrapOptions);
+        bootstrapOptions.applyTo(payload);
     }
 
     List<Node> build() {
@@ -206,6 +279,26 @@ public final class StepsBuilder {
             return this;
         }
 
+        public PaymentRequestPayloadBuilder from(String fromReference) {
+            payload.properties("from", new Node().value(fromReference));
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder from(Node from) {
+            payload.properties("from", from);
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder to(String toReference) {
+            payload.properties("to", new Node().value(toReference));
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder to(Node to) {
+            payload.properties("to", to);
+            return this;
+        }
+
         public PaymentRequestPayloadBuilder currency(String currency) {
             payload.properties("currency", new Node().value(currency));
             return this;
@@ -226,120 +319,185 @@ public final class StepsBuilder {
             return this;
         }
 
-        public PaymentRequestPayloadBuilder routingNumber(String value) {
-            return putCustom("routingNumber", value);
+        public PaymentRequestPayloadBuilder reason(String reason) {
+            payload.properties("reason", new Node().value(reason));
+            return this;
         }
 
-        public PaymentRequestPayloadBuilder accountNumber(String value) {
-            return putCustom("accountNumber", value);
+        public AchRailBuilder viaAch() {
+            return new AchRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder accountType(String value) {
-            return putCustom("accountType", value);
+        public PaymentRequestPayloadBuilder viaAch(AchPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder network(String value) {
-            return putCustom("network", value);
+        public SepaRailBuilder viaSepa() {
+            return new SepaRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder companyEntryDescription(String value) {
-            return putCustom("companyEntryDescription", value);
+        public PaymentRequestPayloadBuilder viaSepa(SepaPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder ibanFrom(String value) {
-            return putCustom("ibanFrom", value);
+        public WireRailBuilder viaWire() {
+            return new WireRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder ibanTo(String value) {
-            return putCustom("ibanTo", value);
+        public PaymentRequestPayloadBuilder viaWire(WirePaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder bicTo(String value) {
-            return putCustom("bicTo", value);
+        public CardRailBuilder viaCard() {
+            return new CardRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder remittanceInformation(String value) {
-            return putCustom("remittanceInformation", value);
+        public PaymentRequestPayloadBuilder viaCard(CardPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder bankSwift(String value) {
-            return putCustom("bankSwift", value);
+        public CardTokenRailBuilder viaTokenizedCard() {
+            return new CardTokenRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder bankName(String value) {
-            return putCustom("bankName", value);
+        public PaymentRequestPayloadBuilder viaTokenizedCard(CardTokenPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder beneficiaryName(String value) {
-            return putCustom("beneficiaryName", value);
+        public CreditLineRailBuilder viaCreditLine() {
+            return new CreditLineRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder beneficiaryAddress(String value) {
-            return putCustom("beneficiaryAddress", value);
+        public PaymentRequestPayloadBuilder viaCreditLine(CreditLinePaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder cardOnFileRef(String value) {
-            return putCustom("cardOnFileRef", value);
+        public LedgerRailBuilder viaLedger() {
+            return new LedgerRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder merchantDescriptor(String value) {
-            return putCustom("merchantDescriptor", value);
+        public PaymentRequestPayloadBuilder viaLedger(LedgerPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder networkToken(String value) {
-            return putCustom("networkToken", value);
+        public CryptoRailBuilder viaCrypto() {
+            return new CryptoRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder tokenProvider(String value) {
-            return putCustom("tokenProvider", value);
+        public PaymentRequestPayloadBuilder viaCrypto(CryptoPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder cryptogram(String value) {
-            return putCustom("cryptogram", value);
+        @Deprecated
+        public AchRailBuilder ach() {
+            return viaAch();
         }
 
-        public PaymentRequestPayloadBuilder creditLineId(String value) {
-            return putCustom("creditLineId", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder ach(AchPaymentFields fields) {
+            return viaAch(fields);
         }
 
-        public PaymentRequestPayloadBuilder merchantAccountId(String value) {
-            return putCustom("merchantAccountId", value);
+        @Deprecated
+        public SepaRailBuilder sepa() {
+            return viaSepa();
         }
 
-        public PaymentRequestPayloadBuilder cardholderAccountId(String value) {
-            return putCustom("cardholderAccountId", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder sepa(SepaPaymentFields fields) {
+            return viaSepa(fields);
         }
 
-        public PaymentRequestPayloadBuilder ledgerAccountFrom(String value) {
-            return putCustom("ledgerAccountFrom", value);
+        @Deprecated
+        public WireRailBuilder wire() {
+            return viaWire();
         }
 
-        public PaymentRequestPayloadBuilder ledgerAccountTo(String value) {
-            return putCustom("ledgerAccountTo", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder wire(WirePaymentFields fields) {
+            return viaWire(fields);
         }
 
-        public PaymentRequestPayloadBuilder memo(String value) {
-            return putCustom("memo", value);
+        @Deprecated
+        public CardRailBuilder card() {
+            return viaCard();
         }
 
-        public PaymentRequestPayloadBuilder asset(String value) {
-            return putCustom("asset", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder card(CardPaymentFields fields) {
+            return viaCard(fields);
         }
 
-        public PaymentRequestPayloadBuilder chain(String value) {
-            return putCustom("chain", value);
+        @Deprecated
+        public CardTokenRailBuilder tokenizedCard() {
+            return viaTokenizedCard();
         }
 
-        public PaymentRequestPayloadBuilder fromWalletRef(String value) {
-            return putCustom("fromWalletRef", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder tokenizedCard(CardTokenPaymentFields fields) {
+            return viaTokenizedCard(fields);
         }
 
-        public PaymentRequestPayloadBuilder toAddress(String value) {
-            return putCustom("toAddress", value);
+        @Deprecated
+        public CreditLineRailBuilder creditLine() {
+            return viaCreditLine();
         }
 
-        public PaymentRequestPayloadBuilder txPolicy(String value) {
-            return putCustom("txPolicy", value);
+        @Deprecated
+        public PaymentRequestPayloadBuilder creditLine(CreditLinePaymentFields fields) {
+            return viaCreditLine(fields);
+        }
+
+        @Deprecated
+        public LedgerRailBuilder ledger() {
+            return viaLedger();
+        }
+
+        @Deprecated
+        public PaymentRequestPayloadBuilder ledger(LedgerPaymentFields fields) {
+            return viaLedger(fields);
+        }
+
+        @Deprecated
+        public CryptoRailBuilder crypto() {
+            return viaCrypto();
+        }
+
+        @Deprecated
+        public PaymentRequestPayloadBuilder crypto(CryptoPaymentFields fields) {
+            return viaCrypto(fields);
+        }
+
+        public PaymentRequestPayloadBuilder rail(Object railFieldsBean) {
+            if (railFieldsBean == null) {
+                throw new IllegalArgumentException("railFieldsBean cannot be null");
+            }
+            Node railNode = BLUE.objectToNode(railFieldsBean);
+            if (railNode.getProperties() == null) {
+                return this;
+            }
+            for (Map.Entry<String, Node> entry : railNode.getProperties().entrySet()) {
+                String key = entry.getKey();
+                if ("type".equals(key)) {
+                    continue;
+                }
+                if ("processor".equals(key)) {
+                    throw new IllegalArgumentException("Use processor(...) to set processor");
+                }
+                payload.properties(key, entry.getValue());
+            }
+            return this;
+        }
+
+        public <E> E ext(Function<PaymentRequestPayloadBuilder, E> extensionFactory) {
+            if (extensionFactory == null) {
+                throw new IllegalArgumentException("extensionFactory cannot be null");
+            }
+            E extension = extensionFactory.apply(this);
+            if (extension == null) {
+                throw new IllegalArgumentException("extensionFactory cannot return null");
+            }
+            return extension;
         }
 
         public PaymentRequestPayloadBuilder putCustom(String key, Object value) {
@@ -368,6 +526,252 @@ public final class StepsBuilder {
 
         private String processor() {
             return processor;
+        }
+
+        public static final class AchRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private AchRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public AchRailBuilder routingNumber(String value) {
+                parent.putCustom("routingNumber", value);
+                return this;
+            }
+
+            public AchRailBuilder accountNumber(String value) {
+                parent.putCustom("accountNumber", value);
+                return this;
+            }
+
+            public AchRailBuilder accountType(String value) {
+                parent.putCustom("accountType", value);
+                return this;
+            }
+
+            public AchRailBuilder network(String value) {
+                parent.putCustom("network", value);
+                return this;
+            }
+
+            public AchRailBuilder companyEntryDescription(String value) {
+                parent.putCustom("companyEntryDescription", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class SepaRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private SepaRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public SepaRailBuilder ibanFrom(String value) {
+                parent.putCustom("ibanFrom", value);
+                return this;
+            }
+
+            public SepaRailBuilder ibanTo(String value) {
+                parent.putCustom("ibanTo", value);
+                return this;
+            }
+
+            public SepaRailBuilder bicTo(String value) {
+                parent.putCustom("bicTo", value);
+                return this;
+            }
+
+            public SepaRailBuilder remittanceInformation(String value) {
+                parent.putCustom("remittanceInformation", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class WireRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private WireRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public WireRailBuilder bankSwift(String value) {
+                parent.putCustom("bankSwift", value);
+                return this;
+            }
+
+            public WireRailBuilder bankName(String value) {
+                parent.putCustom("bankName", value);
+                return this;
+            }
+
+            public WireRailBuilder accountNumber(String value) {
+                parent.putCustom("accountNumber", value);
+                return this;
+            }
+
+            public WireRailBuilder beneficiaryName(String value) {
+                parent.putCustom("beneficiaryName", value);
+                return this;
+            }
+
+            public WireRailBuilder beneficiaryAddress(String value) {
+                parent.putCustom("beneficiaryAddress", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CardRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CardRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CardRailBuilder cardOnFileRef(String value) {
+                parent.putCustom("cardOnFileRef", value);
+                return this;
+            }
+
+            public CardRailBuilder merchantDescriptor(String value) {
+                parent.putCustom("merchantDescriptor", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CardTokenRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CardTokenRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CardTokenRailBuilder networkToken(String value) {
+                parent.putCustom("networkToken", value);
+                return this;
+            }
+
+            public CardTokenRailBuilder tokenProvider(String value) {
+                parent.putCustom("tokenProvider", value);
+                return this;
+            }
+
+            public CardTokenRailBuilder cryptogram(String value) {
+                parent.putCustom("cryptogram", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CreditLineRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CreditLineRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CreditLineRailBuilder creditLineId(String value) {
+                parent.putCustom("creditLineId", value);
+                return this;
+            }
+
+            public CreditLineRailBuilder merchantAccountId(String value) {
+                parent.putCustom("merchantAccountId", value);
+                return this;
+            }
+
+            public CreditLineRailBuilder cardholderAccountId(String value) {
+                parent.putCustom("cardholderAccountId", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class LedgerRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private LedgerRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public LedgerRailBuilder ledgerAccountFrom(String value) {
+                parent.putCustom("ledgerAccountFrom", value);
+                return this;
+            }
+
+            public LedgerRailBuilder ledgerAccountTo(String value) {
+                parent.putCustom("ledgerAccountTo", value);
+                return this;
+            }
+
+            public LedgerRailBuilder memo(String value) {
+                parent.putCustom("memo", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CryptoRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CryptoRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CryptoRailBuilder asset(String value) {
+                parent.putCustom("asset", value);
+                return this;
+            }
+
+            public CryptoRailBuilder chain(String value) {
+                parent.putCustom("chain", value);
+                return this;
+            }
+
+            public CryptoRailBuilder fromWalletRef(String value) {
+                parent.putCustom("fromWalletRef", value);
+                return this;
+            }
+
+            public CryptoRailBuilder toAddress(String value) {
+                parent.putCustom("toAddress", value);
+                return this;
+            }
+
+            public CryptoRailBuilder txPolicy(String value) {
+                parent.putCustom("txPolicy", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
         }
     }
 
@@ -406,9 +810,9 @@ public final class StepsBuilder {
                     PayNoteEvents.captureFundsRequested(new Node().value(expr(amountExpression))));
         }
 
-        public StepsBuilder refundFull() {
+        public StepsBuilder releaseFull() {
             return parent.triggerEvent(
-                    "RequestRefund",
+                    "RequestRelease",
                     PayNoteEvents.reservationReleaseRequested(new Node().value(expr("document('/amount/total')"))));
         }
     }

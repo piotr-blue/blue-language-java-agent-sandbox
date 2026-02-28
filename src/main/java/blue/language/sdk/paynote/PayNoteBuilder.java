@@ -17,13 +17,13 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
     private static final String TOTAL_AMOUNT_EXPRESSION = "document('/amount/total')";
     private static final String RESERVE_LOCK_REQUESTED = "PayNote/Reserve Lock Requested";
     private static final String RESERVE_UNLOCK_REQUESTED = "PayNote/Reserve Unlock Requested";
-    private static final String REFUND_LOCK_REQUESTED = "PayNote/Refund Lock Requested";
-    private static final String REFUND_UNLOCK_REQUESTED = "PayNote/Refund Unlock Requested";
+    private static final String RELEASE_LOCK_REQUESTED = "PayNote/Reservation Release Lock Requested";
+    private static final String RELEASE_UNLOCK_REQUESTED = "PayNote/Reservation Release Unlock Requested";
 
     private Currency currency;
     private final ActionState captureState = new ActionState();
     private final ActionState reserveState = new ActionState();
-    private final ActionState refundState = new ActionState();
+    private final ActionState releaseState = new ActionState();
 
     private PayNoteBuilder(String name) {
         super();
@@ -96,22 +96,22 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
                 PayNoteBuilder::requestReservePartial);
     }
 
-    public ActionBuilder refund() {
+    public ActionBuilder release() {
         return new ActionBuilder(
                 this,
-                "refund",
-                refundState,
-                PayNoteBuilder::requestRefundLock,
-                PayNoteBuilder::requestRefundUnlock,
-                PayNoteBuilder::requestRefundNow,
-                PayNoteBuilder::requestRefundPartial);
+                "release",
+                releaseState,
+                PayNoteBuilder::requestReleaseLock,
+                PayNoteBuilder::requestReleaseUnlock,
+                PayNoteBuilder::requestReleaseNow,
+                PayNoteBuilder::requestReleasePartial);
     }
 
     @Override
     public Node buildDocument() {
         validate(captureState, "capture");
         validate(reserveState, "reserve");
-        validate(refundState, "refund");
+        validate(releaseState, "release");
         return super.buildDocument();
     }
 
@@ -139,21 +139,21 @@ public final class PayNoteBuilder extends DocBuilder<PayNoteBuilder> {
                 PayNoteEvents.reserveFundsRequested(new Node().value(expr(amountExpr))));
     }
 
-    private static void requestRefundLock(StepsBuilder steps) {
-        steps.triggerEvent("RequestRefundLock", eventOfType(REFUND_LOCK_REQUESTED));
+    private static void requestReleaseLock(StepsBuilder steps) {
+        steps.triggerEvent("RequestReleaseLock", eventOfType(RELEASE_LOCK_REQUESTED));
     }
 
-    private static void requestRefundUnlock(StepsBuilder steps) {
-        steps.triggerEvent("RequestRefundUnlock", eventOfType(REFUND_UNLOCK_REQUESTED));
+    private static void requestReleaseUnlock(StepsBuilder steps) {
+        steps.triggerEvent("RequestReleaseUnlock", eventOfType(RELEASE_UNLOCK_REQUESTED));
     }
 
-    private static void requestRefundNow(StepsBuilder steps) {
-        steps.triggerEvent("RequestRefund",
+    private static void requestReleaseNow(StepsBuilder steps) {
+        steps.triggerEvent("RequestRelease",
                 PayNoteEvents.reservationReleaseRequested(new Node().value(expr(TOTAL_AMOUNT_EXPRESSION))));
     }
 
-    private static void requestRefundPartial(StepsBuilder steps, String amountExpr) {
-        steps.triggerEvent("RequestRefund",
+    private static void requestReleasePartial(StepsBuilder steps, String amountExpr) {
+        steps.triggerEvent("RequestRelease",
                 PayNoteEvents.reservationReleaseRequested(new Node().value(expr(amountExpr))));
     }
 

@@ -60,6 +60,17 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder operation(String key,
+                                      String channel,
+                                      Node request,
+                                      String description) {
+        operation(key, channel, description);
+        if (request != null) {
+            contracts.get(key).properties("request", request);
+        }
+        return this;
+    }
+
     public ContractsBuilder operationRequestDescription(String key, String requestDescription) {
         Node operation = contracts.get(key);
         if (operation == null) {
@@ -77,6 +88,9 @@ public final class ContractsBuilder {
     public ContractsBuilder sequentialWorkflowOperation(String key,
                                                         String operationName,
                                                         Consumer<StepsBuilder> customizer) {
+        if (customizer == null) {
+            return this;
+        }
         StepsBuilder stepsBuilder = new StepsBuilder();
         customizer.accept(stepsBuilder);
 
@@ -87,10 +101,41 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder appendOperationImplementation(String key,
+                                                          String operationName,
+                                                          Consumer<StepsBuilder> customizer) {
+        if (customizer == null) {
+            return this;
+        }
+
+        StepsBuilder stepsBuilder = new StepsBuilder();
+        customizer.accept(stepsBuilder);
+        List<Node> nextSteps = stepsBuilder.build();
+
+        Node workflow = contracts.get(key);
+        if (workflow == null) {
+            return sequentialWorkflowOperation(key, operationName, customizer);
+        }
+
+        workflow.type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
+        workflow.properties("operation", new Node().value(operationName));
+
+        Node stepsNode = workflow.getProperties() != null ? workflow.getProperties().get("steps") : null;
+        if (stepsNode == null || stepsNode.getItems() == null) {
+            stepsNode = new Node().items(new ArrayList<Node>());
+            workflow.properties("steps", stepsNode);
+        }
+        for (Node step : nextSteps) {
+            stepsNode.getItems().add(step);
+        }
+        contracts.put(key, workflow);
+        return this;
+    }
+
     public ContractsBuilder implementOperation(String key,
                                                String operationName,
                                                Consumer<StepsBuilder> customizer) {
-        return sequentialWorkflowOperation(key, operationName, customizer);
+        return appendOperationImplementation(key, operationName, customizer);
     }
 
     public ContractsBuilder sequentialWorkflow(String key,

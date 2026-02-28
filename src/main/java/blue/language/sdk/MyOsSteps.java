@@ -2,15 +2,20 @@ package blue.language.sdk;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.sdk.internal.BootstrapOptionsBuilder;
 import blue.language.sdk.internal.NodeObjectBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.types.myos.AddingParticipantRequested;
 import blue.language.types.myos.CallOperationRequested;
 import blue.language.types.myos.LinkedDocumentsPermissionGrantRequested;
+import blue.language.types.myos.LinkedDocumentsPermissionRevokeRequested;
 import blue.language.types.myos.RemovingParticipantRequested;
 import blue.language.types.myos.SingleDocumentPermissionGrantRequested;
+import blue.language.types.myos.SingleDocumentPermissionRevokeRequested;
 import blue.language.types.myos.StartWorkerSessionRequested;
 import blue.language.types.myos.SubscribeToSessionRequested;
+import blue.language.types.myos.WorkerAgencyPermissionGrantRequested;
+import blue.language.types.myos.WorkerAgencyPermissionRevokeRequested;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,12 +26,18 @@ public final class MyOsSteps {
     private static final Blue BLUE = new Blue();
 
     private final StepsBuilder parent;
+    private final String adminChannelKey;
 
     public MyOsSteps(StepsBuilder parent) {
+        this(parent, "myOsAdminChannel");
+    }
+
+    public MyOsSteps(StepsBuilder parent, String adminChannelKey) {
         if (parent == null) {
             throw new IllegalArgumentException("parent cannot be null");
         }
         this.parent = parent;
+        this.adminChannelKey = requireText(adminChannelKey, "adminChannelKey is required");
     }
 
     public StepsBuilder requestSingleDocPermission(String onBehalfOf,
@@ -51,6 +62,26 @@ public final class MyOsSteps {
                 .targetSessionId(asText(targetSessionId, "targetSessionId is required"))
                 .links(toLinksNode(links));
         return emitBean("RequestLinkedDocumentsPermission", LinkedDocumentsPermissionGrantRequested.class, event);
+    }
+
+    public StepsBuilder revokeSingleDocPermission(String onBehalfOf,
+                                                  String requestId,
+                                                  Object targetSessionId) {
+        SingleDocumentPermissionRevokeRequested event = new SingleDocumentPermissionRevokeRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"))
+                .targetSessionId(asText(targetSessionId, "targetSessionId is required"));
+        return emitBean("RevokeSingleDocumentPermission", SingleDocumentPermissionRevokeRequested.class, event);
+    }
+
+    public StepsBuilder revokeLinkedDocsPermission(String onBehalfOf,
+                                                   String requestId,
+                                                   Object targetSessionId) {
+        LinkedDocumentsPermissionRevokeRequested event = new LinkedDocumentsPermissionRevokeRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"))
+                .targetSessionId(asText(targetSessionId, "targetSessionId is required"));
+        return emitBean("RevokeLinkedDocumentsPermission", LinkedDocumentsPermissionRevokeRequested.class, event);
     }
 
     public StepsBuilder addParticipant(String channelKey, String email) {
@@ -94,6 +125,47 @@ public final class MyOsSteps {
                 .agentChannelKey(requireText(agentChannelKey, "agentChannelKey is required"))
                 .config(config);
         return emitBean("StartWorkerSession", StartWorkerSessionRequested.class, event);
+    }
+
+    public StepsBuilder grantWorkerAgencyPermission(String onBehalfOf,
+                                                    String requestId,
+                                                    Object targetSessionId,
+                                                    Object workerAgencyPermissions) {
+        WorkerAgencyPermissionGrantRequested event = new WorkerAgencyPermissionGrantRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"))
+                .targetSessionId(asText(targetSessionId, "targetSessionId is required"))
+                .workerAgencyPermissions(toNode(workerAgencyPermissions, true));
+        return emitBean("GrantWorkerAgencyPermission", WorkerAgencyPermissionGrantRequested.class, event);
+    }
+
+    public StepsBuilder revokeWorkerAgencyPermission(String onBehalfOf,
+                                                     String requestId,
+                                                     Object targetSessionId) {
+        WorkerAgencyPermissionRevokeRequested event = new WorkerAgencyPermissionRevokeRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"))
+                .targetSessionId(asText(targetSessionId, "targetSessionId is required"));
+        return emitBean("RevokeWorkerAgencyPermission", WorkerAgencyPermissionRevokeRequested.class, event);
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings) {
+        return parent.bootstrapDocument(stepName, document, channelBindings,
+                options -> options.assignee(adminChannelKey));
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings,
+                                          java.util.function.Consumer<BootstrapOptionsBuilder> options) {
+        return parent.bootstrapDocument(stepName, document, channelBindings, bootstrap -> {
+            bootstrap.assignee(adminChannelKey);
+            if (options != null) {
+                options.accept(bootstrap);
+            }
+        });
     }
 
     private static Node toLinksNode(Map<String, ?> links) {

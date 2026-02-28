@@ -2,11 +2,11 @@ package blue.language.sdk.dsl;
 
 import blue.language.model.Node;
 import blue.language.sdk.DocBuilder;
-import blue.language.types.core.Channel;
 import blue.language.types.myos.MyOsTimelineChannel;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static blue.language.sdk.dsl.DslParityAssertions.assertDslMatchesYaml;
 
 class DocBuilderChannelsDslParityTest {
@@ -132,7 +132,9 @@ class DocBuilderChannelsDslParityTest {
                         .email("admin@company.com"))
                 .buildDocument();
 
-        assertSame(template, specialized);
+        assertNotSame(template, specialized);
+        assertEquals("Conversation/Timeline Channel",
+                template.getAsText("/contracts/adminChannel/type/value"));
         assertDslMatchesYaml(specialized, """
                 name: Channel template
                 contracts:

@@ -25,7 +25,7 @@ class DynamicWorkflowRegistrationIntegrationTest {
                 "    timelineId: alpha\n" +
                 "  counterUpdate:\n" +
                 "    type:\n" +
-                "      blueId: Core/Document Update Channel\n" +
+                "      blueId: Document Update Channel\n" +
                 "    path: /counter\n" +
                 "  staticWatcher:\n" +
                 "    channel: counterUpdate\n" +

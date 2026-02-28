@@ -23,14 +23,14 @@ class ScopeExecutorDerivedChannelParityTest {
                 "    type:\n" +
                 "      blueId: Derived/Lifecycle Event Channel\n" +
                 "      type:\n" +
-                "        blueId: Core/Lifecycle Event Channel\n" +
+                "        blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: lifecycle\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/Update Document\n" +
@@ -52,14 +52,14 @@ class ScopeExecutorDerivedChannelParityTest {
                 "contracts:\n" +
                 "  lifecycle:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  seed:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: lifecycle\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/Update Document\n" +
@@ -71,7 +71,7 @@ class ScopeExecutorDerivedChannelParityTest {
                 "    type:\n" +
                 "      blueId: Derived/Document Update Channel\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Update Channel\n" +
+                "        blueId: Document Update Channel\n" +
                 "    path: /foo\n" +
                 "  onUpdate:\n" +
                 "    type:\n" +
@@ -102,7 +102,7 @@ class ScopeExecutorDerivedChannelParityTest {
                 "    type:\n" +
                 "      blueId: Derived/Document Update Channel\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Update Channel\n" +
+                "        blueId: Document Update Channel\n" +
                 "    path: /foo\n" +
                 "  onUpdates:\n" +
                 "    type:\n" +

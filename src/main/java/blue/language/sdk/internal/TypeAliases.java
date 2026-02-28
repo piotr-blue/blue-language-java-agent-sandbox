@@ -6,11 +6,11 @@ public final class TypeAliases {
     }
 
     // Core
-    public static final String CORE_DOCUMENT_PROCESSING_INITIATED = "Core/Document Processing Initiated";
-    public static final String CORE_DOCUMENT_UPDATE = "Core/Document Update";
-    public static final String CORE_DOCUMENT_UPDATE_CHANNEL = "Core/Document Update Channel";
-    public static final String CORE_LIFECYCLE_EVENT_CHANNEL = "Core/Lifecycle Event Channel";
-    public static final String CORE_TRIGGERED_EVENT_CHANNEL = "Core/Triggered Event Channel";
+    public static final String CORE_DOCUMENT_PROCESSING_INITIATED = "Document Processing Initiated";
+    public static final String CORE_DOCUMENT_UPDATE = "Document Update";
+    public static final String CORE_DOCUMENT_UPDATE_CHANNEL = "Document Update Channel";
+    public static final String CORE_LIFECYCLE_EVENT_CHANNEL = "Lifecycle Event Channel";
+    public static final String CORE_TRIGGERED_EVENT_CHANNEL = "Triggered Event Channel";
 
     // Conversation
     public static final String CONVERSATION_OPERATION = "Conversation/Operation";

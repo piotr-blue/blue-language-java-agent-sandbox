@@ -2,12 +2,19 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.types.TypeAlias;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@TypeBlueId({"Core/Channel Event Checkpoint", "ChannelEventCheckpoint"})
+@TypeAlias("Channel Event Checkpoint")
+@TypeBlueId({
+        "B7YQeYdQzUNuzaDQ4tNTd2iJqgd4YnVQkgz4QgymDWWU",
+        "Channel Event Checkpoint",
+        "Core/Channel Event Checkpoint",
+        "ChannelEventCheckpoint"
+})
 public class ChannelEventCheckpoint extends MarkerContract {
 
     private Map<String, Node> lastEvents = new LinkedHashMap<>();
@@ -27,6 +34,10 @@ public class ChannelEventCheckpoint extends MarkerContract {
             }
         }
         return this;
+    }
+
+    public ChannelEventCheckpoint setLastEvents(Map<String, Node> lastEvents) {
+        return lastEvents(lastEvents);
     }
 
     public Node lastEvent(String channelKey) {
@@ -59,6 +70,10 @@ public class ChannelEventCheckpoint extends MarkerContract {
             }
         }
         return this;
+    }
+
+    public ChannelEventCheckpoint setLastSignatures(Map<String, String> signatures) {
+        return lastSignatures(signatures);
     }
 
     public String lastSignature(String channelKey) {

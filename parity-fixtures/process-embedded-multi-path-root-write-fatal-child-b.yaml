@@ -40,7 +40,7 @@ document: |
   contracts:
     embedded:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /childA
         - /childB

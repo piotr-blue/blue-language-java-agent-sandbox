@@ -63,16 +63,14 @@ class DocBuilderVoucherPayNoteIntegrationTest {
 
         Node voucherPaymentRequest = findTriggeredEvent(
                 armchairAfterFundsCaptured.triggeredEvents(),
-                "Payments/Credit Line Merchant To Cardholder Payment Requested");
+                "PayNote/Backward Payment Requested");
         assertNotNull(voucherPaymentRequest);
         assertEquals("guarantorChannel", readValue(voucherPaymentRequest, "/processor/value"));
-        assertEquals("payeeChannel", readValue(voucherPaymentRequest, "/payer/value"));
-        assertEquals("payerChannel", readValue(voucherPaymentRequest, "/payee/value"));
+        assertEquals("payeeChannel", readValue(voucherPaymentRequest, "/from/value"));
+        assertEquals("payerChannel", readValue(voucherPaymentRequest, "/to/value"));
         assertEquals("USD", readValue(voucherPaymentRequest, "/currency/value"));
         assertEquals("10000", String.valueOf(voucherPaymentRequest.get("/amountMinor/value")));
-        assertEquals("Balanced Bowl Voucher - 100 USD",
-                voucherPaymentRequest.getAsNode("/attachedPayNote").getName());
-        assertNotNull(voucherPaymentRequest.get("/attachedPayNote/contracts/captureReportedSpend"));
+        assertEquals("facility-001", readValue(voucherPaymentRequest, "/creditLineId/value"));
 
         DocumentProcessingResult balancedAfterMonitoringApproval = balancedProcessor.processDocument(
                 initializedBalanced.document(),

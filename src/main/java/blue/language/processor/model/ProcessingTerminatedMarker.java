@@ -2,8 +2,15 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.types.TypeAlias;
 
-@TypeBlueId({"Core/Processing Terminated Marker", "ProcessingTerminatedMarker"})
+@TypeAlias("Processing Terminated Marker")
+@TypeBlueId({
+        "5NiEhupJ6uF54Q3vs4GwQX4UX4ExtwHpKRVvjKEHtvjR",
+        "Processing Terminated Marker",
+        "Core/Processing Terminated Marker",
+        "ProcessingTerminatedMarker"
+})
 public class ProcessingTerminatedMarker extends MarkerContract {
 
     private String cause;
@@ -13,31 +20,31 @@ public class ProcessingTerminatedMarker extends MarkerContract {
         return cause;
     }
 
-    public void setCause(String cause) {
+    public ProcessingTerminatedMarker setCause(String cause) {
         this.cause = cause;
+        return this;
     }
 
     public String getReason() {
         return reason;
     }
 
-    public void setReason(String reason) {
+    public ProcessingTerminatedMarker setReason(String reason) {
         this.reason = reason;
+        return this;
     }
 
     public ProcessingTerminatedMarker cause(String cause) {
-        this.cause = cause;
-        return this;
+        return setCause(cause);
     }
 
     public ProcessingTerminatedMarker reason(String reason) {
-        this.reason = reason;
-        return this;
+        return setReason(reason);
     }
 
     public Node toNode() {
         Node node = new Node()
-                .type(new Node().blueId("ProcessingTerminatedMarker"))
+                .type(new Node().blueId("5NiEhupJ6uF54Q3vs4GwQX4UX4ExtwHpKRVvjKEHtvjR"))
                 .properties("cause", new Node().value(cause));
         if (reason != null) {
             node.properties("reason", new Node().value(reason));

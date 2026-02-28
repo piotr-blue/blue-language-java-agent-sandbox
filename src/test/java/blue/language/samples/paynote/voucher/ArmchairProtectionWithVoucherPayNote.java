@@ -4,7 +4,6 @@ import blue.language.model.Node;
 import blue.language.samples.paynote.types.domain.VoucherEvents;
 import blue.language.sdk.paynote.PayNotes;
 import blue.language.types.paynote.FundsCaptured;
-import blue.language.types.payments.PaymentRequests;
 
 public final class ArmchairProtectionWithVoucherPayNote {
 
@@ -17,24 +16,24 @@ public final class ArmchairProtectionWithVoucherPayNote {
                 .currency("USD")
                 .amountMinor(10000)
                 .capture()
-                .lockOnInit()
-                .unlockOnOperation(
-                        "confirmSatisfaction",
-                        "payerChannel",
-                        "Buyer confirms satisfaction.",
-                        steps -> steps.emitType("SatisfactionConfirmed", VoucherEvents.SatisfactionConfirmed.class, null))
-                .done()
-                .onEvent("requestVoucherPayment", FundsCaptured.class, steps -> steps.triggerPayment(
-                        "DemoBankCreditLinePaymentRequested",
-                        PaymentRequests.CreditLineMerchantToCardholderPaymentRequested.class,
+                    .lockOnInit()
+                    .unlockOnOperation(
+                            "confirmSatisfaction",
+                            "payerChannel",
+                            "Buyer confirms satisfaction.",
+                            steps -> steps.emitType("SatisfactionConfirmed", VoucherEvents.SatisfactionConfirmed.class, null))
+                    .done()
+                .onEvent("requestVoucherPayment", FundsCaptured.class, steps -> steps.requestBackwardPayment(
+                        "VoucherCredit",
                         payload -> payload
                                 .processor("guarantorChannel")
-                                .payer("payeeChannel")
-                                .payee("payerChannel")
+                                .from("payeeChannel")
+                                .to("payerChannel")
                                 .currency("USD")
                                 .amountMinor(10000)
-                                .creditLineId("demoBank-facility-001")
-                                .attachPayNote(BalancedBowlVoucherPayNote.templateDoc())))
+                                .viaCreditLine()
+                                    .creditLineId("facility-001")
+                                    .done()))
                 .buildDocument();
     }
 }

@@ -16,13 +16,18 @@ public class SequentialWorkflow extends HandlerContract {
         return Collections.unmodifiableList(steps);
     }
 
-    public void setSteps(List<Node> steps) {
+    public SequentialWorkflow setSteps(List<Node> steps) {
         this.steps.clear();
         if (steps == null) {
-            return;
+            return this;
         }
         for (Node step : steps) {
             this.steps.add(step != null ? step.clone() : null);
         }
+        return this;
+    }
+
+    public SequentialWorkflow steps(List<Node> steps) {
+        return setSteps(steps);
     }
 }

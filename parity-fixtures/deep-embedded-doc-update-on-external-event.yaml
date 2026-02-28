@@ -35,7 +35,7 @@ document: |
                     val: "${(document('value') ?? 0) + 1}"
           leafUpdates:
             type:
-              blueId: Core/Document Update Channel
+              blueId: Document Update Channel
             path: /value
           leafWatcher:
             type:
@@ -63,12 +63,12 @@ document: |
       contracts:
         embedded:
           type:
-            blueId: Core/Process Embedded
+            blueId: Process Embedded
           paths:
             - /leaf
         subLeafUpdates:
           type:
-            blueId: Core/Document Update Channel
+            blueId: Document Update Channel
           path: /leaf/value
         subWatcher:
           type:
@@ -96,12 +96,12 @@ document: |
     contracts:
       embedded:
         type:
-          blueId: Core/Process Embedded
+          blueId: Process Embedded
         paths:
           - /sub
       branchLeafUpdates:
         type:
-          blueId: Core/Document Update Channel
+          blueId: Document Update Channel
         path: /sub/leaf/value
       branchWatcher:
         type:
@@ -129,12 +129,12 @@ document: |
   contracts:
     embedded:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /branch
     rootLeafUpdates:
       type:
-        blueId: Core/Document Update Channel
+        blueId: Document Update Channel
       path: /branch/sub/leaf/value
     rootWatcher:
       type:

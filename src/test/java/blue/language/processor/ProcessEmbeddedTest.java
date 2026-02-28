@@ -87,7 +87,7 @@ class ProcessEmbeddedTest {
                 "Root lifecycle emission should still occur exactly once");
         Map<String, Node> lifecycleProps = result.triggeredEvents().get(0).getProperties();
         assertNotNull(lifecycleProps, "Lifecycle event should expose properties");
-        assertEquals("Core/Document Processing Initiated", lifecycleProps.get("type").getValue());
+        assertEquals("Document Processing Initiated", lifecycleProps.get("type").getValue());
         Node lifecycleDocId = lifecycleProps.get("documentId");
         assertNotNull(lifecycleDocId);
         assertEquals(rootId, lifecycleDocId.getValue());

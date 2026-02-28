@@ -11,7 +11,7 @@ document: |
       timelineId: alpha
     counterUpdate:
       type:
-        blueId: Core/Document Update Channel
+        blueId: Document Update Channel
       path: /counter
     staticWatcher:
       channel: counterUpdate

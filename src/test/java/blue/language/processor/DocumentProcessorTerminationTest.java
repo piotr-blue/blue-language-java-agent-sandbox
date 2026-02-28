@@ -56,7 +56,7 @@ class DocumentProcessorTerminationTest {
 
         List<Node> triggeredEvents = result.triggeredEvents();
         assertEquals(1, triggeredEvents.size(), "Only the terminated lifecycle event should be present");
-        assertEquals("Core/Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
+        assertEquals("Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
         assertEquals("graceful", stringProperty(triggeredEvents.get(0), "cause"));
     }
 
@@ -80,7 +80,7 @@ class DocumentProcessorTerminationTest {
 
         List<Node> triggeredEvents = result.triggeredEvents();
         assertEquals(1, triggeredEvents.size(), "Fatal run should emit only terminated lifecycle event");
-        assertEquals("Core/Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
+        assertEquals("Document Processing Terminated", stringProperty(triggeredEvents.get(0), "type"));
         assertEquals("fatal", stringProperty(triggeredEvents.get(0), "cause"));
         assertEquals("panic", stringProperty(triggeredEvents.get(0), "reason"));
     }

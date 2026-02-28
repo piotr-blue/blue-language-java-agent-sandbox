@@ -1,10 +1,18 @@
 package blue.language.processor.model;
 
 import blue.language.model.Node;
+import blue.language.model.TypeBlueId;
+import blue.language.types.TypeAlias;
 
 /**
  * Base contract describing a channel available within a scope.
  */
+@TypeAlias("Channel")
+@TypeBlueId({
+        "DcoJyCh7XXxy1nR5xjy7qfkUgQ1GiZnKKSxh8DJusBSr",
+        "Channel",
+        "Core/Channel"
+})
 public abstract class ChannelContract extends Contract {
 
     private String path;
@@ -14,25 +22,25 @@ public abstract class ChannelContract extends Contract {
         return path;
     }
 
-    public void setPath(String path) {
+    public ChannelContract setPath(String path) {
         this.path = path;
+        return this;
     }
 
     public ChannelContract path(String path) {
-        this.path = path;
-        return this;
+        return setPath(path);
     }
 
     public Node getDefinition() {
         return definition;
     }
 
-    public void setDefinition(Node definition) {
+    public ChannelContract setDefinition(Node definition) {
         this.definition = definition;
+        return this;
     }
 
     public ChannelContract definition(Node definition) {
-        this.definition = definition;
-        return this;
+        return setDefinition(definition);
     }
 }

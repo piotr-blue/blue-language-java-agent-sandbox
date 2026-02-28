@@ -5,6 +5,11 @@ import blue.language.sdk.DocBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.types.conversation.ChatMessage;
 import blue.language.types.payments.PaymentRequests;
+import blue.language.types.payments.fields.CardTokenPaymentFields;
+import blue.language.types.payments.fields.CreditLinePaymentFields;
+import blue.language.types.payments.fields.LedgerPaymentFields;
+import blue.language.types.payments.fields.SepaPaymentFields;
+import blue.language.types.payments.fields.WirePaymentFields;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
@@ -27,7 +32,7 @@ class DocBuilderStepsDslParityTest {
                         .capture().markUnlocked()
                         .capture().requestNow()
                         .capture().requestPartial("document('/amount/partial')")
-                        .capture().refundFull())
+                        .capture().releaseFull())
                 .buildDocument();
 
         assertEquals("Conversation/Sequential Workflow", String.valueOf(built.get("/contracts/captureFlow/type/value")));
@@ -139,35 +144,46 @@ class DocBuilderStepsDslParityTest {
                                 .amountMinor(1500)
                                 .amountMinorExpression("document('/amount/total')")
                                 .attachPayNote(attached)
-                                .routingNumber("111000025")
-                                .accountNumber("123456")
-                                .accountType("checking")
-                                .network("ACH")
-                                .companyEntryDescription("PAYROLL")
-                                .ibanFrom("DE123")
-                                .ibanTo("DE456")
-                                .bicTo("BICCODE")
-                                .remittanceInformation("Invoice #123")
-                                .bankSwift("SWIFT-1")
-                                .bankName("Blue Bank")
-                                .beneficiaryName("Jane Doe")
-                                .beneficiaryAddress("Main Street 1")
-                                .cardOnFileRef("cof-1")
-                                .merchantDescriptor("Blue Shop")
-                                .networkToken("token-1")
-                                .tokenProvider("provider-1")
-                                .cryptogram("crypt-1")
-                                .creditLineId("credit-1")
-                                .merchantAccountId("merchant-1")
-                                .cardholderAccountId("holder-1")
-                                .ledgerAccountFrom("ledger-from")
-                                .ledgerAccountTo("ledger-to")
-                                .memo("memo-1")
-                                .asset("BTC")
-                                .chain("bitcoin")
-                                .fromWalletRef("wallet-1")
-                                .toAddress("bc1address")
-                                .txPolicy("fast")
+                                .viaAch()
+                                    .routingNumber("111000025")
+                                    .accountNumber("123456")
+                                    .accountType("checking")
+                                    .network("ACH")
+                                    .companyEntryDescription("PAYROLL")
+                                    .done()
+                                .viaSepa(new SepaPaymentFields()
+                                        .ibanFrom("DE123")
+                                        .ibanTo("DE456")
+                                        .bicTo("BICCODE")
+                                        .remittanceInformation("Invoice #123"))
+                                .viaWire(new WirePaymentFields()
+                                        .bankSwift("SWIFT-1")
+                                        .bankName("Blue Bank")
+                                        .beneficiaryName("Jane Doe")
+                                        .beneficiaryAddress("Main Street 1"))
+                                .viaCard()
+                                    .cardOnFileRef("cof-1")
+                                    .merchantDescriptor("Blue Shop")
+                                    .done()
+                                .viaTokenizedCard(new CardTokenPaymentFields()
+                                        .networkToken("token-1")
+                                        .tokenProvider("provider-1")
+                                        .cryptogram("crypt-1"))
+                                .viaCreditLine(new CreditLinePaymentFields()
+                                        .creditLineId("credit-1")
+                                        .merchantAccountId("merchant-1")
+                                        .cardholderAccountId("holder-1"))
+                                .viaLedger(new LedgerPaymentFields()
+                                        .ledgerAccountFrom("ledger-from")
+                                        .ledgerAccountTo("ledger-to")
+                                        .memo("memo-1"))
+                                .viaCrypto()
+                                    .asset("BTC")
+                                    .chain("bitcoin")
+                                    .fromWalletRef("wallet-1")
+                                    .toAddress("bc1address")
+                                    .txPolicy("fast")
+                                    .done()
                                 .putCustom("customField", "custom-value")
                                 .putCustomExpression("customExpr", "document('/calc')")))
                 .buildDocument();
@@ -214,6 +230,74 @@ class DocBuilderStepsDslParityTest {
     }
 
     @Test
+    void requestBackwardPaymentBuildsAbstractIntentAndSupportsOptionalRailHint() {
+        Node built = DocBuilder.doc()
+                .name("Backward payment parity")
+                .onInit("bootstrap", steps -> steps.requestBackwardPayment(
+                        "RequestBackwardPayment",
+                        payload -> payload
+                                .processor("guarantorChannel")
+                                .from("payeeChannel")
+                                .to("payerChannel")
+                                .currency("USD")
+                                .amountMinor(10000)
+                                .reason("voucher-activation")
+                                .viaCreditLine()
+                                    .creditLineId("facility-1")
+                                    .done()))
+                .buildDocument();
+
+        String eventPath = "/contracts/bootstrap/steps/0/event";
+        assertEquals("PayNote/Backward Payment Requested", built.getAsText(eventPath + "/type/value"));
+        assertEquals("guarantorChannel", built.getAsText(eventPath + "/processor/value"));
+        assertEquals("payeeChannel", built.getAsText(eventPath + "/from/value"));
+        assertEquals("payerChannel", built.getAsText(eventPath + "/to/value"));
+        assertEquals("USD", built.getAsText(eventPath + "/currency/value"));
+        assertEquals("10000", String.valueOf(built.get(eventPath + "/amountMinor/value")));
+        assertEquals("voucher-activation", built.getAsText(eventPath + "/reason/value"));
+        assertEquals("facility-1", built.getAsText(eventPath + "/creditLineId/value"));
+    }
+
+    @Test
+    void bootstrapDocumentBuildersMapDocumentBindingsAndOptions() {
+        Node child = new Node()
+                .name("Child Doc")
+                .type("Demo/Child");
+
+        Node built = DocBuilder.doc()
+                .name("Bootstrap parity")
+                .onInit("bootstrap", steps -> steps
+                        .bootstrapDocument(
+                                "BootstrapNode",
+                                child,
+                                java.util.Map.of("participantA", "aliceChannel"),
+                                options -> options
+                                        .assignee("orchestratorChannel")
+                                        .defaultMessage("You have been added.")
+                                        .channelMessage("participantA", "Please review and accept."))
+                        .bootstrapDocumentExpr(
+                                "BootstrapExpr",
+                                "document('/childTemplate')",
+                                java.util.Map.of("participantB", "bobChannel"),
+                                options -> options.assignee("myOsAdminChannel")))
+                .buildDocument();
+
+        String first = "/contracts/bootstrap/steps/0/event";
+        assertEquals("Conversation/Document Bootstrap Requested", built.getAsText(first + "/type/value"));
+        assertEquals("Child Doc", built.getAsText(first + "/document/name/value"));
+        assertEquals("aliceChannel", built.getAsText(first + "/channelBindings/participantA/value"));
+        assertEquals("orchestratorChannel", built.getAsText(first + "/bootstrapAssignee/value"));
+        assertEquals("You have been added.", built.getAsText(first + "/initialMessages/defaultMessage/value"));
+        assertEquals("Please review and accept.", built.getAsText(first + "/initialMessages/perChannel/participantA/value"));
+
+        String second = "/contracts/bootstrap/steps/1/event";
+        assertEquals("Conversation/Document Bootstrap Requested", built.getAsText(second + "/type/value"));
+        assertEquals("${document('/childTemplate')}", built.getAsText(second + "/document/value"));
+        assertEquals("bobChannel", built.getAsText(second + "/channelBindings/participantB/value"));
+        assertEquals("myOsAdminChannel", built.getAsText(second + "/bootstrapAssignee/value"));
+    }
+
+    @Test
     void triggerPaymentRequiresProcessorField() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 DocBuilder.doc()
@@ -241,6 +325,27 @@ class DocBuilderStepsDslParityTest {
                         .buildDocument());
 
         assertEquals("Use processor(...) to set processor", exception.getMessage());
+    }
+
+    @Test
+    void paymentPayloadExtSupportsThirdPartyFields() {
+        Node built = DocBuilder.doc()
+                .name("Payment ext parity")
+                .onInit("bootstrap", steps -> steps.triggerPayment(
+                        "RequestPayment",
+                        PaymentRequests.PaymentRequested.class,
+                        payload -> payload
+                                .processor("processorChannel")
+                                .currency("USD")
+                                .amountMinor(100)
+                                .ext(DemoBankPaymentFields::new)
+                                .creditFacilityId("facility-42")
+                                .riskTier("tier-a")))
+                .buildDocument();
+
+        String eventPath = "/contracts/bootstrap/steps/0/event";
+        assertEquals("facility-42", built.getAsText(eventPath + "/creditFacilityId/value"));
+        assertEquals("tier-a", built.getAsText(eventPath + "/riskTier/value"));
     }
 
     @Test
@@ -278,6 +383,24 @@ class DocBuilderStepsDslParityTest {
 
         private StepsBuilder emitDemo(String signal) {
             return parent.namedEvent("DemoStep", signal);
+        }
+    }
+
+    private static final class DemoBankPaymentFields {
+        private final StepsBuilder.PaymentRequestPayloadBuilder payload;
+
+        private DemoBankPaymentFields(StepsBuilder.PaymentRequestPayloadBuilder payload) {
+            this.payload = Objects.requireNonNull(payload, "payload");
+        }
+
+        private DemoBankPaymentFields creditFacilityId(String value) {
+            payload.putCustom("creditFacilityId", value);
+            return this;
+        }
+
+        private DemoBankPaymentFields riskTier(String value) {
+            payload.putCustom("riskTier", value);
+            return this;
         }
     }
 

@@ -5,6 +5,7 @@ import blue.language.sdk.DocBuilder;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static blue.language.sdk.dsl.DslParityAssertions.assertDslMatchesYaml;
 
@@ -48,6 +49,24 @@ class DocBuilderGeneralDslParityTest {
 
         assertSame(existing, edited);
         assertDslMatchesYaml(edited, """
+                name: Existing
+                counter: 1
+                """);
+    }
+
+    @Test
+    void fromClonesProvidedNode() {
+        Node existing = new Node().name("Existing");
+
+        Node clonedAndEdited = DocBuilder.from(existing)
+                .set("/counter", 1)
+                .buildDocument();
+
+        assertNotSame(existing, clonedAndEdited);
+        assertDslMatchesYaml(existing, """
+                name: Existing
+                """);
+        assertDslMatchesYaml(clonedAndEdited, """
                 name: Existing
                 counter: 1
                 """);
@@ -215,7 +234,7 @@ class DocBuilderGeneralDslParityTest {
                 name: On event parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onNumber:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -242,13 +261,13 @@ class DocBuilderGeneralDslParityTest {
                 name: On doc change parity
                 contracts:
                   whenPriceChangesDocUpdateChannel:
-                    type: Core/Document Update Channel
+                    type: Document Update Channel
                     path: /price
                   whenPriceChanges:
                     type: Conversation/Sequential Workflow
                     channel: whenPriceChangesDocUpdateChannel
                     event:
-                      type: Core/Document Update
+                      type: Document Update
                     steps:
                       - name: SetStatus
                         type: Conversation/Update Document
@@ -270,9 +289,9 @@ class DocBuilderGeneralDslParityTest {
                 name: On init parity
                 contracts:
                   initLifecycleChannel:
-                    type: Core/Lifecycle Event Channel
+                    type: Lifecycle Event Channel
                     event:
-                      type: Core/Document Processing Initiated
+                      type: Document Processing Initiated
                   initialize:
                     type: Conversation/Sequential Workflow
                     channel: initLifecycleChannel
@@ -290,25 +309,26 @@ class DocBuilderGeneralDslParityTest {
     void myOsAdminMatchesYamlDefinition() {
         Node fromDsl = DocBuilder.doc()
                 .name("MyOS admin parity")
-                .myOsAdmin("myOsAdminChannel")
+                .myOsAdmin()
                 .buildDocument();
 
         assertDslMatchesYaml(fromDsl, """
                 name: MyOS admin parity
                 contracts:
                   myOsAdminChannel:
-                    type: Conversation/Timeline Channel
-                  myOsAdminUpdate:
+                    type: MyOS/MyOS Timeline
+                  myOsEmit:
                     type: Conversation/Operation
+                    request:
+                      type: List
                     channel: myOsAdminChannel
-                    description: Accept events from MyOS admin
-                  myOsAdminUpdateImpl:
+                  myOsEmitImpl:
                     type: Conversation/Sequential Workflow Operation
-                    operation: myOsAdminUpdate
+                    operation: myOsEmit
                     steps:
-                      - name: EmitAdminEvents
+                      - name: EmitEvents
                         type: Conversation/JavaScript Code
-                        code: "return { events: event?.message?.request ?? [] };"
+                        code: "return { events: event };"
                 """);
     }
 
@@ -324,7 +344,7 @@ class DocBuilderGeneralDslParityTest {
                 name: MyOS response parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onResponse:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -355,7 +375,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Any response parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onAnyResponse:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -383,7 +403,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Triggered id parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSubscription:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -412,7 +432,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Triggered matcher parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onCorrelation:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -441,7 +461,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Subscription update typed parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSub:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -473,7 +493,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Subscription update parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSub:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
