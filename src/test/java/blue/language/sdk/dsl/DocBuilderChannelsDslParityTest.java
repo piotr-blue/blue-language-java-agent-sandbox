@@ -92,7 +92,7 @@ class DocBuilderChannelsDslParityTest {
         Node fromDsl = DocBuilder.doc()
                 .name("Channel event parity")
                 .channel("ownerChannel")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .onChannelEvent("onIncrementEvent", "ownerChannel", Integer.class,
                         steps -> steps.replaceValue("SetCounter", "/counter", 1))
                 .buildDocument();

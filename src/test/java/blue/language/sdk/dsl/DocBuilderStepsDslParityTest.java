@@ -57,7 +57,7 @@ class DocBuilderStepsDslParityTest {
 
         Node built = DocBuilder.doc()
                 .name("Step primitive parity")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .onInit("initialize", steps -> steps
                         .jsRaw("Compute", "return { next: 2 };")
                         .updateDocument("ApplyPatch", changeset -> changeset

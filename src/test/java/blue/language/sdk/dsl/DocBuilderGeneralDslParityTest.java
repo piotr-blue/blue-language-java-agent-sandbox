@@ -44,7 +44,7 @@ class DocBuilderGeneralDslParityTest {
         Node existing = new Node().name("Existing");
 
         Node edited = DocBuilder.edit(existing)
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .buildDocument();
 
         assertSame(existing, edited);
@@ -59,7 +59,7 @@ class DocBuilderGeneralDslParityTest {
         Node existing = new Node().name("Existing");
 
         Node clonedAndEdited = DocBuilder.from(existing)
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .buildDocument();
 
         assertNotSame(existing, clonedAndEdited);
@@ -545,12 +545,12 @@ class DocBuilderGeneralDslParityTest {
     }
 
     @Test
-    void setReplaceRemoveMatchYamlDefinition() {
+    void fieldReplaceRemoveMatchYamlDefinition() {
         Node fromDsl = DocBuilder.doc()
                 .name("Pointer parity")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .replace("/counter", 2)
-                .set("/temp", 3)
+                .field("/temp", 3)
                 .remove("/temp")
                 .buildDocument();
 

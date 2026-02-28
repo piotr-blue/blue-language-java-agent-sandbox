@@ -1,6 +1,7 @@
 package blue.language.sdk;
 
 import blue.language.Blue;
+import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
 import blue.language.sdk.internal.ContractsBuilder;
@@ -15,9 +16,12 @@ import blue.language.types.myos.SubscriptionUpdate;
 import blue.language.types.myos.SubscriptionToSessionInitiated;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class DocBuilder<T extends DocBuilder<T>> {
@@ -27,7 +31,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     protected final Node document;
     private final Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations =
             new LinkedHashMap<String, StepsBuilder.AiIntegrationConfig>();
-    private String activeSectionKey;
+    private SectionContext currentSection;
 
     protected DocBuilder() {
         this.document = new Node();
@@ -78,37 +82,54 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
     public T section(String key, String title, String summary) {
         require(key, "section key");
-        Node sectionNode = ensureSectionContract(key);
-        if (title != null) {
-            sectionNode.properties("title", new Node().value(title));
+        require(title, "section title");
+        if (currentSection != null) {
+            throw new IllegalStateException(
+                    "Already in section '" + currentSection.key + "'. Call endSection() first.");
         }
-        if (summary != null) {
-            sectionNode.properties("summary", new Node().value(summary));
+        currentSection = sectionContextFromDocument(key.trim(), title.trim(), summary);
+        if (currentSection == null) {
+            currentSection = new SectionContext(key.trim(), title.trim(), summary);
         }
-        ensureSectionListNode(sectionNode, "relatedFields");
-        ensureSectionListNode(sectionNode, "relatedContracts");
-        activeSectionKey = key;
         return self();
     }
 
     public T section(String key) {
         require(key, "section key");
-        Node sectionNode = ensureSectionContract(key);
-        ensureSectionListNode(sectionNode, "relatedFields");
-        ensureSectionListNode(sectionNode, "relatedContracts");
-        activeSectionKey = key;
+        if (currentSection != null) {
+            throw new IllegalStateException(
+                    "Already in section '" + currentSection.key + "'. Call endSection() first.");
+        }
+        String normalizedKey = key.trim();
+        currentSection = sectionContextFromDocument(normalizedKey, normalizedKey, null);
+        if (currentSection == null) {
+            currentSection = new SectionContext(normalizedKey, normalizedKey, null);
+        }
         return self();
     }
 
     public T endSection() {
-        activeSectionKey = null;
+        if (currentSection == null) {
+            throw new IllegalStateException("Not in a section.");
+        }
+        contracts().putRaw(currentSection.key, currentSection.buildNode());
+        currentSection = null;
         return self();
+    }
+
+    public T field(String path, Object value) {
+        return set(path, value);
+    }
+
+    public FieldBuilder<T> field(String path) {
+        trackField(path);
+        return new FieldBuilder<T>(self(), path);
     }
 
     public T channel(String channelKey) {
         require(channelKey, "channel key");
         contracts().timelineChannel(channelKey);
-        addContractToActiveSection(channelKey);
+        trackContract(channelKey);
         return self();
     }
 
@@ -119,7 +140,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         pruneEmptyEventProperty(channelNode);
         channelNode.type(TypeRef.of(channelContract.getClass()).alias());
         contracts().putRaw(channelKey, channelNode);
-        addContractToActiveSection(channelKey);
+        trackContract(channelKey);
         return self();
     }
 
@@ -136,7 +157,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     public T compositeChannel(String compositeChannelKey, String... channelKeys) {
         require(compositeChannelKey, "composite channel key");
         contracts().compositeTimelineChannel(compositeChannelKey, channelKeys);
-        addContractToActiveSection(compositeChannelKey);
+        trackContract(compositeChannelKey);
         return self();
     }
 
@@ -175,9 +196,9 @@ public class DocBuilder<T extends DocBuilder<T>> {
         }
         if (implementation != null) {
             contracts.implementOperation(key + "Impl", key, implementation);
+            trackContract(key + "Impl");
         }
-        addContractToActiveSection(key);
-        addContractToActiveSection(key + "Impl");
+        trackContract(key);
         return self();
     }
 
@@ -201,6 +222,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         require(eventTypeClass, "event type");
         require(customizer, "steps");
         contracts().onEvent(workflowKey, channelKey, eventTypeClass, customizer);
+        trackContract(workflowKey);
         return self();
     }
 
@@ -212,6 +234,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         require(customizer, "steps");
         ensureTriggeredChannel();
         contracts().onTriggered(workflowKey, eventTypeClass, customizer);
+        trackContract(workflowKey);
         return self();
     }
 
@@ -227,6 +250,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
                 channelKey,
                 new Node().type(TypeAliases.CORE_DOCUMENT_UPDATE),
                 customizer);
+        trackContract(channelKey);
+        trackContract(workflowKey);
         return self();
     }
 
@@ -235,11 +260,13 @@ public class DocBuilder<T extends DocBuilder<T>> {
         require(customizer, "steps");
         ensureInitChannel();
         contracts().onLifecycle(workflowKey, "initLifecycleChannel", customizer);
+        trackContract(workflowKey);
         return self();
     }
 
     public T myOsAdmin() {
         contracts().putRaw("myOsAdminChannel", new Node().type("MyOS/MyOS Timeline"));
+        trackContract("myOsAdminChannel");
         canEmit("myOsAdminChannel", "myOsEmit");
         return self();
     }
@@ -247,6 +274,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     public T myOsAdmin(String channelKey) {
         require(channelKey, "channel key");
         contracts().putRaw(channelKey, new Node().type("MyOS/MyOS Timeline"));
+        trackContract(channelKey);
         canEmit(channelKey, deriveEmitOperationKey(channelKey));
         return self();
     }
@@ -374,6 +402,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         Node matcher = matcherBean == null ? typeOnlyNode(eventClass) : BLUE.objectToNode(matcherBean);
         matcher.type(TypeRef.of(eventClass).alias());
         contracts().onTriggered(workflowKey, matcher, customizer);
+        trackContract(workflowKey);
         return self();
     }
 
@@ -437,25 +466,15 @@ public class DocBuilder<T extends DocBuilder<T>> {
         });
     }
 
-    public T set(String pointer, Object value) {
+    protected T set(String pointer, Object value) {
         setPointer(pointer, toNode(value));
-        addFieldToActiveSection(pointer);
-        return self();
-    }
-
-    public T field(String pointer, Object value) {
-        return set(pointer, value);
-    }
-
-    public T field(String pointer) {
-        require(pointer, "pointer");
-        addFieldToActiveSection(pointer);
+        trackField(pointer);
         return self();
     }
 
     public T replace(String pointer, Object value) {
         setPointer(pointer, toNode(value));
-        addFieldToActiveSection(pointer);
+        trackField(pointer);
         return self();
     }
 
@@ -465,7 +484,25 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     public Node buildDocument() {
+        if (currentSection != null) {
+            throw new IllegalStateException(
+                    "Unclosed section: '" + currentSection.key + "'. Call endSection() before buildDocument().");
+        }
         return document;
+    }
+
+    protected void trackField(String path) {
+        if (currentSection == null) {
+            return;
+        }
+        currentSection.addField(PointerUtils.normalizeRequiredPointer(path, "field path"));
+    }
+
+    protected void trackContract(String key) {
+        if (currentSection == null || key == null || key.trim().isEmpty()) {
+            return;
+        }
+        currentSection.addContract(key.trim());
     }
 
     public static String expr(String expression) {
@@ -488,7 +525,23 @@ public class DocBuilder<T extends DocBuilder<T>> {
         if (value instanceof Node) {
             return (Node) value;
         }
-        return new Node().value(value);
+        if (value == null
+                || value instanceof String
+                || value instanceof Number
+                || value instanceof Boolean
+                || value instanceof Character) {
+            return new Node().value(value);
+        }
+        if (value instanceof Map<?, ?> || value instanceof Collection<?>) {
+            return BLUE.objectToNode(value);
+        }
+        if (value.getClass().isArray()) {
+            return BLUE.objectToNode(value);
+        }
+        if (value.getClass().getName().startsWith("java.time.")) {
+            return new Node().value(value.toString());
+        }
+        return BLUE.objectToNode(value);
     }
 
     private static Node toRequestNode(Object value) {
@@ -609,64 +662,52 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return child.getProperties();
     }
 
-    private Node ensureSectionContract(String sectionKey) {
+    private SectionContext sectionContextFromDocument(String sectionKey,
+                                                      String fallbackTitle,
+                                                      String fallbackSummary) {
         Map<String, Node> contracts = ensureMap(document, "contracts");
         Node section = contracts.get(sectionKey);
         if (section == null) {
-            section = new Node().type("Conversation/Document Section");
-            section.properties("title", new Node().value(sectionKey));
-            section.properties("summary", new Node().value("Auto-generated section"));
-            contracts.put(sectionKey, section);
-        } else if (section.getType() == null) {
-            section.type("Conversation/Document Section");
+            return null;
         }
-        return section;
-    }
 
-    private static Node ensureSectionListNode(Node section, String key) {
+        String title = fallbackTitle;
+        String summary = fallbackSummary;
+        if (section.getProperties() != null) {
+            Node titleNode = section.getProperties().get("title");
+            if (titleNode != null && titleNode.getValue() != null) {
+                title = String.valueOf(titleNode.getValue());
+            }
+            if (fallbackSummary == null) {
+                Node summaryNode = section.getProperties().get("summary");
+                if (summaryNode != null && summaryNode.getValue() != null) {
+                    summary = String.valueOf(summaryNode.getValue());
+                }
+            }
+        }
+
+        SectionContext context = new SectionContext(sectionKey, title, summary);
         if (section.getProperties() == null) {
-            section.properties(new LinkedHashMap<String, Node>());
+            return context;
         }
-        Node listNode = section.getProperties().get(key);
-        if (listNode == null) {
-            listNode = new Node().items(new ArrayList<Node>());
-            section.getProperties().put(key, listNode);
-            return listNode;
-        }
-        if (listNode.getItems() == null) {
-            listNode.items(new ArrayList<Node>());
-        }
-        return listNode;
+        readStringList(section.getProperties().get("relatedFields"), context.fields);
+        readStringList(section.getProperties().get("relatedContracts"), context.contracts);
+        return context;
     }
 
-    private void addFieldToActiveSection(String pointer) {
-        if (activeSectionKey == null || pointer == null || pointer.isBlank()) {
-            return;
-        }
-        Node section = ensureSectionContract(activeSectionKey);
-        Node relatedFields = ensureSectionListNode(section, "relatedFields");
-        addStringToListIfMissing(relatedFields, pointer.trim());
-    }
-
-    private void addContractToActiveSection(String contractKey) {
-        if (activeSectionKey == null || contractKey == null || contractKey.isBlank()) {
-            return;
-        }
-        Node section = ensureSectionContract(activeSectionKey);
-        Node relatedContracts = ensureSectionListNode(section, "relatedContracts");
-        addStringToListIfMissing(relatedContracts, contractKey.trim());
-    }
-
-    private static void addStringToListIfMissing(Node listNode, String value) {
+    private static void readStringList(Node listNode, Set<String> sink) {
         if (listNode == null || listNode.getItems() == null) {
             return;
         }
         for (Node item : listNode.getItems()) {
-            if (item != null && value.equals(item.getValue())) {
-                return;
+            if (item == null || item.getValue() == null) {
+                continue;
+            }
+            String value = String.valueOf(item.getValue()).trim();
+            if (!value.isEmpty()) {
+                sink.add(value);
             }
         }
-        listNode.getItems().add(new Node().value(value));
     }
 
     private void setPointer(String pointer, Node valueNode) {
@@ -833,8 +874,10 @@ public class DocBuilder<T extends DocBuilder<T>> {
         }
 
         contractsMap.put(key, operation);
+        trackContract(key);
         if (implementation != null) {
             contracts().implementOperation(key + "Impl", key, implementation);
+            trackContract(key + "Impl");
         }
         return self();
     }
@@ -962,6 +1005,171 @@ public class DocBuilder<T extends DocBuilder<T>> {
                 throw new IllegalArgumentException(fieldName + " is required");
             }
             return value.trim();
+        }
+    }
+
+    public static final class FieldBuilder<P extends DocBuilder<P>> {
+        private final P parent;
+        private final String path;
+        private Node typeNode;
+        private String description;
+        private Object value;
+        private boolean valueSet;
+        private Boolean required;
+        private Number minimum;
+        private Number maximum;
+
+        private FieldBuilder(P parent, String path) {
+            this.parent = parent;
+            this.path = PointerUtils.normalizeRequiredPointer(path, "field path");
+        }
+
+        public FieldBuilder<P> type(Class<?> typeClass) {
+            require(typeClass, "type class");
+            this.typeNode = TypeRef.of(typeClass).asTypeNode();
+            return this;
+        }
+
+        public FieldBuilder<P> type(String typeAlias) {
+            require(typeAlias, "type alias");
+            this.typeNode = new Node().value(typeAlias.trim()).inlineValue(true);
+            return this;
+        }
+
+        public FieldBuilder<P> type(Node typeNode) {
+            require(typeNode, "type node");
+            this.typeNode = typeNode.clone();
+            return this;
+        }
+
+        public FieldBuilder<P> description(String description) {
+            require(description, "description");
+            this.description = description;
+            return this;
+        }
+
+        public FieldBuilder<P> value(Object value) {
+            this.value = value;
+            this.valueSet = true;
+            return this;
+        }
+
+        public FieldBuilder<P> required(boolean required) {
+            this.required = required;
+            return this;
+        }
+
+        public FieldBuilder<P> minimum(Number minimum) {
+            require(minimum, "minimum");
+            this.minimum = minimum;
+            return this;
+        }
+
+        public FieldBuilder<P> maximum(Number maximum) {
+            require(maximum, "maximum");
+            this.maximum = maximum;
+            return this;
+        }
+
+        public P done() {
+            Node working = resolveExistingFieldNode(parent.document, path);
+            boolean mutated = valueSet
+                    || typeNode != null
+                    || description != null
+                    || required != null
+                    || minimum != null
+                    || maximum != null;
+            if (!mutated && working == null) {
+                return parent;
+            }
+            if (working == null) {
+                working = new Node();
+            } else {
+                working = working.clone();
+            }
+
+            if (valueSet) {
+                working = toNode(value);
+            }
+            if (typeNode != null) {
+                working.type(typeNode.clone());
+            }
+            if (description != null) {
+                working.description(description);
+            }
+            if (required != null || minimum != null || maximum != null) {
+                Constraints constraints = working.getConstraints() == null
+                        ? new Constraints()
+                        : working.getConstraints().clone();
+                if (required != null) {
+                    constraints.required(required);
+                }
+                if (minimum != null) {
+                    constraints.minimum(new java.math.BigDecimal(minimum.toString()));
+                }
+                if (maximum != null) {
+                    constraints.maximum(new java.math.BigDecimal(maximum.toString()));
+                }
+                working.constraints(constraints);
+            }
+            return parent.set(path, working);
+        }
+
+        private static Node resolveExistingFieldNode(Node document, String path) {
+            try {
+                Object value = document.get(path);
+                if (value instanceof Node) {
+                    return (Node) value;
+                }
+                return null;
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+    }
+
+    private static final class SectionContext {
+        private final String key;
+        private final String title;
+        private final String summary;
+        private final Set<String> fields = new LinkedHashSet<String>();
+        private final Set<String> contracts = new LinkedHashSet<String>();
+
+        private SectionContext(String key, String title, String summary) {
+            this.key = key;
+            this.title = title;
+            this.summary = summary;
+        }
+
+        private void addField(String path) {
+            fields.add(path);
+        }
+
+        private void addContract(String contractKey) {
+            contracts.add(contractKey);
+        }
+
+        private Node buildNode() {
+            Node section = new Node().type(TypeAliases.CONVERSATION_DOCUMENT_SECTION);
+            section.properties("title", new Node().value(title));
+            if (summary != null && !summary.trim().isEmpty()) {
+                section.properties("summary", new Node().value(summary.trim()));
+            }
+            if (!fields.isEmpty()) {
+                List<Node> relatedFields = new ArrayList<Node>();
+                for (String field : fields) {
+                    relatedFields.add(new Node().value(field));
+                }
+                section.properties("relatedFields", new Node().items(relatedFields));
+            }
+            if (!contracts.isEmpty()) {
+                List<Node> relatedContracts = new ArrayList<Node>();
+                for (String contract : contracts) {
+                    relatedContracts.add(new Node().value(contract));
+                }
+                section.properties("relatedContracts", new Node().items(relatedContracts));
+            }
+            return section;
         }
     }
 

@@ -16,6 +16,7 @@ public final class TypeAliases {
     public static final String CONVERSATION_OPERATION = "Conversation/Operation";
     public static final String CONVERSATION_TIMELINE_CHANNEL = "Conversation/Timeline Channel";
     public static final String CONVERSATION_COMPOSITE_TIMELINE_CHANNEL = "Conversation/Composite Timeline Channel";
+    public static final String CONVERSATION_DOCUMENT_SECTION = "Conversation/Document Section";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW = "Conversation/Sequential Workflow";
     public static final String CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION = "Conversation/Sequential Workflow Operation";
     public static final String CONVERSATION_JAVASCRIPT_CODE = "Conversation/JavaScript Code";

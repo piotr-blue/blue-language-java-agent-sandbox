@@ -110,7 +110,7 @@ public final class BootstrapExamples {
                 .type("Demo/Deal")
                 .channel("sellerChannel")
                 .channel("buyerChannel")
-                .set("/status", "draft")
+                .field("/status", "draft")
                 .buildDocument();
     }
 }

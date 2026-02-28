@@ -50,7 +50,7 @@ class DocBuilderMyOsDslParityTest {
 
         Node built = DocBuilder.doc()
                 .name("MyOS step parity")
-                .set("/targetSessionId", "session-42")
+                .field("/targetSessionId", "session-42")
                 .onInit("bootstrap", steps -> steps
                         .myOs().requestSingleDocPermission(
                                 "ownerChannel",
@@ -133,7 +133,7 @@ class DocBuilderMyOsDslParityTest {
     void myOsCallOperationOmitsRequestWhenInputIsNull() {
         Node built = DocBuilder.doc()
                 .name("Call operation without request")
-                .set("/targetSessionId", "session-42")
+                .field("/targetSessionId", "session-42")
                 .onInit("bootstrap", steps -> steps
                         .myOs().callOperation(
                                 "ownerChannel",
@@ -154,7 +154,7 @@ class DocBuilderMyOsDslParityTest {
     void myOsRevokeAndWorkerAgencyMethodsProduceExpectedEventContracts() {
         Node built = DocBuilder.doc()
                 .name("MyOS revoke and worker-agency parity")
-                .set("/targetSessionId", "session-77")
+                .field("/targetSessionId", "session-77")
                 .onInit("bootstrap", steps -> steps
                         .myOs().revokeSingleDocPermission(
                                 "ownerChannel",
