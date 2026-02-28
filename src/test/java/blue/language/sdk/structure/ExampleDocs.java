@@ -3,6 +3,9 @@ package blue.language.sdk.structure;
 import blue.language.model.Node;
 import blue.language.samples.paynote.PayNoteCookbookExamples;
 import blue.language.samples.paynote.voucher.ArmchairProtectionWithVoucherPayNote;
+import blue.language.samples.paynote.voucher.BalancedBowlVoucherPayNote;
+import blue.language.samples.sdk.DocBuilderExamples;
+import blue.language.samples.sdk.MyOsCookbookExamples;
 import blue.language.sdk.DocBuilder;
 import blue.language.sdk.MyOsPermissions;
 import blue.language.sdk.paynote.PayNotes;
@@ -98,6 +101,30 @@ final class ExampleDocs {
         scenarios.add(new Scenario("counter-add-status", counterDoc(), doc -> DocBuilder.from(doc)
                 .set("/status", "active")
                 .buildDocument()));
+        scenarios.add(new Scenario("sample-simple-agent-add-channel", DocBuilderExamples.simpleAgentWithPermissions(), doc -> DocBuilder.from(doc)
+                .channel("observerChannel")
+                .buildDocument()));
+        scenarios.add(new Scenario("sample-agent-participant-add-field", DocBuilderExamples.agentAddsParticipantAndWaits(), doc -> DocBuilder.from(doc)
+                .set("/audit/version", "v2")
+                .buildDocument()));
+        scenarios.add(new Scenario("myos-cookbook-weather-status", MyOsCookbookExamples.simplePermissionAndSubscribe(), doc -> DocBuilder.from(doc)
+                .replace("/status", "paused")
+                .buildDocument()));
+        scenarios.add(new Scenario("myos-cookbook-linked-docs-note", MyOsCookbookExamples.linkedDocsWithUpdates(), doc -> DocBuilder.from(doc)
+                .set("/lastSyncStatus", "partial")
+                .buildDocument()));
+        scenarios.add(new Scenario("paynote-cookbook-shipment-add-channel", PayNoteCookbookExamples.shipmentEscrowSimple(), doc -> DocBuilder.from(doc)
+                .channel("shipmentCompanyChannel")
+                .buildDocument()));
+        scenarios.add(new Scenario("paynote-cookbook-refund-window-note", PayNoteCookbookExamples.refundLockedUntilWindowOpens(), doc -> DocBuilder.from(doc)
+                .set("/refundNote", "window-open")
+                .buildDocument()));
+        scenarios.add(new Scenario("paynote-cookbook-doc-update-note", PayNoteCookbookExamples.captureTriggeredFromDocUpdate(), doc -> DocBuilder.from(doc)
+                .set("/deliveryComment", "verified")
+                .buildDocument()));
+        scenarios.add(new Scenario("voucher-balanced-add-version", BalancedBowlVoucherPayNote.templateDoc(), doc -> DocBuilder.from(doc)
+                .set("/voucherVersion", 2)
+                .buildDocument()));
         return scenarios;
     }
 
@@ -109,7 +136,10 @@ final class ExampleDocs {
                 new Scenario("myos", myOsDoc(), Function.identity()),
                 new Scenario("ai", aiDoc(), Function.identity()),
                 new Scenario("paynoteSimple", simpleCapturePayNote(), Function.identity()),
-                new Scenario("paynoteVoucher", ArmchairProtectionWithVoucherPayNote.templateDoc(), Function.identity())
+                new Scenario("paynoteVoucher", ArmchairProtectionWithVoucherPayNote.templateDoc(), Function.identity()),
+                new Scenario("myosCookbook", MyOsCookbookExamples.simplePermissionAndSubscribe(), Function.identity()),
+                new Scenario("paynoteCookbook", PayNoteCookbookExamples.shipmentEscrowSimple(), Function.identity()),
+                new Scenario("docBuilderSamples", DocBuilderExamples.simpleAgentWithPermissions(), Function.identity())
         );
     }
 
