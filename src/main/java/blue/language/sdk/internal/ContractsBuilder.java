@@ -3,6 +3,7 @@ package blue.language.sdk.internal;
 import blue.language.model.Node;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -10,9 +11,19 @@ import java.util.function.Consumer;
 public final class ContractsBuilder {
 
     private final Map<String, Node> contracts;
+    private final Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations;
 
     public ContractsBuilder(Map<String, Node> contracts) {
+        this(contracts, null);
+    }
+
+    public ContractsBuilder(Map<String, Node> contracts,
+                            Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations) {
         this.contracts = contracts;
+        this.aiIntegrations = new LinkedHashMap<String, StepsBuilder.AiIntegrationConfig>();
+        if (aiIntegrations != null) {
+            this.aiIntegrations.putAll(aiIntegrations);
+        }
     }
 
     public ContractsBuilder putRaw(String key, Node contract) {
@@ -91,7 +102,7 @@ public final class ContractsBuilder {
         if (customizer == null) {
             return this;
         }
-        StepsBuilder stepsBuilder = new StepsBuilder();
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
@@ -108,7 +119,7 @@ public final class ContractsBuilder {
             return this;
         }
 
-        StepsBuilder stepsBuilder = new StepsBuilder();
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
         customizer.accept(stepsBuilder);
         List<Node> nextSteps = stepsBuilder.build();
 
@@ -142,7 +153,7 @@ public final class ContractsBuilder {
                                                String channel,
                                                Node event,
                                                Consumer<StepsBuilder> customizer) {
-        StepsBuilder stepsBuilder = new StepsBuilder();
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW);

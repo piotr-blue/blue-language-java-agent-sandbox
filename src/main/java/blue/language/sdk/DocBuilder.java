@@ -8,7 +8,11 @@ import blue.language.sdk.internal.PoliciesBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.sdk.internal.TypeAliases;
 import blue.language.sdk.internal.TypeRef;
+import blue.language.types.conversation.Response;
+import blue.language.types.myos.SingleDocumentPermissionGranted;
+import blue.language.types.myos.SingleDocumentPermissionRejected;
 import blue.language.types.myos.SubscriptionUpdate;
+import blue.language.types.myos.SubscriptionToSessionInitiated;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -21,6 +25,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
     private static final Blue BLUE = new Blue();
 
     protected final Node document;
+    private final Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations =
+            new LinkedHashMap<String, StepsBuilder.AiIntegrationConfig>();
     private String activeSectionKey;
 
     protected DocBuilder() {
@@ -395,6 +401,42 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return onSubscriptionUpdate(workflowKey, subscriptionId, null, customizer);
     }
 
+    public AiIntegrationBuilder<T> ai(String integrationName) {
+        return new AiIntegrationBuilder<T>(self(), integrationName);
+    }
+
+    public T onAIResponse(String integrationName,
+                          String workflowKey,
+                          Consumer<StepsBuilder> customizer) {
+        return onAIResponse(integrationName, workflowKey, Response.class, customizer);
+    }
+
+    public T onAIResponse(String integrationName,
+                          String workflowKey,
+                          Class<?> responseTypeClass,
+                          Consumer<StepsBuilder> customizer) {
+        require(responseTypeClass, "response type");
+        require(customizer, "steps");
+        StepsBuilder.AiIntegrationConfig integration = requireAiIntegration(integrationName);
+
+        SubscriptionUpdateMatcher matcher = new SubscriptionUpdateMatcher();
+        matcher.subscriptionId = integration.subscriptionId;
+
+        AIResponseMatcher responseMatcher = new AIResponseMatcher();
+        responseMatcher.inResponseTo = new AIResponseInResponseToMatcher();
+        responseMatcher.inResponseTo.incomingEvent = new AIIncomingEventMatcher();
+        responseMatcher.inResponseTo.incomingEvent.requester = integration.requesterId;
+
+        Node updateMatcher = BLUE.objectToNode(responseMatcher);
+        updateMatcher.type(TypeRef.of(responseTypeClass).alias());
+        matcher.update = updateMatcher;
+
+        return onTriggeredWithMatcher(workflowKey, SubscriptionUpdate.class, matcher, steps -> {
+            steps.replaceExpression("_SaveAIContext", integration.contextPath, "event.update.context");
+            customizer.accept(steps);
+        });
+    }
+
     public T set(String pointer, Object value) {
         setPointer(pointer, toNode(value));
         addFieldToActiveSection(pointer);
@@ -435,7 +477,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     private ContractsBuilder contracts() {
-        return new ContractsBuilder(ensureMap(document, "contracts"));
+        return new ContractsBuilder(ensureMap(document, "contracts"), aiIntegrations);
     }
 
     private PoliciesBuilder policies() {
@@ -460,17 +502,89 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return new Node().type("List");
     }
 
+    private StepsBuilder.AiIntegrationConfig requireAiIntegration(String integrationName) {
+        require(integrationName, "ai integration");
+        StepsBuilder.AiIntegrationConfig config = aiIntegrations.get(integrationName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown AI integration: " + integrationName);
+        }
+        return config;
+    }
+
+    T registerAiIntegration(AiIntegrationDefinition definition) {
+        String name = definition.name.trim();
+        String sessionId = definition.sessionId.trim();
+        String permissionFrom = definition.permissionFrom.trim();
+        String requesterId = definition.requesterId.trim();
+        String statusPath = definition.statusPath.trim();
+        String contextPath = definition.contextPath.trim();
+
+        String token = aiToken(name);
+        String requestId = "REQ_" + token;
+        String subscriptionId = "SUB_" + token;
+
+        StepsBuilder.AiIntegrationConfig config = new StepsBuilder.AiIntegrationConfig()
+                .name(name)
+                .sessionId(sessionId)
+                .permissionFrom(permissionFrom)
+                .requesterId(requesterId)
+                .contextPath(contextPath)
+                .subscriptionId(subscriptionId);
+        aiIntegrations.put(name, config);
+
+        set(statusPath, "pending");
+        set(contextPath, new Node().properties(new LinkedHashMap<String, Node>()));
+
+        String keyPrefix = "ai" + token;
+        onInit(keyPrefix + "RequestPermission", steps -> steps.myOs().requestSingleDocPermission(
+                permissionFrom,
+                requestId,
+                sessionId,
+                MyOsPermissions.create().read(true).singleOps("provideInstructions")));
+
+        onMyOsResponse(keyPrefix + "Subscribe",
+                SingleDocumentPermissionGranted.class,
+                requestId,
+                steps -> steps.myOs().subscribeToSession(sessionId, subscriptionId));
+
+        onSubscriptionUpdate(keyPrefix + "SubscriptionReady",
+                subscriptionId,
+                SubscriptionToSessionInitiated.class,
+                steps -> steps.replaceValue("Mark" + token + "Ready", statusPath, "ready"));
+
+        onMyOsResponse(keyPrefix + "PermissionRejected",
+                SingleDocumentPermissionRejected.class,
+                requestId,
+                steps -> steps.replaceValue("Mark" + token + "Revoked", statusPath, "revoked"));
+
+        return self();
+    }
+
+    private static String aiToken(String name) {
+        StringBuilder token = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                token.append(Character.toUpperCase(c));
+            }
+        }
+        if (token.length() == 0) {
+            token.append("AI");
+        }
+        return token.toString();
+    }
+
     private void ensureTriggeredChannel() {
         Map<String, Node> contracts = ensureMap(document, "contracts");
         if (!contracts.containsKey("triggeredEventChannel")) {
-            new ContractsBuilder(contracts).triggeredEventChannel("triggeredEventChannel");
+            new ContractsBuilder(contracts, aiIntegrations).triggeredEventChannel("triggeredEventChannel");
         }
     }
 
     private void ensureInitChannel() {
         Map<String, Node> contracts = ensureMap(document, "contracts");
         if (!contracts.containsKey("initLifecycleChannel")) {
-            new ContractsBuilder(contracts).lifecycleEventChannel(
+            new ContractsBuilder(contracts, aiIntegrations).lifecycleEventChannel(
                     "initLifecycleChannel",
                     TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
         }
@@ -773,6 +887,82 @@ public class DocBuilder<T extends DocBuilder<T>> {
     private static final class SubscriptionUpdateMatcher {
         public String subscriptionId;
         public Node update;
+    }
+
+    private static final class AIResponseMatcher {
+        public AIResponseInResponseToMatcher inResponseTo;
+    }
+
+    private static final class AIResponseInResponseToMatcher {
+        public AIIncomingEventMatcher incomingEvent;
+    }
+
+    private static final class AIIncomingEventMatcher {
+        public String requester;
+    }
+
+    private static final class AiIntegrationDefinition {
+        public String name;
+        public String sessionId;
+        public String permissionFrom;
+        public String statusPath;
+        public String contextPath;
+        public String requesterId;
+    }
+
+    public static final class AiIntegrationBuilder<P extends DocBuilder<P>> {
+        private final P parent;
+        private final AiIntegrationDefinition definition = new AiIntegrationDefinition();
+
+        private AiIntegrationBuilder(P parent, String name) {
+            this.parent = parent;
+            this.definition.name = requireValue(name, "ai name");
+            String normalized = this.definition.name.trim();
+            this.definition.statusPath = "/ai/" + normalized + "/status";
+            this.definition.contextPath = "/ai/" + normalized + "/context";
+            this.definition.requesterId = aiToken(normalized);
+        }
+
+        public AiIntegrationBuilder<P> sessionId(String sessionId) {
+            this.definition.sessionId = requireValue(sessionId, "sessionId");
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> permissionFrom(String channelKey) {
+            this.definition.permissionFrom = requireValue(channelKey, "permissionFrom");
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> statusPath(String pointer) {
+            this.definition.statusPath = requireValue(pointer, "statusPath");
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> contextPath(String pointer) {
+            this.definition.contextPath = requireValue(pointer, "contextPath");
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> requesterId(String requesterId) {
+            this.definition.requesterId = requireValue(requesterId, "requesterId");
+            return this;
+        }
+
+        public P done() {
+            requireValue(definition.sessionId, "sessionId");
+            requireValue(definition.permissionFrom, "permissionFrom");
+            requireValue(definition.statusPath, "statusPath");
+            requireValue(definition.contextPath, "contextPath");
+            requireValue(definition.requesterId, "requesterId");
+            return parent.registerAiIntegration(definition);
+        }
+
+        private static String requireValue(String value, String fieldName) {
+            if (value == null || value.trim().isEmpty()) {
+                throw new IllegalArgumentException(fieldName + " is required");
+            }
+            return value.trim();
+        }
     }
 
     public static final class OperationBuilder<P extends DocBuilder<P>> {
