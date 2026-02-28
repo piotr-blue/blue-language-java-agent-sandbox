@@ -404,16 +404,7 @@ public class PatchSet {
 
     private static boolean builtInExists(Node node, String leaf) {
         return switch (leaf) {
-            case "name" -> node.getName() != null;
-            case "description" -> node.getDescription() != null;
-            case "type" -> node.getType() != null;
-            case "itemType" -> node.getItemType() != null;
-            case "keyType" -> node.getKeyType() != null;
-            case "valueType" -> node.getValueType() != null;
-            case "value" -> node.getValue() != null;
-            case "items" -> node.getItems() != null;
-            case "blueId" -> node.getBlueId() != null;
-            case "blue" -> node.getBlue() != null;
+            case "name", "description", "type", "itemType", "keyType", "valueType", "value", "items", "blueId", "blue" -> true;
             default -> false;
         };
     }

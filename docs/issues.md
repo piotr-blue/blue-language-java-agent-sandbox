@@ -36,3 +36,21 @@ During audit, some canonical IDs are 43 characters in current repo metadata:
 - `MyOS/MyOS Session Link` → `d1vQ8ZTPcQc5KeuU6tzWaVukWRVtKjQL4hbvbpC22rB`
 
 These were not treated as placeholders and were left unchanged.
+
+## 4) Missing attached SDK DSL mapping reference for DocBuilder/PayNoteBuilder task
+
+- Task requested reading an attached "SDK DSL Mapping Reference" before implementation.
+- Current workspace does not include that attached reference document/file.
+- Action taken:
+  - Implemented based on in-repo DSL sources/tests (`DocBuilder`, `PayNoteBuilder`, parity/integration suites).
+  - Kept behavior aligned with existing DSL outputs and canonical comparison rules used by `DslParityAssertions`.
+
+## 5) `bootstrapDocument` wording mismatch vs current nested PayNote embedding shape
+
+- Task scenario mentions detecting nested `bootstrapDocument` in voucher-related workflow steps.
+- Current Java DSL + fixtures use nested PayNote composition through payment request payload field:
+  - `triggerPayment(...).attachPayNote(...)`
+  - serialized shape key: `attachedPayNote`
+- Action taken:
+  - Coverage/tests validate nested PayNote composition via `attachedPayNote`.
+  - No `bootstrapDocument` key was introduced to avoid unrelated DSL shape refactors.
