@@ -20,14 +20,14 @@ class JavaScriptCodeStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: Compute\n" +
                 "        type:\n" +
@@ -65,14 +65,14 @@ class JavaScriptCodeStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: Boom\n" +
                 "        type:\n" +
@@ -90,7 +90,7 @@ class JavaScriptCodeStepExecutorIntegrationParityTest {
                 .contains("Failed to evaluate code block"));
 
         List<Node> terminationEvents = result.triggeredEvents().stream()
-                .filter(event -> "Core/Document Processing Terminated".equals(typeBlueId(event)))
+                .filter(event -> "Document Processing Terminated".equals(typeBlueId(event)))
                 .toList();
         assertEquals(1, terminationEvents.size());
         assertEquals("fatal", String.valueOf(terminationEvents.get(0).getProperties().get("cause").getValue()));
@@ -105,17 +105,17 @@ class JavaScriptCodeStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  trig:\n" +
                 "    type:\n" +
-                "      blueId: Core/Triggered Event Channel\n" +
+                "      blueId: Triggered Event Channel\n" +
                 "  producer:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitStatus\n" +
                 "        type:\n" +

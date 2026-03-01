@@ -1,19 +1,15 @@
 package blue.language.sdk.dsl;
 
-import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.sdk.DocBuilder;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static blue.language.sdk.dsl.DslParityAssertions.assertDslMatchesYaml;
 
 class DocBuilderGeneralDslParityTest {
-
-    private static final Blue BLUE = new Blue();
 
     @Test
     void identityAndStringTypeMatchYamlDefinition() {
@@ -48,11 +44,29 @@ class DocBuilderGeneralDslParityTest {
         Node existing = new Node().name("Existing");
 
         Node edited = DocBuilder.edit(existing)
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .buildDocument();
 
         assertSame(existing, edited);
         assertDslMatchesYaml(edited, """
+                name: Existing
+                counter: 1
+                """);
+    }
+
+    @Test
+    void fromClonesProvidedNode() {
+        Node existing = new Node().name("Existing");
+
+        Node clonedAndEdited = DocBuilder.from(existing)
+                .field("/counter", 1)
+                .buildDocument();
+
+        assertNotSame(existing, clonedAndEdited);
+        assertDslMatchesYaml(existing, """
+                name: Existing
+                """);
+        assertDslMatchesYaml(clonedAndEdited, """
                 name: Existing
                 counter: 1
                 """);
@@ -78,7 +92,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation request parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   increment:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -114,7 +128,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   ping:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -149,7 +163,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation builder parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   ack:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -188,7 +202,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation builder request description parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   increment:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -220,7 +234,7 @@ class DocBuilderGeneralDslParityTest {
                 name: On event parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onNumber:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -237,6 +251,34 @@ class DocBuilderGeneralDslParityTest {
     }
 
     @Test
+    void onNamedEventMatchesYamlDefinition() {
+        Node fromDsl = DocBuilder.doc()
+                .name("On named event parity")
+                .onNamedEvent("onOrderReady", "order-ready", steps -> steps.replaceValue("SetReady", "/status", "ready"))
+                .buildDocument();
+
+        assertDslMatchesYaml(fromDsl, """
+                name: On named event parity
+                contracts:
+                  triggeredEventChannel:
+                    type: Triggered Event Channel
+                  onOrderReady:
+                    type: Conversation/Sequential Workflow
+                    channel: triggeredEventChannel
+                    event:
+                      type: Common/Named Event
+                      name: order-ready
+                    steps:
+                      - name: SetReady
+                        type: Conversation/Update Document
+                        changeset:
+                          - op: replace
+                            path: /status
+                            val: ready
+                """);
+    }
+
+    @Test
     void onDocChangeMatchesYamlDefinition() {
         Node fromDsl = DocBuilder.doc()
                 .name("On doc change parity")
@@ -247,13 +289,13 @@ class DocBuilderGeneralDslParityTest {
                 name: On doc change parity
                 contracts:
                   whenPriceChangesDocUpdateChannel:
-                    type: Core/Document Update Channel
+                    type: Document Update Channel
                     path: /price
                   whenPriceChanges:
                     type: Conversation/Sequential Workflow
                     channel: whenPriceChangesDocUpdateChannel
                     event:
-                      type: Core/Document Update
+                      type: Document Update
                     steps:
                       - name: SetStatus
                         type: Conversation/Update Document
@@ -275,9 +317,9 @@ class DocBuilderGeneralDslParityTest {
                 name: On init parity
                 contracts:
                   initLifecycleChannel:
-                    type: Core/Lifecycle Event Channel
+                    type: Lifecycle Event Channel
                     event:
-                      type: Core/Document Processing Initiated
+                      type: Document Processing Initiated
                   initialize:
                     type: Conversation/Sequential Workflow
                     channel: initLifecycleChannel
@@ -295,25 +337,26 @@ class DocBuilderGeneralDslParityTest {
     void myOsAdminMatchesYamlDefinition() {
         Node fromDsl = DocBuilder.doc()
                 .name("MyOS admin parity")
-                .myOsAdmin("myOsAdminChannel")
+                .myOsAdmin()
                 .buildDocument();
 
         assertDslMatchesYaml(fromDsl, """
                 name: MyOS admin parity
                 contracts:
                   myOsAdminChannel:
-                    type: Conversation/Timeline Channel
-                  myOsAdminUpdate:
+                    type: MyOS/MyOS Timeline
+                  myOsEmit:
                     type: Conversation/Operation
+                    request:
+                      type: List
                     channel: myOsAdminChannel
-                    description: Accept events from MyOS admin
-                  myOsAdminUpdateImpl:
+                  myOsEmitImpl:
                     type: Conversation/Sequential Workflow Operation
-                    operation: myOsAdminUpdate
+                    operation: myOsEmit
                     steps:
-                      - name: EmitAdminEvents
+                      - name: EmitEvents
                         type: Conversation/JavaScript Code
-                        code: "return { events: event?.message?.request ?? [] };"
+                        code: "return { events: event };"
                 """);
     }
 
@@ -329,7 +372,7 @@ class DocBuilderGeneralDslParityTest {
                 name: MyOS response parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onResponse:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -360,7 +403,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Any response parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onAnyResponse:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -388,7 +431,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Triggered id parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSubscription:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -417,7 +460,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Triggered matcher parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onCorrelation:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -446,7 +489,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Subscription update typed parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSub:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -478,7 +521,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Subscription update parity
                 contracts:
                   triggeredEventChannel:
-                    type: Core/Triggered Event Channel
+                    type: Triggered Event Channel
                   onSub:
                     type: Conversation/Sequential Workflow
                     channel: triggeredEventChannel
@@ -507,7 +550,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Direct change parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   applyPatch:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -530,12 +573,12 @@ class DocBuilderGeneralDslParityTest {
     }
 
     @Test
-    void setReplaceRemoveMatchYamlDefinition() {
+    void fieldReplaceRemoveMatchYamlDefinition() {
         Node fromDsl = DocBuilder.doc()
                 .name("Pointer parity")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .replace("/counter", 2)
-                .set("/temp", 3)
+                .field("/temp", 3)
                 .remove("/temp")
                 .buildDocument();
 
@@ -549,22 +592,6 @@ class DocBuilderGeneralDslParityTest {
     void exprWrapsWhenMissingAndKeepsWrappedExpressions() {
         assertEquals("${document('/x')}", DocBuilder.expr("document('/x')"));
         assertEquals("${document('/x')}", DocBuilder.expr("${document('/x')}"));
-    }
-
-    private static void assertDslMatchesYaml(Node fromDsl, String yaml) {
-        Node fromYaml = BLUE.preprocess(BLUE.yamlToNode(yaml).clone());
-        Node normalizedDsl = BLUE.preprocess(fromDsl.clone());
-        String expectedBlueId = BLUE.calculateBlueId(fromYaml);
-        String actualBlueId = BLUE.calculateBlueId(normalizedDsl);
-        assertNotNull(expectedBlueId);
-        assertNotNull(actualBlueId);
-        JsonNode expectedTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(fromYaml));
-        JsonNode actualTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(normalizedDsl));
-        assertEquals(
-                expectedTree,
-                actualTree,
-                () -> "Expected YAML:\n" + BLUE.nodeToSimpleYaml(fromYaml)
-                        + "\nActual DSL:\n" + BLUE.nodeToSimpleYaml(normalizedDsl));
     }
 
     private static final class CorrelationMatcher {

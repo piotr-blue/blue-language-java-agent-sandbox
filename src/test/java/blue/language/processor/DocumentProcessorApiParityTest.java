@@ -27,7 +27,7 @@ class DocumentProcessorApiParityTest {
         assertFalse(init.capabilityFailure());
         assertTrue(processor.isInitialized(init.document()));
         assertEquals(1, init.triggeredEvents().size());
-        assertEquals("Core/Document Processing Initiated",
+        assertEquals("Document Processing Initiated",
                 String.valueOf(init.triggeredEvents().get(0).getProperties().get("type").getValue()));
         assertEquals(new BigInteger("1"), init.document().getProperties().get("initialized").getValue());
 
@@ -74,7 +74,7 @@ class DocumentProcessorApiParityTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onLifecycle:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
@@ -119,14 +119,14 @@ class DocumentProcessorApiParityTest {
                 "contracts:\n" +
                 "  lifecycleChannel:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onLifecycle:\n" +
                 "    channel: lifecycleChannel\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - type:\n" +
                 "          blueId: Conversation/Update Document\n" +

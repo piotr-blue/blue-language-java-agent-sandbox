@@ -21,14 +21,14 @@ class TriggerEventStepLeakageReproIntegrationTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitStartWithChildDoc\n" +
                 "        type:\n" +
@@ -109,14 +109,14 @@ class TriggerEventStepLeakageReproIntegrationTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitStartWithSnapshot\n" +
                 "        type:\n" +

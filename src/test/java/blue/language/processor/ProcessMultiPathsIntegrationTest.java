@@ -55,7 +55,7 @@ class ProcessMultiPathsIntegrationTest {
             "contracts:\n" +
             "  embedded:\n" +
             "    type:\n" +
-            "      blueId: Core/Process Embedded\n" +
+            "      blueId: Process Embedded\n" +
             "    paths:\n" +
             "      - /childA\n" +
             "      - /childB\n";

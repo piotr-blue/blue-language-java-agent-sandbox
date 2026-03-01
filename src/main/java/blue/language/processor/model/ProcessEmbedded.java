@@ -2,12 +2,19 @@ package blue.language.processor.model;
 
 import blue.language.model.TypeBlueId;
 import blue.language.processor.util.PointerUtils;
+import blue.language.types.TypeAlias;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@TypeBlueId({"Core/Process Embedded", "ProcessEmbedded"})
+@TypeAlias("Process Embedded")
+@TypeBlueId({
+        "Hu4XkfvyXLSdfFNUwuXebEu3oJeWcMyhBTcRV9AQyKPC",
+        "Process Embedded",
+        "Core/Process Embedded",
+        "ProcessEmbedded"
+})
 public class ProcessEmbedded extends MarkerContract {
 
     private final List<String> paths = new ArrayList<>();
@@ -16,7 +23,7 @@ public class ProcessEmbedded extends MarkerContract {
         return Collections.unmodifiableList(paths);
     }
 
-    public void setPaths(List<String> newPaths) {
+    public ProcessEmbedded setPaths(List<String> newPaths) {
         List<String> normalizedPaths = new ArrayList<>();
         if (newPaths != null) {
             for (String path : newPaths) {
@@ -28,6 +35,7 @@ public class ProcessEmbedded extends MarkerContract {
         }
         paths.clear();
         paths.addAll(normalizedPaths);
+        return this;
     }
 
     public ProcessEmbedded addPath(String path) {

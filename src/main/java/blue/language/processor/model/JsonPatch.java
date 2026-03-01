@@ -2,10 +2,16 @@ package blue.language.processor.model;
 
 import blue.language.model.Node;
 import blue.language.model.TypeBlueId;
+import blue.language.types.TypeAlias;
 
 import java.util.Objects;
 
-@TypeBlueId("JsonPatch")
+@TypeAlias("Json Patch Entry")
+@TypeBlueId({
+        "Bz49DbfqKC1yJeCfv5RYPZUKTfb7rtZnmreCaz4RsXn5",
+        "Json Patch Entry",
+        "JsonPatch"
+})
 public class JsonPatch {
 
     public enum Op {

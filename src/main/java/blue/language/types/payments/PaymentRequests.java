@@ -269,4 +269,27 @@ public final class PaymentRequests {
             return this;
         }
     }
+
+    @TypeAlias("PayNote/Backward Payment Requested")
+    @TypeBlueId("PayNote-Backward-Payment-Requested-BlueId")
+    public static class BackwardPaymentRequested extends PaymentRequested {
+        public Node from;
+        public Node to;
+        public String reason;
+
+        public BackwardPaymentRequested from(Node from) {
+            this.from = from;
+            return this;
+        }
+
+        public BackwardPaymentRequested to(Node to) {
+            this.to = to;
+            return this;
+        }
+
+        public BackwardPaymentRequested reason(String reason) {
+            this.reason = reason;
+            return this;
+        }
+    }
 }

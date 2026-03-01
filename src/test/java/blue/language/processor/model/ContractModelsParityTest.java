@@ -20,7 +20,7 @@ class ContractModelsParityTest {
     @Test
     void convertsDocumentAndEmbeddedChannelContracts() {
         Node documentUpdateNode = blue.yamlToNode("type:\n" +
-                "  blueId: Core/Document Update Channel\n" +
+                "  blueId: Document Update Channel\n" +
                 "path: /documents/foo\n" +
                 "order: 7\n");
         Contract documentUpdate = converter.convertWithType(documentUpdateNode, Contract.class, false);
@@ -29,7 +29,7 @@ class ContractModelsParityTest {
         assertEquals(Integer.valueOf(7), documentUpdate.getOrder());
 
         Node embeddedNode = blue.yamlToNode("type:\n" +
-                "  blueId: Core/Embedded Node Channel\n" +
+                "  blueId: Embedded Node Channel\n" +
                 "childPath: /child/alpha\n");
         Contract embedded = converter.convertWithType(embeddedNode, Contract.class, false);
         assertTrue(embedded instanceof EmbeddedNodeChannel);
@@ -39,11 +39,11 @@ class ContractModelsParityTest {
     @Test
     void convertsLifecycleTriggeredAndMarkerContracts() {
         Contract lifecycle = converter.convertWithType(
-                blue.yamlToNode("type:\n  blueId: Core/Lifecycle Event Channel\n"),
+                blue.yamlToNode("type:\n  blueId: Lifecycle Event Channel\n"),
                 Contract.class,
                 false);
         Contract triggered = converter.convertWithType(
-                blue.yamlToNode("type:\n  blueId: Core/Triggered Event Channel\n"),
+                blue.yamlToNode("type:\n  blueId: Triggered Event Channel\n"),
                 Contract.class,
                 false);
         assertTrue(lifecycle instanceof LifecycleChannel);
@@ -51,7 +51,7 @@ class ContractModelsParityTest {
 
         Contract processEmbedded = converter.convertWithType(
                 blue.yamlToNode("type:\n" +
-                        "  blueId: Core/Process Embedded\n" +
+                        "  blueId: Process Embedded\n" +
                         "paths:\n" +
                         "  - /child/a\n" +
                         "  - /child/b\n"),
@@ -62,7 +62,7 @@ class ContractModelsParityTest {
 
         Contract initialized = converter.convertWithType(
                 blue.yamlToNode("type:\n" +
-                        "  blueId: Core/Processing Initialized Marker\n" +
+                        "  blueId: Processing Initialized Marker\n" +
                         "documentId: doc-123\n"),
                 Contract.class,
                 false);
@@ -71,7 +71,7 @@ class ContractModelsParityTest {
 
         Contract terminated = converter.convertWithType(
                 blue.yamlToNode("type:\n" +
-                        "  blueId: Core/Processing Terminated Marker\n" +
+                        "  blueId: Processing Terminated Marker\n" +
                         "cause: BoundaryViolation\n" +
                         "reason: Test\n"),
                 Contract.class,
@@ -85,7 +85,7 @@ class ContractModelsParityTest {
     void convertsCheckpointMarkerPreservingEventNodes() {
         Contract checkpointContract = converter.convertWithType(
                 blue.yamlToNode("type:\n" +
-                        "  blueId: Core/Channel Event Checkpoint\n" +
+                        "  blueId: Channel Event Checkpoint\n" +
                         "lastEvents:\n" +
                         "  channelA:\n" +
                         "    payload: data\n" +

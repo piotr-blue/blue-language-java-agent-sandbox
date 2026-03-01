@@ -49,12 +49,12 @@ class EmbeddedRoutingBridgeIntegrationTest {
                 "contracts:\n" +
                 "  embeddedSub1:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /sub1\n" +
                 "  sub1Bridge:\n" +
                 "    type:\n" +
-                "      blueId: Core/Embedded Node Channel\n" +
+                "      blueId: Embedded Node Channel\n" +
                 "    childPath: /sub1\n" +
                 "  alice:\n" +
                 "    type:\n" +

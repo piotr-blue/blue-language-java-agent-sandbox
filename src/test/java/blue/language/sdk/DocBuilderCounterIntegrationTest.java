@@ -14,7 +14,7 @@ class DocBuilderCounterIntegrationTest {
     void buildsCounterDocumentAndProcessesIncrementOperation() {
         Node built = DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel", new TimelineChannel().timelineId("{{PASTE_TIMELINE_ID_HERE}}"))
                 .operation("increment")
                     .channel("ownerChannel")

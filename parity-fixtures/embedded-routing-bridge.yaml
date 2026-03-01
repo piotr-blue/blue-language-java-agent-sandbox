@@ -32,12 +32,12 @@ document: |
   contracts:
     embeddedSub1:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /sub1
     sub1Bridge:
       type:
-        blueId: Core/Embedded Node Channel
+        blueId: Embedded Node Channel
       childPath: /sub1
     alice:
       type:

@@ -42,7 +42,7 @@ class ProcessProtectedPathRemovalTerminatesRootIntegrationTest {
                 "    timelineId: root\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  removeEmbeddedPath:\n" +

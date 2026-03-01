@@ -12,15 +12,25 @@ public class ProcessingFailureMarker extends MarkerContract {
         return code;
     }
 
-    public void setCode(String code) {
+    public ProcessingFailureMarker setCode(String code) {
         this.code = code;
+        return this;
+    }
+
+    public ProcessingFailureMarker code(String code) {
+        return setCode(code);
     }
 
     public String getReason() {
         return reason;
     }
 
-    public void setReason(String reason) {
+    public ProcessingFailureMarker setReason(String reason) {
         this.reason = reason;
+        return this;
+    }
+
+    public ProcessingFailureMarker reason(String reason) {
+        return setReason(reason);
     }
 }

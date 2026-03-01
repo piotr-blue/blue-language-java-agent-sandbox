@@ -2,12 +2,30 @@ package blue.language.sdk.internal;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.sdk.MyOsPermissions;
 import blue.language.sdk.MyOsSteps;
+import blue.language.sdk.ai.AIIntegrationConfig;
+import blue.language.sdk.ai.AITaskTemplate;
+import blue.language.sdk.ai.NamedEventExpectation;
+import blue.language.sdk.ai.TypeReference;
 import blue.language.types.common.NamedEvent;
+import blue.language.types.conversation.DocumentBootstrapRequested;
+import blue.language.types.payments.PaymentRequests;
+import blue.language.types.payments.fields.AchPaymentFields;
+import blue.language.types.payments.fields.CardPaymentFields;
+import blue.language.types.payments.fields.CardTokenPaymentFields;
+import blue.language.types.payments.fields.CreditLinePaymentFields;
+import blue.language.types.payments.fields.CryptoPaymentFields;
+import blue.language.types.payments.fields.LedgerPaymentFields;
+import blue.language.types.payments.fields.SepaPaymentFields;
+import blue.language.types.payments.fields.WirePaymentFields;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -16,6 +34,25 @@ public final class StepsBuilder {
     private static final Blue BLUE = new Blue();
 
     private final List<Node> steps = new ArrayList<Node>();
+    private final Map<String, AIIntegrationConfig> aiIntegrations;
+
+    public StepsBuilder() {
+        this(null);
+    }
+
+    public StepsBuilder(Map<String, AIIntegrationConfig> aiIntegrations) {
+        this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
+        if (aiIntegrations != null) {
+            for (Map.Entry<String, AIIntegrationConfig> entry : aiIntegrations.entrySet()) {
+                String key = entry.getKey();
+                AIIntegrationConfig value = entry.getValue();
+                if (key == null || value == null) {
+                    continue;
+                }
+                this.aiIntegrations.put(key.trim(), value);
+            }
+        }
+    }
 
     public StepsBuilder jsRaw(String name, String code) {
         Node step = new Node().type(TypeAliases.CONVERSATION_JAVASCRIPT_CODE);
@@ -51,10 +88,14 @@ public final class StepsBuilder {
     }
 
     public StepsBuilder triggerEvent(String name, Node event) {
-        Node step = new Node().type(TypeAliases.CONVERSATION_TRIGGER_EVENT);
-        if (name != null) {
-            step.name(name);
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("step name is required");
         }
+        if (event == null) {
+            throw new IllegalArgumentException("event cannot be null");
+        }
+        Node step = new Node().type(TypeAliases.CONVERSATION_TRIGGER_EVENT);
+        step.name(name.trim());
         step.properties("event", event);
         steps.add(step);
         return this;
@@ -67,11 +108,10 @@ public final class StepsBuilder {
         return triggerEvent(name, BLUE.objectToNode(typedEvent));
     }
 
-    public StepsBuilder emit(Object typedEvent) {
-        return emit(null, typedEvent);
-    }
-
     public StepsBuilder emitType(String name, Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        if (eventTypeClass == null) {
+            throw new IllegalArgumentException("eventTypeClass cannot be null");
+        }
         Node event = new Node().type(TypeRef.of(eventTypeClass).asTypeNode());
         if (payloadCustomizer != null) {
             NodeObjectBuilder builder = NodeObjectBuilder.create();
@@ -86,17 +126,12 @@ public final class StepsBuilder {
         return triggerEvent(name, event);
     }
 
-    public StepsBuilder emitType(Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
-        return emitType(null, eventTypeClass, payloadCustomizer);
-    }
-
-    public StepsBuilder emitType(Class<?> eventTypeClass) {
-        return emitType(null, eventTypeClass, null);
-    }
-
-    public StepsBuilder emitAdHocEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+    public StepsBuilder namedEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        if (eventName == null || eventName.trim().isEmpty()) {
+            throw new IllegalArgumentException("eventName cannot be blank");
+        }
         Node event = new Node().type(TypeRef.of(NamedEvent.class).asTypeNode());
-        event.properties("name", new Node().value(eventName));
+        event.properties("name", new Node().value(eventName.trim()));
         if (payloadCustomizer != null) {
             NodeObjectBuilder payloadBuilder = NodeObjectBuilder.create();
             payloadCustomizer.accept(payloadBuilder);
@@ -105,39 +140,81 @@ public final class StepsBuilder {
         return triggerEvent(name, event);
     }
 
-    public StepsBuilder namedEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
-        return emitAdHocEvent(name, eventName, payloadCustomizer);
-    }
-
     public StepsBuilder namedEvent(String name, String eventName) {
-        return emitAdHocEvent(name, eventName, null);
+        return namedEvent(name, eventName, null);
     }
 
     public StepsBuilder triggerPayment(String name,
                                        Class<?> paymentEventTypeClass,
                                        Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
-        Node event = new Node().type(TypeRef.of(paymentEventTypeClass).asTypeNode());
-        PaymentRequestPayloadBuilder payloadBuilder = new PaymentRequestPayloadBuilder();
-        if (payloadCustomizer != null) {
-            payloadCustomizer.accept(payloadBuilder);
-            Node payload = payloadBuilder.build();
-            if (payload.getProperties() != null) {
-                for (Map.Entry<String, Node> entry : payload.getProperties().entrySet()) {
-                    event.properties(entry.getKey(), entry.getValue());
-                }
-            }
-        }
-
-        String processor = payloadBuilder.processor();
-        if (processor == null || processor.trim().isEmpty()) {
-            throw new IllegalArgumentException("triggerPayment requires non-empty processor field");
-        }
-        return triggerEvent(name, event);
+        return emitPaymentRequest(name, paymentEventTypeClass, payloadCustomizer);
     }
 
     public StepsBuilder triggerPayment(Class<?> paymentEventTypeClass,
                                        Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
-        return triggerPayment(null, paymentEventTypeClass, payloadCustomizer);
+        return triggerPayment("TriggerPayment", paymentEventTypeClass, payloadCustomizer);
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings) {
+        return bootstrapDocument(stepName, document, channelBindings, null);
+    }
+
+    public StepsBuilder bootstrapDocument(String stepName,
+                                          Node document,
+                                          Map<String, String> channelBindings,
+                                          Consumer<BootstrapOptionsBuilder> options) {
+        if (document == null) {
+            throw new IllegalArgumentException("document cannot be null");
+        }
+        return emitType(stepName, DocumentBootstrapRequested.class, payload -> {
+            payload.putNode("document", document);
+            payload.putStringMap("channelBindings", channelBindings);
+            applyBootstrapOptions(payload, options);
+        });
+    }
+
+    public StepsBuilder bootstrapDocumentExpr(String stepName,
+                                              String documentExpression,
+                                              Map<String, String> channelBindings,
+                                              Consumer<BootstrapOptionsBuilder> options) {
+        if (documentExpression == null || documentExpression.trim().isEmpty()) {
+            throw new IllegalArgumentException("documentExpression cannot be blank");
+        }
+        return emitType(stepName, DocumentBootstrapRequested.class, payload -> {
+            payload.putExpression("document", documentExpression);
+            payload.putStringMap("channelBindings", channelBindings);
+            applyBootstrapOptions(payload, options);
+        });
+    }
+
+    public StepsBuilder requestBackwardPayment(String name,
+                                               Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        return emitPaymentRequest(name, PaymentRequests.BackwardPaymentRequested.class, payloadCustomizer);
+    }
+
+    public StepsBuilder requestBackwardPayment(Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        return requestBackwardPayment("RequestBackwardPayment", payloadCustomizer);
+    }
+
+    public StepsBuilder askAI(String aiName,
+                              String stepName,
+                              Consumer<AskAIBuilder> askCustomizer) {
+        AskAIBuilder askBuilder = new AskAIBuilder(this, requireAiIntegration(aiName), stepName);
+        if (askCustomizer != null) {
+            askCustomizer.accept(askBuilder);
+        }
+        return askBuilder.build();
+    }
+
+    public StepsBuilder askAI(String aiName,
+                              Consumer<AskAIBuilder> askCustomizer) {
+        return askAI(aiName, "AskAI", askCustomizer);
+    }
+
+    public AISteps ai(String aiName) {
+        return new AISteps(this, requireAiIntegration(aiName));
     }
 
     public StepsBuilder replaceValue(String name, String path, Object value) {
@@ -169,7 +246,73 @@ public final class StepsBuilder {
     }
 
     public MyOsSteps myOs() {
-        return ext(MyOsSteps::new);
+        return ext(steps -> new MyOsSteps(steps, "myOsAdminChannel"));
+    }
+
+    public MyOsSteps myOs(String adminChannelKey) {
+        return ext(steps -> new MyOsSteps(steps, adminChannelKey));
+    }
+
+    private StepsBuilder emitPaymentRequest(String name,
+                                            Class<?> paymentEventTypeClass,
+                                            Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
+        Node event = new Node().type(TypeRef.of(paymentEventTypeClass).asTypeNode());
+        PaymentRequestPayloadBuilder payloadBuilder = new PaymentRequestPayloadBuilder();
+        if (payloadCustomizer != null) {
+            payloadCustomizer.accept(payloadBuilder);
+            Node payload = payloadBuilder.build();
+            if (payload.getProperties() != null) {
+                for (Map.Entry<String, Node> entry : payload.getProperties().entrySet()) {
+                    event.properties(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        String processor = payloadBuilder.processor();
+        if (processor == null || processor.trim().isEmpty()) {
+            throw new IllegalArgumentException("triggerPayment requires non-empty processor field");
+        }
+        return triggerEvent(name, event);
+    }
+
+    private static void applyBootstrapOptions(NodeObjectBuilder payload,
+                                              Consumer<BootstrapOptionsBuilder> options) {
+        if (options == null) {
+            return;
+        }
+        BootstrapOptionsBuilder bootstrapOptions = new BootstrapOptionsBuilder();
+        options.accept(bootstrapOptions);
+        bootstrapOptions.applyTo(payload);
+    }
+
+    private AIIntegrationConfig requireAiIntegration(String aiName) {
+        if (aiName == null || aiName.trim().isEmpty()) {
+            throw new IllegalArgumentException("ai name is required");
+        }
+        AIIntegrationConfig config = aiIntegrations.get(aiName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown AI integration: " + aiName);
+        }
+        return config;
+    }
+
+    private StepsBuilder emitCallOperationRequested(String stepName,
+                                                    AIIntegrationConfig integration,
+                                                    Node requestPayload) {
+        return emitType(stepName, blue.language.types.myos.CallOperationRequested.class, payload -> payload
+                .put("onBehalfOf", integration.permissionFromChannel())
+                .put("targetSessionId", integration.sessionIdExpression())
+                .put("operation", "provideInstructions")
+                .putNode("request", requestPayload));
+    }
+
+    private static String escapeSingleQuoted(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text
+                .replace("\\", "\\\\")
+                .replace("'", "\\'");
     }
 
     List<Node> build() {
@@ -206,6 +349,26 @@ public final class StepsBuilder {
             return this;
         }
 
+        public PaymentRequestPayloadBuilder from(String fromReference) {
+            payload.properties("from", new Node().value(fromReference));
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder from(Node from) {
+            payload.properties("from", from);
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder to(String toReference) {
+            payload.properties("to", new Node().value(toReference));
+            return this;
+        }
+
+        public PaymentRequestPayloadBuilder to(Node to) {
+            payload.properties("to", to);
+            return this;
+        }
+
         public PaymentRequestPayloadBuilder currency(String currency) {
             payload.properties("currency", new Node().value(currency));
             return this;
@@ -226,120 +389,105 @@ public final class StepsBuilder {
             return this;
         }
 
-        public PaymentRequestPayloadBuilder routingNumber(String value) {
-            return putCustom("routingNumber", value);
+        public PaymentRequestPayloadBuilder reason(String reason) {
+            payload.properties("reason", new Node().value(reason));
+            return this;
         }
 
-        public PaymentRequestPayloadBuilder accountNumber(String value) {
-            return putCustom("accountNumber", value);
+        public AchRailBuilder viaAch() {
+            return new AchRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder accountType(String value) {
-            return putCustom("accountType", value);
+        public PaymentRequestPayloadBuilder viaAch(AchPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder network(String value) {
-            return putCustom("network", value);
+        public SepaRailBuilder viaSepa() {
+            return new SepaRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder companyEntryDescription(String value) {
-            return putCustom("companyEntryDescription", value);
+        public PaymentRequestPayloadBuilder viaSepa(SepaPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder ibanFrom(String value) {
-            return putCustom("ibanFrom", value);
+        public WireRailBuilder viaWire() {
+            return new WireRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder ibanTo(String value) {
-            return putCustom("ibanTo", value);
+        public PaymentRequestPayloadBuilder viaWire(WirePaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder bicTo(String value) {
-            return putCustom("bicTo", value);
+        public CardRailBuilder viaCard() {
+            return new CardRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder remittanceInformation(String value) {
-            return putCustom("remittanceInformation", value);
+        public PaymentRequestPayloadBuilder viaCard(CardPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder bankSwift(String value) {
-            return putCustom("bankSwift", value);
+        public CardTokenRailBuilder viaTokenizedCard() {
+            return new CardTokenRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder bankName(String value) {
-            return putCustom("bankName", value);
+        public PaymentRequestPayloadBuilder viaTokenizedCard(CardTokenPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder beneficiaryName(String value) {
-            return putCustom("beneficiaryName", value);
+        public CreditLineRailBuilder viaCreditLine() {
+            return new CreditLineRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder beneficiaryAddress(String value) {
-            return putCustom("beneficiaryAddress", value);
+        public PaymentRequestPayloadBuilder viaCreditLine(CreditLinePaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder cardOnFileRef(String value) {
-            return putCustom("cardOnFileRef", value);
+        public LedgerRailBuilder viaLedger() {
+            return new LedgerRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder merchantDescriptor(String value) {
-            return putCustom("merchantDescriptor", value);
+        public PaymentRequestPayloadBuilder viaLedger(LedgerPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder networkToken(String value) {
-            return putCustom("networkToken", value);
+        public CryptoRailBuilder viaCrypto() {
+            return new CryptoRailBuilder(this);
         }
 
-        public PaymentRequestPayloadBuilder tokenProvider(String value) {
-            return putCustom("tokenProvider", value);
+        public PaymentRequestPayloadBuilder viaCrypto(CryptoPaymentFields fields) {
+            return rail(fields);
         }
 
-        public PaymentRequestPayloadBuilder cryptogram(String value) {
-            return putCustom("cryptogram", value);
+        public PaymentRequestPayloadBuilder rail(Object railFieldsBean) {
+            if (railFieldsBean == null) {
+                throw new IllegalArgumentException("railFieldsBean cannot be null");
+            }
+            Node railNode = BLUE.objectToNode(railFieldsBean);
+            if (railNode.getProperties() == null) {
+                return this;
+            }
+            for (Map.Entry<String, Node> entry : railNode.getProperties().entrySet()) {
+                String key = entry.getKey();
+                if ("type".equals(key)) {
+                    continue;
+                }
+                if ("processor".equals(key)) {
+                    throw new IllegalArgumentException("Use processor(...) to set processor");
+                }
+                payload.properties(key, entry.getValue());
+            }
+            return this;
         }
 
-        public PaymentRequestPayloadBuilder creditLineId(String value) {
-            return putCustom("creditLineId", value);
-        }
-
-        public PaymentRequestPayloadBuilder merchantAccountId(String value) {
-            return putCustom("merchantAccountId", value);
-        }
-
-        public PaymentRequestPayloadBuilder cardholderAccountId(String value) {
-            return putCustom("cardholderAccountId", value);
-        }
-
-        public PaymentRequestPayloadBuilder ledgerAccountFrom(String value) {
-            return putCustom("ledgerAccountFrom", value);
-        }
-
-        public PaymentRequestPayloadBuilder ledgerAccountTo(String value) {
-            return putCustom("ledgerAccountTo", value);
-        }
-
-        public PaymentRequestPayloadBuilder memo(String value) {
-            return putCustom("memo", value);
-        }
-
-        public PaymentRequestPayloadBuilder asset(String value) {
-            return putCustom("asset", value);
-        }
-
-        public PaymentRequestPayloadBuilder chain(String value) {
-            return putCustom("chain", value);
-        }
-
-        public PaymentRequestPayloadBuilder fromWalletRef(String value) {
-            return putCustom("fromWalletRef", value);
-        }
-
-        public PaymentRequestPayloadBuilder toAddress(String value) {
-            return putCustom("toAddress", value);
-        }
-
-        public PaymentRequestPayloadBuilder txPolicy(String value) {
-            return putCustom("txPolicy", value);
+        public <E> E ext(Function<PaymentRequestPayloadBuilder, E> extensionFactory) {
+            if (extensionFactory == null) {
+                throw new IllegalArgumentException("extensionFactory cannot be null");
+            }
+            E extension = extensionFactory.apply(this);
+            if (extension == null) {
+                throw new IllegalArgumentException("extensionFactory cannot return null");
+            }
+            return extension;
         }
 
         public PaymentRequestPayloadBuilder putCustom(String key, Object value) {
@@ -368,6 +516,589 @@ public final class StepsBuilder {
 
         private String processor() {
             return processor;
+        }
+
+        public static final class AchRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private AchRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public AchRailBuilder routingNumber(String value) {
+                parent.putCustom("routingNumber", value);
+                return this;
+            }
+
+            public AchRailBuilder accountNumber(String value) {
+                parent.putCustom("accountNumber", value);
+                return this;
+            }
+
+            public AchRailBuilder accountType(String value) {
+                parent.putCustom("accountType", value);
+                return this;
+            }
+
+            public AchRailBuilder network(String value) {
+                parent.putCustom("network", value);
+                return this;
+            }
+
+            public AchRailBuilder companyEntryDescription(String value) {
+                parent.putCustom("companyEntryDescription", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class SepaRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private SepaRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public SepaRailBuilder ibanFrom(String value) {
+                parent.putCustom("ibanFrom", value);
+                return this;
+            }
+
+            public SepaRailBuilder ibanTo(String value) {
+                parent.putCustom("ibanTo", value);
+                return this;
+            }
+
+            public SepaRailBuilder bicTo(String value) {
+                parent.putCustom("bicTo", value);
+                return this;
+            }
+
+            public SepaRailBuilder remittanceInformation(String value) {
+                parent.putCustom("remittanceInformation", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class WireRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private WireRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public WireRailBuilder bankSwift(String value) {
+                parent.putCustom("bankSwift", value);
+                return this;
+            }
+
+            public WireRailBuilder bankName(String value) {
+                parent.putCustom("bankName", value);
+                return this;
+            }
+
+            public WireRailBuilder accountNumber(String value) {
+                parent.putCustom("accountNumber", value);
+                return this;
+            }
+
+            public WireRailBuilder beneficiaryName(String value) {
+                parent.putCustom("beneficiaryName", value);
+                return this;
+            }
+
+            public WireRailBuilder beneficiaryAddress(String value) {
+                parent.putCustom("beneficiaryAddress", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CardRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CardRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CardRailBuilder cardOnFileRef(String value) {
+                parent.putCustom("cardOnFileRef", value);
+                return this;
+            }
+
+            public CardRailBuilder merchantDescriptor(String value) {
+                parent.putCustom("merchantDescriptor", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CardTokenRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CardTokenRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CardTokenRailBuilder networkToken(String value) {
+                parent.putCustom("networkToken", value);
+                return this;
+            }
+
+            public CardTokenRailBuilder tokenProvider(String value) {
+                parent.putCustom("tokenProvider", value);
+                return this;
+            }
+
+            public CardTokenRailBuilder cryptogram(String value) {
+                parent.putCustom("cryptogram", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CreditLineRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CreditLineRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CreditLineRailBuilder creditLineId(String value) {
+                parent.putCustom("creditLineId", value);
+                return this;
+            }
+
+            public CreditLineRailBuilder merchantAccountId(String value) {
+                parent.putCustom("merchantAccountId", value);
+                return this;
+            }
+
+            public CreditLineRailBuilder cardholderAccountId(String value) {
+                parent.putCustom("cardholderAccountId", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class LedgerRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private LedgerRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public LedgerRailBuilder ledgerAccountFrom(String value) {
+                parent.putCustom("ledgerAccountFrom", value);
+                return this;
+            }
+
+            public LedgerRailBuilder ledgerAccountTo(String value) {
+                parent.putCustom("ledgerAccountTo", value);
+                return this;
+            }
+
+            public LedgerRailBuilder memo(String value) {
+                parent.putCustom("memo", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+
+        public static final class CryptoRailBuilder {
+            private final PaymentRequestPayloadBuilder parent;
+
+            private CryptoRailBuilder(PaymentRequestPayloadBuilder parent) {
+                this.parent = parent;
+            }
+
+            public CryptoRailBuilder asset(String value) {
+                parent.putCustom("asset", value);
+                return this;
+            }
+
+            public CryptoRailBuilder chain(String value) {
+                parent.putCustom("chain", value);
+                return this;
+            }
+
+            public CryptoRailBuilder fromWalletRef(String value) {
+                parent.putCustom("fromWalletRef", value);
+                return this;
+            }
+
+            public CryptoRailBuilder toAddress(String value) {
+                parent.putCustom("toAddress", value);
+                return this;
+            }
+
+            public CryptoRailBuilder txPolicy(String value) {
+                parent.putCustom("txPolicy", value);
+                return this;
+            }
+
+            public PaymentRequestPayloadBuilder done() {
+                return parent;
+            }
+        }
+    }
+
+    public static final class AskAIBuilder {
+        private final StepsBuilder parent;
+        private final AIIntegrationConfig integration;
+        private final String stepName;
+        private final PromptExpressionBuilder prompt = new PromptExpressionBuilder();
+        private final List<TypeReference> inlineExpectedResponses = new ArrayList<TypeReference>();
+        private final List<NamedEventExpectation> inlineNamedExpectedResponses = new ArrayList<NamedEventExpectation>();
+        private String taskName;
+
+        private AskAIBuilder(StepsBuilder parent, AIIntegrationConfig integration, String stepName) {
+            this.parent = parent;
+            this.integration = integration;
+            this.stepName = stepName;
+        }
+
+        public AskAIBuilder task(String taskName) {
+            if (taskName == null || taskName.trim().isEmpty()) {
+                throw new IllegalArgumentException("taskName is required");
+            }
+            this.taskName = taskName.trim();
+            return this;
+        }
+
+        public AskAIBuilder instruction(String text) {
+            prompt.text(text);
+            return this;
+        }
+
+        public AskAIBuilder expects(Class<?> eventTypeClass) {
+            inlineExpectedResponses.add(TypeReference.of(eventTypeClass));
+            return this;
+        }
+
+        public AskAIBuilder expects(Node eventTypeNode) {
+            inlineExpectedResponses.add(TypeReference.of(eventTypeNode));
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName) {
+            inlineNamedExpectedResponses.add(NamedEventExpectation.named(eventName).build());
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName,
+                                         Consumer<NamedEventExpectation.Builder> fieldsCustomizer) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldsCustomizer != null) {
+                fieldsCustomizer.accept(builder);
+            }
+            inlineNamedExpectedResponses.add(builder.build());
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName, String... fieldNames) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldNames != null) {
+                for (String fieldName : fieldNames) {
+                    builder.field(fieldName);
+                }
+            }
+            inlineNamedExpectedResponses.add(builder.build());
+            return this;
+        }
+
+        @Deprecated
+        public AskAIBuilder text(String value) {
+            return instruction(value);
+        }
+
+        @Deprecated
+        public AskAIBuilder expression(String expression) {
+            prompt.expression(expression);
+            return this;
+        }
+
+        private StepsBuilder build() {
+            PromptExpressionBuilder merged = new PromptExpressionBuilder();
+            List<TypeReference> mergedExpectedResponses = new ArrayList<TypeReference>();
+            List<NamedEventExpectation> mergedNamedExpectedResponses =
+                    new ArrayList<NamedEventExpectation>();
+
+            if (taskName != null) {
+                AITaskTemplate task = integration.task(taskName);
+                if (task == null) {
+                    throw new IllegalStateException("Unknown task '" + taskName
+                            + "' for AI integration '" + integration.name() + "'");
+                }
+                for (String instruction : task.instructions()) {
+                    merged.text(instruction);
+                }
+                mergedExpectedResponses.addAll(task.expectedResponses());
+                mergedNamedExpectedResponses.addAll(task.expectedNamedEvents());
+            }
+
+            merged.append(prompt);
+            mergedExpectedResponses.addAll(inlineExpectedResponses);
+            mergedNamedExpectedResponses.addAll(inlineNamedExpectedResponses);
+
+            if (merged.isEmpty()) {
+                throw new IllegalStateException("askAI('" + integration.name() + "', '" + stepName
+                        + "'): at least one instruction is required");
+            }
+
+            Node request = new Node().properties(new LinkedHashMap<String, Node>());
+            request.properties("requester", new Node().value(integration.requesterId()));
+            request.properties("instructions", new Node().value(expr(merged.toExpression())));
+            request.properties("context", new Node().value(expr("document('"
+                    + escapeSingleQuoted(integration.contextPath()) + "')")));
+            if (taskName != null) {
+                request.properties("taskName", new Node().value(taskName));
+            }
+
+            Node expectedResponsesNode = expectedResponsesNode(mergedExpectedResponses, mergedNamedExpectedResponses);
+            if (expectedResponsesNode != null) {
+                request.properties("expectedResponses", expectedResponsesNode);
+            }
+
+            return parent.emitCallOperationRequested(stepName, integration, request);
+        }
+
+        private static Node expectedResponsesNode(List<TypeReference> references,
+                                                  List<NamedEventExpectation> namedExpectations) {
+            boolean noTypeReferences = references == null || references.isEmpty();
+            boolean noNamed = namedExpectations == null || namedExpectations.isEmpty();
+            if (noTypeReferences && noNamed) {
+                return null;
+            }
+            Set<String> dedup = new LinkedHashSet<String>();
+            List<Node> items = new ArrayList<Node>();
+            if (references != null) {
+                for (TypeReference reference : references) {
+                    if (reference == null) {
+                        continue;
+                    }
+                    String key = reference.dedupKey();
+                    if (!dedup.add(key)) {
+                        continue;
+                    }
+                    Node node = reference.toNode();
+                    if (node != null) {
+                        items.add(node);
+                    }
+                }
+            }
+            if (namedExpectations != null) {
+                for (NamedEventExpectation named : namedExpectations) {
+                    if (named == null) {
+                        continue;
+                    }
+                    String key = named.dedupKey();
+                    if (!dedup.add(key)) {
+                        continue;
+                    }
+                    items.add(namedEventExpectationNode(named));
+                }
+            }
+            if (items.isEmpty()) {
+                return null;
+            }
+            return new Node().items(items);
+        }
+
+        private static Node namedEventExpectationNode(NamedEventExpectation named) {
+            Node event = new Node().type(TypeRef.of(NamedEvent.class).asTypeNode());
+            event.properties("name", new Node().value(named.eventName()));
+            if (named.fields() != null && !named.fields().isEmpty()) {
+                Node payload = new Node().properties(new LinkedHashMap<String, Node>());
+                for (NamedEventExpectation.FieldExpectation field : named.fields()) {
+                    Node descriptor = new Node().properties(new LinkedHashMap<String, Node>());
+                    if (field.description() != null && !field.description().isEmpty()) {
+                        descriptor.properties("description", new Node().value(field.description()));
+                    }
+                    payload.properties(field.name(), descriptor);
+                }
+                event.properties("payload", payload);
+            }
+            return event;
+        }
+    }
+
+    public static final class AISteps {
+        private final StepsBuilder parent;
+        private final AIIntegrationConfig integration;
+
+        private AISteps(StepsBuilder parent, AIIntegrationConfig integration) {
+            this.parent = parent;
+            this.integration = integration;
+        }
+
+        public StepsBuilder requestPermission() {
+            return requestPermission("RequestPermission");
+        }
+
+        public StepsBuilder requestPermission(String stepName) {
+            return parent.emitType(stepName,
+                    blue.language.types.myos.SingleDocumentPermissionGrantRequested.class,
+                    payload -> payload
+                            .put("onBehalfOf", integration.permissionFromChannel())
+                            .put("requestId", integration.requestId())
+                            .put("targetSessionId", integration.sessionIdExpression())
+                            .putNode("permissions",
+                                    MyOsPermissions.create().read(true).singleOps("provideInstructions").build()));
+        }
+
+        public StepsBuilder subscribe() {
+            return subscribe("Subscribe");
+        }
+
+        public StepsBuilder subscribe(String stepName) {
+            Node subscription = new Node().properties(new LinkedHashMap<String, Node>());
+            subscription.properties("id", new Node().value(integration.subscriptionId()));
+            subscription.properties("events", new Node().items(new ArrayList<Node>()));
+            return parent.emitType(stepName,
+                    blue.language.types.myos.SubscribeToSessionRequested.class,
+                    payload -> payload
+                            .put("onBehalfOf", integration.permissionFromChannel())
+                            .put("targetSessionId", integration.sessionIdExpression())
+                            .putNode("subscription", subscription));
+        }
+    }
+
+    private static final class PromptExpressionBuilder {
+        private final List<PromptSegment> segments = new ArrayList<PromptSegment>();
+
+        private void append(PromptExpressionBuilder other) {
+            if (other == null || other.segments.isEmpty()) {
+                return;
+            }
+            if (!segments.isEmpty()) {
+                segments.add(PromptSegment.literal("\n"));
+            }
+            for (PromptSegment segment : other.segments) {
+                segments.add(segment);
+            }
+        }
+
+        private void text(String value) {
+            if (value == null) {
+                return;
+            }
+            if (!segments.isEmpty()) {
+                segments.add(PromptSegment.literal("\n"));
+            }
+            parseInterpolatedText(value);
+        }
+
+        private void expression(String expression) {
+            if (expression == null || expression.trim().isEmpty()) {
+                return;
+            }
+            if (!segments.isEmpty()) {
+                segments.add(PromptSegment.literal("\n"));
+            }
+            segments.add(PromptSegment.expression(unwrapExpression(expression.trim())));
+        }
+
+        private boolean isEmpty() {
+            return segments.isEmpty();
+        }
+
+        private String toExpression() {
+            if (segments.isEmpty()) {
+                return "''";
+            }
+            StringBuilder expression = new StringBuilder();
+            for (int i = 0; i < segments.size(); i++) {
+                PromptSegment segment = segments.get(i);
+                if (i > 0) {
+                    expression.append(" + ");
+                }
+                if (segment.expression) {
+                    expression.append("(").append(segment.value).append(")");
+                } else {
+                    expression.append("'")
+                            .append(segment.value
+                                    .replace("\\", "\\\\")
+                                    .replace("'", "\\'")
+                                    .replace("\n", "\\n"))
+                            .append("'");
+                }
+            }
+            return expression.toString();
+        }
+
+        private void parseInterpolatedText(String rawText) {
+            int index = 0;
+            while (index < rawText.length()) {
+                int start = rawText.indexOf("${", index);
+                if (start < 0) {
+                    String literal = rawText.substring(index);
+                    if (!literal.isEmpty()) {
+                        segments.add(PromptSegment.literal(literal));
+                    }
+                    return;
+                }
+                if (start > index) {
+                    segments.add(PromptSegment.literal(rawText.substring(index, start)));
+                }
+                int end = rawText.indexOf('}', start + 2);
+                if (end < 0) {
+                    segments.add(PromptSegment.literal(rawText.substring(start)));
+                    return;
+                }
+                String expression = rawText.substring(start + 2, end).trim();
+                if (!expression.isEmpty()) {
+                    segments.add(PromptSegment.expression(expression));
+                }
+                index = end + 1;
+            }
+        }
+
+        private static String unwrapExpression(String expression) {
+            if (expression.startsWith("${") && expression.endsWith("}")) {
+                return expression.substring(2, expression.length() - 1).trim();
+            }
+            return expression;
+        }
+    }
+
+    private static final class PromptSegment {
+        private final boolean expression;
+        private final String value;
+
+        private PromptSegment(boolean expression, String value) {
+            this.expression = expression;
+            this.value = value;
+        }
+
+        private static PromptSegment literal(String value) {
+            return new PromptSegment(false, value);
+        }
+
+        private static PromptSegment expression(String value) {
+            return new PromptSegment(true, value);
         }
     }
 
@@ -406,9 +1137,9 @@ public final class StepsBuilder {
                     PayNoteEvents.captureFundsRequested(new Node().value(expr(amountExpression))));
         }
 
-        public StepsBuilder refundFull() {
+        public StepsBuilder releaseFull() {
             return parent.triggerEvent(
-                    "RequestRefund",
+                    "RequestRelease",
                     PayNoteEvents.reservationReleaseRequested(new Node().value(expr("document('/amount/total')"))));
         }
     }

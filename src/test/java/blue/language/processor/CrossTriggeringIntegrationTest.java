@@ -51,12 +51,12 @@ class CrossTriggeringIntegrationTest {
                 "  contracts:\n" +
                 "    embeddedSubA:\n" +
                 "      type:\n" +
-                "        blueId: Core/Process Embedded\n" +
+                "        blueId: Process Embedded\n" +
                 "      paths:\n" +
                 "        - /subA\n" +
                 "    subAScoreUpdates:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Update Channel\n" +
+                "        blueId: Document Update Channel\n" +
                 "      path: /subA/score\n" +
                 "    onSubAScoreUpdate:\n" +
                 "      type:\n" +
@@ -110,7 +110,7 @@ class CrossTriggeringIntegrationTest {
                 "                val: \"${document('y') + document('x')}\"\n" +
                 "      nestedYUpdates:\n" +
                 "        type:\n" +
-                "          blueId: Core/Document Update Channel\n" +
+                "          blueId: Document Update Channel\n" +
                 "        path: /y\n" +
                 "      onNestedYUpdate:\n" +
                 "        type:\n" +
@@ -127,12 +127,12 @@ class CrossTriggeringIntegrationTest {
                 "  contracts:\n" +
                 "    embeddedNestedB:\n" +
                 "      type:\n" +
-                "        blueId: Core/Process Embedded\n" +
+                "        blueId: Process Embedded\n" +
                 "      paths:\n" +
                 "        - /nestedB\n" +
                 "    nestedBXUpdates:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Update Channel\n" +
+                "        blueId: Document Update Channel\n" +
                 "      path: /nestedB/x\n" +
                 "    onNestedBXUpdate:\n" +
                 "      type:\n" +
@@ -156,13 +156,13 @@ class CrossTriggeringIntegrationTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /groupA\n" +
                 "      - /groupB\n" +
                 "  rootNestedBXUpdates:\n" +
                 "    type:\n" +
-                "      blueId: Core/Document Update Channel\n" +
+                "      blueId: Document Update Channel\n" +
                 "    path: /groupB/nestedB/x\n" +
                 "  onRootNestedBXUpdate:\n" +
                 "    type:\n" +

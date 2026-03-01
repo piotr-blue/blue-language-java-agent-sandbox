@@ -60,7 +60,7 @@ document: |
   contracts:
     processEmbedded:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /emb1
         - /emb2

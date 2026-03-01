@@ -15,10 +15,10 @@ public class CompositeTimelineChannel extends ChannelContract {
         return Collections.unmodifiableList(channels);
     }
 
-    public void setChannels(List<String> channels) {
+    public CompositeTimelineChannel setChannels(List<String> channels) {
         this.channels.clear();
         if (channels == null) {
-            return;
+            return this;
         }
         for (String channel : channels) {
             if (channel == null) {
@@ -29,5 +29,10 @@ public class CompositeTimelineChannel extends ChannelContract {
                 this.channels.add(normalized);
             }
         }
+        return this;
+    }
+
+    public CompositeTimelineChannel channels(List<String> channels) {
+        return setChannels(channels);
     }
 }

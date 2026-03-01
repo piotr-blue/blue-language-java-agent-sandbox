@@ -41,7 +41,7 @@ class RuntimeSdkGuardrailsTest {
 
         assertDoesNotThrow(() -> Class.forName("blue.language.types.common.NamedEvent"));
         assertDoesNotThrow(() -> Class.forName("blue.language.types.conversation.Operation"));
-        assertDoesNotThrow(() -> Class.forName("blue.language.types.core.DocumentUpdate"));
+        assertDoesNotThrow(() -> Class.forName("blue.language.processor.model.DocumentUpdate"));
         assertDoesNotThrow(() -> Class.forName("blue.language.types.myos.CallOperationRequested"));
         assertDoesNotThrow(() -> Class.forName("blue.language.types.paynote.CaptureFundsRequested"));
     }

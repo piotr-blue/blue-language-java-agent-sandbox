@@ -21,7 +21,7 @@ class TriggerEventIntegrationTest {
                 "    timelineId: admin\n" +
                 "  triggered:\n" +
                 "    type:\n" +
-                "      blueId: Core/Triggered Event Channel\n" +
+                "      blueId: Triggered Event Channel\n" +
                 "  onTimeline:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +

@@ -74,7 +74,7 @@ class SharedTimelineCheckpointIntegrationTest {
                 "contracts:\n" +
                 "  processEmbedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /child\n" +
                 "  rootChannel:\n" +

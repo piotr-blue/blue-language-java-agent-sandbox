@@ -4,14 +4,14 @@ document: |
   contracts:
     life:
       type:
-        blueId: Core/Lifecycle Event Channel
+        blueId: Lifecycle Event Channel
     workflow:
       channel: life
       type:
         blueId: Conversation/Sequential Workflow
       event:
         type:
-          blueId: Core/Document Processing Initiated
+          blueId: Document Processing Initiated
       steps:
         - type:
             blueId: Conversation/Trigger Event

@@ -25,27 +25,27 @@ class ContractLoaderParityTest {
         Node scope = blue.yamlToNode("contracts:\n" +
                 "  update:\n" +
                 "    type:\n" +
-                "      blueId: Core/Document Update Channel\n" +
+                "      blueId: Document Update Channel\n" +
                 "    path: /document\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /children\n" +
                 "  init:\n" +
                 "    type:\n" +
-                "      blueId: Core/Processing Initialized Marker\n" +
+                "      blueId: Processing Initialized Marker\n" +
                 "    documentId: doc-123\n" +
                 "  checkpoint:\n" +
                 "    type:\n" +
-                "      blueId: Core/Channel Event Checkpoint\n" +
+                "      blueId: Channel Event Checkpoint\n" +
                 "    lastEvents: {}\n" +
                 "    lastSignatures: {}\n");
 
         ContractBundle bundle = loader.load(scope, "/");
 
-        assertEquals(1, bundle.channelsOfType("Core/Document Update Channel").size());
-        assertEquals("update", bundle.channelsOfType("Core/Document Update Channel").get(0).key());
+        assertEquals(1, bundle.channelsOfType("Document Update Channel").size());
+        assertEquals("update", bundle.channelsOfType("Document Update Channel").get(0).key());
         ContractBundle.ChannelBinding channelBinding = bundle.channel("update");
         assertNotNull(channelBinding);
         assertTrue(channelBinding.contract() instanceof DocumentUpdateChannel);
@@ -80,7 +80,7 @@ class ContractLoaderParityTest {
         Node scope = blue.yamlToNode("contracts:\n" +
                 "  wrongCheckpoint:\n" +
                 "    type:\n" +
-                "      blueId: Core/Channel Event Checkpoint\n" +
+                "      blueId: Channel Event Checkpoint\n" +
                 "    lastEvents: {}\n" +
                 "    lastSignatures: {}\n");
 
@@ -179,7 +179,7 @@ class ContractLoaderParityTest {
         Node scope = blue.yamlToNode("contracts:\n" +
                 "  main:\n" +
                 "    type:\n" +
-                "      blueId: Core/Document Update Channel\n" +
+                "      blueId: Document Update Channel\n" +
                 "    path: /document\n" +
                 "  handler:\n" +
                 "    type:\n" +

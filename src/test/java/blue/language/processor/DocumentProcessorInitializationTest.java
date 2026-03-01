@@ -59,7 +59,7 @@ class DocumentProcessorInitializationTest {
         assertEquals(1, initResult.triggeredEvents().size());
         Node lifecycleEvent = initResult.triggeredEvents().get(0);
         Map<String, Node> lifecycleProps = lifecycleEvent.getProperties();
-        assertEquals("Core/Document Processing Initiated", lifecycleProps.get("type").getValue());
+        assertEquals("Document Processing Initiated", lifecycleProps.get("type").getValue());
         Node lifecycleDocId = lifecycleProps.get("documentId");
         assertNotNull(lifecycleDocId);
         assertEquals(expectedDocumentId, lifecycleDocId.getValue());
@@ -268,7 +268,7 @@ class DocumentProcessorInitializationTest {
         assertTrue(result.triggeredEvents().stream()
                 .anyMatch(node -> {
                     Map<String, Node> props = node.getProperties();
-                    return props != null && "Core/Document Processing Initiated".equals(props.get("type").getValue());
+                    return props != null && "Document Processing Initiated".equals(props.get("type").getValue());
                 }));
 
         assertTrue(original.getProperties().containsKey("x"));

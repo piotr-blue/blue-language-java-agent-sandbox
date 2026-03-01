@@ -24,7 +24,7 @@ public final class DocBuilderExamples {
                 .description("Requests read access to provider session on init.")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/providerSessionId", "session-abc-123")
+                .field("/providerSessionId", "session-abc-123")
                 .onInit("requestProviderAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
                         "REQ_PROVIDER",
@@ -35,6 +35,7 @@ public final class DocBuilderExamples {
                         "REQ_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/providerSessionId')"),
                                         "SUB_PROVIDER")
                                 .replaceValue("MarkReady", "/status", "ready"))
@@ -66,7 +67,7 @@ public final class DocBuilderExamples {
                 .description("Calls operation on linked session when /trigger changes.")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/linkedSessionId", "session-xyz-789")
+                .field("/linkedSessionId", "session-xyz-789")
                 .onDocChange("onTriggerChanged", "/trigger", steps -> steps
                         .myOs().callOperation(
                                 "ownerChannel",
@@ -86,9 +87,9 @@ public final class DocBuilderExamples {
                 .description("Classifies linked CVs via llm-provider.")
                 .channel("recruitmentChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/recruitmentSessionId", "session-recruitment-001")
-                .set("/cvSubscriptionId", "SUB_CV_UPDATES")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/recruitmentSessionId", "session-recruitment-001")
+                .field("/cvSubscriptionId", "SUB_CV_UPDATES")
                 .onInit("requestAccess", steps -> steps
                         .myOs().requestSingleDocPermission(
                                 "recruitmentChannel",
@@ -109,6 +110,7 @@ public final class DocBuilderExamples {
                         "REQ_RECRUITMENT_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("document('/llmProviderSessionId')"),
                                         "SUB_RECRUITMENT_PROVIDER"))
                 .buildDocument();

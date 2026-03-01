@@ -32,14 +32,14 @@ class DeepEmbeddedInitializationPropagationTest {
                 "      contracts:\n" +
                 "        life:\n" +
                 "          type:\n" +
-                "            blueId: Core/Lifecycle Event Channel\n" +
+                "            blueId: Lifecycle Event Channel\n" +
                 "        initializeLeaf:\n" +
                 "          type:\n" +
                 "            blueId: Conversation/Sequential Workflow\n" +
                 "          channel: life\n" +
                 "          event:\n" +
                 "            type:\n" +
-                "              blueId: Core/Document Processing Initiated\n" +
+                "              blueId: Document Processing Initiated\n" +
                 "          steps:\n" +
                 "            - type:\n" +
                 "                blueId: Conversation/Update Document\n" +
@@ -49,7 +49,7 @@ class DeepEmbeddedInitializationPropagationTest {
                 "                  val: 1\n" +
                 "        leafUpdates:\n" +
                 "          type:\n" +
-                "            blueId: Core/Document Update Channel\n" +
+                "            blueId: Document Update Channel\n" +
                 "          path: /value\n" +
                 "        leafWatcher:\n" +
                 "          type:\n" +
@@ -77,12 +77,12 @@ class DeepEmbeddedInitializationPropagationTest {
                 "    contracts:\n" +
                 "      embedded:\n" +
                 "        type:\n" +
-                "          blueId: Core/Process Embedded\n" +
+                "          blueId: Process Embedded\n" +
                 "        paths:\n" +
                 "          - /leaf\n" +
                 "      subLeafUpdates:\n" +
                 "        type:\n" +
-                "          blueId: Core/Document Update Channel\n" +
+                "          blueId: Document Update Channel\n" +
                 "        path: /leaf/value\n" +
                 "      subWatcher:\n" +
                 "        type:\n" +
@@ -110,12 +110,12 @@ class DeepEmbeddedInitializationPropagationTest {
                 "  contracts:\n" +
                 "    embedded:\n" +
                 "      type:\n" +
-                "        blueId: Core/Process Embedded\n" +
+                "        blueId: Process Embedded\n" +
                 "      paths:\n" +
                 "        - /sub\n" +
                 "    branchLeafUpdates:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Update Channel\n" +
+                "        blueId: Document Update Channel\n" +
                 "      path: /sub/leaf/value\n" +
                 "    branchWatcher:\n" +
                 "      type:\n" +
@@ -143,12 +143,12 @@ class DeepEmbeddedInitializationPropagationTest {
                 "contracts:\n" +
                 "  embedded:\n" +
                 "    type:\n" +
-                "      blueId: Core/Process Embedded\n" +
+                "      blueId: Process Embedded\n" +
                 "    paths:\n" +
                 "      - /branch\n" +
                 "  rootLeafUpdates:\n" +
                 "    type:\n" +
-                "      blueId: Core/Document Update Channel\n" +
+                "      blueId: Document Update Channel\n" +
                 "    path: /branch/sub/leaf/value\n" +
                 "  rootWatcher:\n" +
                 "    type:\n" +

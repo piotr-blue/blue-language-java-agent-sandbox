@@ -107,10 +107,10 @@ final class ProcessorEngine {
 
     static Node createLifecycleInitiatedEvent(String documentId) {
         Node event = new Node()
-                .type(new Node().blueId("Core/Document Processing Initiated"))
+                .type(new Node().blueId("Document Processing Initiated"))
                 .properties("type", new Node()
-                .value("Core/Document Processing Initiated")
-                .type(new Node().blueId("Core/Document Processing Initiated")));
+                .value("Document Processing Initiated")
+                .type(new Node().blueId("Document Processing Initiated")));
         event.properties("documentId", new Node().value(documentId));
         return event;
     }
@@ -216,7 +216,12 @@ final class ProcessorEngine {
             return;
         }
         Node type = marker.getType();
-        if (type == null || type.getBlueId() == null || !"InitializationMarker".equals(type.getBlueId())) {
+        String blueId = type != null ? type.getBlueId() : null;
+        boolean validBlueId = "EVguxFmq5iFtMZaBQgHfjWDojaoesQ1vEXCQFZ59yL28".equals(blueId)
+                || "Processing Initialized Marker".equals(blueId)
+                || "Core/Processing Initialized Marker".equals(blueId)
+                || "InitializationMarker".equals(blueId);
+        if (!validBlueId) {
             throw new IllegalStateException(
                     "Reserved key 'initialized' must contain an Initialization Marker at " + pointer);
         }

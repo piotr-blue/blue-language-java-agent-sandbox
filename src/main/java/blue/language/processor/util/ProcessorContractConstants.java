@@ -22,15 +22,29 @@ public final class ProcessorContractConstants {
     public static final String KEY_TERMINATED = "terminated";
     public static final String KEY_CHECKPOINT = "checkpoint";
 
-    public static final String BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "DocumentUpdateChannel";
-    public static final String BLUE_ID_TRIGGERED_EVENT_CHANNEL = "TriggeredEventChannel";
-    public static final String BLUE_ID_LIFECYCLE_CHANNEL = "LifecycleChannel";
-    public static final String BLUE_ID_EMBEDDED_NODE_CHANNEL = "EmbeddedNodeChannel";
+    public static final String BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "6H1iGrDAcqtFE1qv3iyMTj79jCZsMUMxsNUzqYSJNbyR";
+    public static final String BLUE_ID_TRIGGERED_EVENT_CHANNEL = "C77W4kVGcxL7Mkx9WL9QESPEFFL2GzWAe647s1Efprt";
+    public static final String BLUE_ID_LIFECYCLE_CHANNEL = "H2aCCTUcLMTJozWkn7HPUjyFBFxamraw1q8DyWk87zxr";
+    public static final String BLUE_ID_EMBEDDED_NODE_CHANNEL = "Fjbu3QpnUaTruDTcTidETCX2N5STyv7KYxT42PCzGHxm";
 
-    public static final String CORE_BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "Core/Document Update Channel";
-    public static final String CORE_BLUE_ID_TRIGGERED_EVENT_CHANNEL = "Core/Triggered Event Channel";
-    public static final String CORE_BLUE_ID_LIFECYCLE_CHANNEL = "Core/Lifecycle Event Channel";
-    public static final String CORE_BLUE_ID_EMBEDDED_NODE_CHANNEL = "Core/Embedded Node Channel";
+    public static final String ALIAS_DOCUMENT_UPDATE_CHANNEL = "Document Update Channel";
+    public static final String ALIAS_TRIGGERED_EVENT_CHANNEL = "Triggered Event Channel";
+    public static final String ALIAS_LIFECYCLE_CHANNEL = "Lifecycle Event Channel";
+    public static final String ALIAS_EMBEDDED_NODE_CHANNEL = "Embedded Node Channel";
+
+    public static final String LEGACY_BLUE_ID_DOCUMENT_UPDATE_CHANNEL = "Core/Document Update Channel";
+    public static final String LEGACY_BLUE_ID_TRIGGERED_EVENT_CHANNEL = "Core/Triggered Event Channel";
+    public static final String LEGACY_BLUE_ID_LIFECYCLE_CHANNEL = "Core/Lifecycle Event Channel";
+    public static final String LEGACY_BLUE_ID_EMBEDDED_NODE_CHANNEL = "Core/Embedded Node Channel";
+
+    @Deprecated
+    public static final String CORE_BLUE_ID_DOCUMENT_UPDATE_CHANNEL = LEGACY_BLUE_ID_DOCUMENT_UPDATE_CHANNEL;
+    @Deprecated
+    public static final String CORE_BLUE_ID_TRIGGERED_EVENT_CHANNEL = LEGACY_BLUE_ID_TRIGGERED_EVENT_CHANNEL;
+    @Deprecated
+    public static final String CORE_BLUE_ID_LIFECYCLE_CHANNEL = LEGACY_BLUE_ID_LIFECYCLE_CHANNEL;
+    @Deprecated
+    public static final String CORE_BLUE_ID_EMBEDDED_NODE_CHANNEL = LEGACY_BLUE_ID_EMBEDDED_NODE_CHANNEL;
 
     public static final Set<String> RESERVED_CONTRACT_KEYS =
             Collections.unmodifiableSet(new LinkedHashSet<String>(Arrays.asList(
@@ -54,10 +68,14 @@ public final class ProcessorContractConstants {
                     BLUE_ID_TRIGGERED_EVENT_CHANNEL,
                     BLUE_ID_LIFECYCLE_CHANNEL,
                     BLUE_ID_EMBEDDED_NODE_CHANNEL,
-                    CORE_BLUE_ID_DOCUMENT_UPDATE_CHANNEL,
-                    CORE_BLUE_ID_TRIGGERED_EVENT_CHANNEL,
-                    CORE_BLUE_ID_LIFECYCLE_CHANNEL,
-                    CORE_BLUE_ID_EMBEDDED_NODE_CHANNEL
+                    ALIAS_DOCUMENT_UPDATE_CHANNEL,
+                    ALIAS_TRIGGERED_EVENT_CHANNEL,
+                    ALIAS_LIFECYCLE_CHANNEL,
+                    ALIAS_EMBEDDED_NODE_CHANNEL,
+                    LEGACY_BLUE_ID_DOCUMENT_UPDATE_CHANNEL,
+                    LEGACY_BLUE_ID_TRIGGERED_EVENT_CHANNEL,
+                    LEGACY_BLUE_ID_LIFECYCLE_CHANNEL,
+                    LEGACY_BLUE_ID_EMBEDDED_NODE_CHANNEL
             )));
 
     private ProcessorContractConstants() {

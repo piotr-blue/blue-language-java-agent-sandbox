@@ -1,21 +1,15 @@
 package blue.language.sdk.dsl;
 
-import blue.language.Blue;
 import blue.language.model.Node;
 import blue.language.sdk.DocBuilder;
-import blue.language.types.core.Channel;
 import blue.language.types.myos.MyOsTimelineChannel;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static blue.language.utils.UncheckedObjectMapper.JSON_MAPPER;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static blue.language.sdk.dsl.DslParityAssertions.assertDslMatchesYaml;
 
 class DocBuilderChannelsDslParityTest {
-
-    private static final Blue BLUE = new Blue();
 
     @Test
     void channelDefaultMatchesYamlDefinition() {
@@ -28,7 +22,7 @@ class DocBuilderChannelsDslParityTest {
                 name: Channel parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                 """);
     }
 
@@ -64,9 +58,9 @@ class DocBuilderChannelsDslParityTest {
                 name: Channels parity
                 contracts:
                   nameA:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   nameB:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                 """);
     }
 
@@ -82,9 +76,9 @@ class DocBuilderChannelsDslParityTest {
                 name: Composite channel parity
                 contracts:
                   payerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   payeeChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   participantUnionChannel:
                     type: Conversation/Composite Timeline Channel
                     channels:
@@ -98,7 +92,7 @@ class DocBuilderChannelsDslParityTest {
         Node fromDsl = DocBuilder.doc()
                 .name("Channel event parity")
                 .channel("ownerChannel")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .onChannelEvent("onIncrementEvent", "ownerChannel", Integer.class,
                         steps -> steps.replaceValue("SetCounter", "/counter", 1))
                 .buildDocument();
@@ -108,7 +102,7 @@ class DocBuilderChannelsDslParityTest {
                 counter: 0
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   onIncrementEvent:
                     type: Conversation/Sequential Workflow
                     channel: ownerChannel
@@ -138,7 +132,9 @@ class DocBuilderChannelsDslParityTest {
                         .email("admin@company.com"))
                 .buildDocument();
 
-        assertSame(template, specialized);
+        assertNotSame(template, specialized);
+        assertEquals("Core/Channel",
+                template.getAsText("/contracts/adminChannel/type/value"));
         assertDslMatchesYaml(specialized, """
                 name: Channel template
                 contracts:
@@ -148,17 +144,5 @@ class DocBuilderChannelsDslParityTest {
                     accountId: acc-42
                     email: admin@company.com
                 """);
-    }
-
-    private static void assertDslMatchesYaml(Node fromDsl, String yaml) {
-        Node fromYaml = BLUE.preprocess(BLUE.yamlToNode(yaml).clone());
-        Node normalizedDsl = BLUE.preprocess(fromDsl.clone());
-        String expectedBlueId = BLUE.calculateBlueId(fromYaml);
-        String actualBlueId = BLUE.calculateBlueId(normalizedDsl);
-        assertNotNull(expectedBlueId);
-        assertNotNull(actualBlueId);
-        JsonNode expectedTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(fromYaml));
-        JsonNode actualTree = JSON_MAPPER.readTree(BLUE.nodeToSimpleJson(normalizedDsl));
-        assertEquals(expectedTree, actualTree);
     }
 }

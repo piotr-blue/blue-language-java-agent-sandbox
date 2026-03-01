@@ -1,8 +1,10 @@
 package blue.language.sdk.internal;
 
 import blue.language.model.Node;
+import blue.language.sdk.ai.AIIntegrationConfig;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -10,9 +12,19 @@ import java.util.function.Consumer;
 public final class ContractsBuilder {
 
     private final Map<String, Node> contracts;
+    private final Map<String, AIIntegrationConfig> aiIntegrations;
 
     public ContractsBuilder(Map<String, Node> contracts) {
+        this(contracts, null);
+    }
+
+    public ContractsBuilder(Map<String, Node> contracts,
+                            Map<String, AIIntegrationConfig> aiIntegrations) {
         this.contracts = contracts;
+        this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
+        if (aiIntegrations != null) {
+            this.aiIntegrations.putAll(aiIntegrations);
+        }
     }
 
     public ContractsBuilder putRaw(String key, Node contract) {
@@ -21,7 +33,7 @@ public final class ContractsBuilder {
     }
 
     public ContractsBuilder timelineChannel(String key) {
-        contracts.put(key, new Node().type(TypeAliases.CONVERSATION_TIMELINE_CHANNEL));
+        contracts.put(key, new Node().type(TypeAliases.CORE_CHANNEL));
         return this;
     }
 
@@ -60,6 +72,17 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder operation(String key,
+                                      String channel,
+                                      Node request,
+                                      String description) {
+        operation(key, channel, description);
+        if (request != null) {
+            contracts.get(key).properties("request", request);
+        }
+        return this;
+    }
+
     public ContractsBuilder operationRequestDescription(String key, String requestDescription) {
         Node operation = contracts.get(key);
         if (operation == null) {
@@ -77,7 +100,10 @@ public final class ContractsBuilder {
     public ContractsBuilder sequentialWorkflowOperation(String key,
                                                         String operationName,
                                                         Consumer<StepsBuilder> customizer) {
-        StepsBuilder stepsBuilder = new StepsBuilder();
+        if (customizer == null) {
+            return this;
+        }
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
@@ -87,17 +113,48 @@ public final class ContractsBuilder {
         return this;
     }
 
+    public ContractsBuilder appendOperationImplementation(String key,
+                                                          String operationName,
+                                                          Consumer<StepsBuilder> customizer) {
+        if (customizer == null) {
+            return this;
+        }
+
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
+        customizer.accept(stepsBuilder);
+        List<Node> nextSteps = stepsBuilder.build();
+
+        Node workflow = contracts.get(key);
+        if (workflow == null) {
+            return sequentialWorkflowOperation(key, operationName, customizer);
+        }
+
+        workflow.type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
+        workflow.properties("operation", new Node().value(operationName));
+
+        Node stepsNode = workflow.getProperties() != null ? workflow.getProperties().get("steps") : null;
+        if (stepsNode == null || stepsNode.getItems() == null) {
+            stepsNode = new Node().items(new ArrayList<Node>());
+            workflow.properties("steps", stepsNode);
+        }
+        for (Node step : nextSteps) {
+            stepsNode.getItems().add(step);
+        }
+        contracts.put(key, workflow);
+        return this;
+    }
+
     public ContractsBuilder implementOperation(String key,
                                                String operationName,
                                                Consumer<StepsBuilder> customizer) {
-        return sequentialWorkflowOperation(key, operationName, customizer);
+        return appendOperationImplementation(key, operationName, customizer);
     }
 
     public ContractsBuilder sequentialWorkflow(String key,
                                                String channel,
                                                Node event,
                                                Consumer<StepsBuilder> customizer) {
-        StepsBuilder stepsBuilder = new StepsBuilder();
+        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW);

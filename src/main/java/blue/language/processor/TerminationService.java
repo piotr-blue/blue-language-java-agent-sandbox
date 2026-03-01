@@ -62,10 +62,10 @@ final class TerminationService {
 
     private Node createTerminationLifecycleEvent(ScopeRuntimeContext.TerminationKind kind, String reason) {
         Node event = new Node()
-                .type(new Node().blueId("Core/Document Processing Terminated"))
+                .type(new Node().blueId("Document Processing Terminated"))
                 .properties("type", new Node()
-                .value("Core/Document Processing Terminated")
-                .type(new Node().blueId("Core/Document Processing Terminated")));
+                .value("Document Processing Terminated")
+                .type(new Node().blueId("Document Processing Terminated")));
         event.properties("cause", new Node().value(kind == ScopeRuntimeContext.TerminationKind.GRACEFUL ? "graceful" : "fatal"));
         if (reason != null && !reason.isEmpty()) {
             event.properties("reason", new Node().value(reason));

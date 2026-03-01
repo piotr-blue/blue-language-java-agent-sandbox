@@ -22,21 +22,31 @@ public class SequentialWorkflowOperation extends HandlerContract {
         return operation;
     }
 
-    public void setOperation(String operation) {
+    public SequentialWorkflowOperation setOperation(String operation) {
         this.operation = operation;
+        return this;
+    }
+
+    public SequentialWorkflowOperation operation(String operation) {
+        return setOperation(operation);
     }
 
     public List<Node> getSteps() {
         return Collections.unmodifiableList(steps);
     }
 
-    public void setSteps(List<Node> steps) {
+    public SequentialWorkflowOperation setSteps(List<Node> steps) {
         this.steps.clear();
         if (steps == null) {
-            return;
+            return this;
         }
         for (Node step : steps) {
             this.steps.add(step != null ? step.clone() : null);
         }
+        return this;
+    }
+
+    public SequentialWorkflowOperation steps(List<Node> steps) {
+        return setSteps(steps);
     }
 }

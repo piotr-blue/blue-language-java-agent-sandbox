@@ -18,14 +18,14 @@ class TriggerEventStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitWelcome\n" +
                 "        type:\n" +
@@ -52,17 +52,17 @@ class TriggerEventStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  trig:\n" +
                 "    type:\n" +
-                "      blueId: Core/Triggered Event Channel\n" +
+                "      blueId: Triggered Event Channel\n" +
                 "  producer:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitCompleted\n" +
                 "        type:\n" +
@@ -109,14 +109,14 @@ class TriggerEventStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
                 "    channel: life\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: PreparePayment\n" +
                 "        type:\n" +
@@ -152,7 +152,7 @@ class TriggerEventStepExecutorIntegrationParityTest {
                 "contracts:\n" +
                 "  life:\n" +
                 "    type:\n" +
-                "      blueId: Core/Lifecycle Event Channel\n" +
+                "      blueId: Lifecycle Event Channel\n" +
                 "  onInit:\n" +
                 "    type:\n" +
                 "      blueId: Conversation/Sequential Workflow\n" +
@@ -160,7 +160,7 @@ class TriggerEventStepExecutorIntegrationParityTest {
                 "    description: Init workflow\n" +
                 "    event:\n" +
                 "      type:\n" +
-                "        blueId: Core/Document Processing Initiated\n" +
+                "        blueId: Document Processing Initiated\n" +
                 "    steps:\n" +
                 "      - name: EmitFromContract\n" +
                 "        type:\n" +

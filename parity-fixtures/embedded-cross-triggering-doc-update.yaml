@@ -34,12 +34,12 @@ document: |
     contracts:
       embeddedSubA:
         type:
-          blueId: Core/Process Embedded
+          blueId: Process Embedded
         paths:
           - /subA
       subAScoreUpdates:
         type:
-          blueId: Core/Document Update Channel
+          blueId: Document Update Channel
         path: /subA/score
       onSubAScoreUpdate:
         type:
@@ -89,7 +89,7 @@ document: |
                   val: "${document('y') + document('x')}"
         nestedYUpdates:
           type:
-            blueId: Core/Document Update Channel
+            blueId: Document Update Channel
           path: /y
         onNestedYUpdate:
           type:
@@ -105,12 +105,12 @@ document: |
     contracts:
       embeddedNestedB:
         type:
-          blueId: Core/Process Embedded
+          blueId: Process Embedded
         paths:
           - /nestedB
       nestedBXUpdates:
         type:
-          blueId: Core/Document Update Channel
+          blueId: Document Update Channel
         path: /nestedB/x
       onNestedBXUpdate:
         type:
@@ -132,13 +132,13 @@ document: |
   contracts:
     embedded:
       type:
-        blueId: Core/Process Embedded
+        blueId: Process Embedded
       paths:
         - /groupA
         - /groupB
     rootNestedBXUpdates:
       type:
-        blueId: Core/Document Update Channel
+        blueId: Document Update Channel
       path: /groupB/nestedB/x
     onRootNestedBXUpdate:
       type:

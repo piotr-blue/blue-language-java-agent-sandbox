@@ -52,8 +52,8 @@ class ContractBundleParityTest {
                 .addChannel("beta", beta)
                 .build();
 
-        assertEquals(1, bundle.channelsOfType("Core/Lifecycle Event Channel").size());
-        assertEquals("beta", bundle.channelsOfType("Core/Lifecycle Event Channel").get(0).key());
+        assertEquals(1, bundle.channelsOfType("Lifecycle Event Channel").size());
+        assertEquals("beta", bundle.channelsOfType("Lifecycle Event Channel").get(0).key());
     }
 
     @Test

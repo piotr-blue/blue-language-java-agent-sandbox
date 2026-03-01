@@ -39,8 +39,8 @@ public final class MyOsCookbookExamples {
                 .description("Requests access and subscribes to a provider session.")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/weatherSessionId", "session-weather-prod")
-                .set("/status", "initializing")
+                .field("/weatherSessionId", "session-weather-prod")
+                .field("/status", "initializing")
                 .onInit("requestWeatherAccess", steps -> steps
                         .myOs().requestSingleDocPermission(
                                 "ownerChannel",
@@ -52,6 +52,7 @@ public final class MyOsCookbookExamples {
                         "REQ_WEATHER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/weatherSessionId')"),
                                         "SUB_WEATHER")
                                 .replaceValue("MarkSubscribing", "/status", "subscribing"))
@@ -69,8 +70,8 @@ public final class MyOsCookbookExamples {
                 .description("Calls a provider operation after permission is granted.")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/llmSessionId", "session-llm-prod")
-                .set("/analysisStatus", "idle")
+                .field("/llmSessionId", "session-llm-prod")
+                .field("/analysisStatus", "idle")
                 .onInit("requestLlmAccess", steps -> steps
                         .myOs().requestSingleDocPermission(
                                 "ownerChannel",
@@ -82,6 +83,7 @@ public final class MyOsCookbookExamples {
                         "REQ_LLM",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/llmSessionId')"),
                                         "SUB_LLM_PROVIDER"))
                 .operation("analyze")
@@ -114,7 +116,7 @@ public final class MyOsCookbookExamples {
                 .description("Adds participants and marks setup progress.")
                 .channel("managerChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/status", "setting-up")
+                .field("/status", "setting-up")
                 .onInit("addTeamMembers", steps -> steps
                         .myOs().addParticipant("aliceChannel", "alice@company.com")
                         .myOs().addParticipant("bobChannel", "bob@company.com"))
@@ -134,9 +136,9 @@ public final class MyOsCookbookExamples {
                 .description("Requests linked-docs permission and tracks invoice totals.")
                 .channel("accountingChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/projectSessionId", "session-project-42")
-                .set("/invoiceSubscriptionId", "SUB_INVOICES")
-                .set("/totalInvoiced", 0)
+                .field("/projectSessionId", "session-project-42")
+                .field("/invoiceSubscriptionId", "SUB_INVOICES")
+                .field("/totalInvoiced", 0)
                 .onInit("requestInvoiceAccess", steps -> steps
                         .myOs().requestLinkedDocsPermission(
                                 "accountingChannel",
@@ -148,6 +150,7 @@ public final class MyOsCookbookExamples {
                         "REQ_INVOICES",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "accountingChannel",
                                         DocBuilder.expr("event.targetSessionId"),
                                         DocBuilder.expr("document('/invoiceSubscriptionId')")))
                 .onSubscriptionUpdate("onInvoiceUpdate",
@@ -174,9 +177,9 @@ public final class MyOsCookbookExamples {
                 .description("Requests access, subscribes, and invokes provider classification.")
                 .channel("recruitmentChannel")
                 .myOsAdmin("myOsAdminChannel")
-                .set("/recruitmentSessionId", "session-recruitment-001")
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/cvSubscriptionId", "SUB_RECRUITMENT_CVS")
+                .field("/recruitmentSessionId", "session-recruitment-001")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/cvSubscriptionId", "SUB_RECRUITMENT_CVS")
                 .onInit("requestAccess", steps -> steps
                         .myOs().requestSingleDocPermission(
                                 "recruitmentChannel",
@@ -193,6 +196,7 @@ public final class MyOsCookbookExamples {
                         "REQ_RECRUITMENT_CVS",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("event.targetSessionId"),
                                         DocBuilder.expr("document('/cvSubscriptionId')")))
                 .onMyOsResponse("onLlmProviderAccessGranted",
@@ -200,6 +204,7 @@ public final class MyOsCookbookExamples {
                         "REQ_RECRUITMENT_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("document('/llmProviderSessionId')"),
                                         "SUB_RECRUITMENT_PROVIDER"))
                 .onSubscriptionUpdate("onCvArrived",
