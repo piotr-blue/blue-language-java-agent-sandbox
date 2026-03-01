@@ -16,6 +16,7 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -233,29 +234,43 @@ class DocBuilderStepsDslParityTest {
     void requestBackwardPaymentBuildsAbstractIntentAndSupportsOptionalRailHint() {
         Node built = DocBuilder.doc()
                 .name("Backward payment parity")
-                .onInit("bootstrap", steps -> steps.requestBackwardPayment(
-                        "RequestBackwardPayment",
-                        payload -> payload
-                                .processor("guarantorChannel")
-                                .from("payeeChannel")
-                                .to("payerChannel")
-                                .currency("USD")
-                                .amountMinor(10000)
-                                .reason("voucher-activation")
-                                .viaCreditLine()
-                                    .creditLineId("facility-1")
-                                    .done()))
+                .onInit("bootstrap", steps -> steps
+                        .requestBackwardPayment(
+                                "RequestBackwardPaymentAbstract",
+                                payload -> payload
+                                        .processor("guarantorChannel")
+                                        .from("payeeChannel")
+                                        .to("payerChannel")
+                                        .currency("USD")
+                                        .amountMinor(10000)
+                                        .reason("voucher-activation"))
+                        .requestBackwardPayment(
+                                "RequestBackwardPaymentHinted",
+                                payload -> payload
+                                        .processor("guarantorChannel")
+                                        .from("payeeChannel")
+                                        .to("payerChannel")
+                                        .currency("USD")
+                                        .amountMinor(10000)
+                                        .reason("voucher-activation")
+                                        .viaCreditLine()
+                                            .creditLineId("facility-1")
+                                            .done()))
                 .buildDocument();
 
-        String eventPath = "/contracts/bootstrap/steps/0/event";
-        assertEquals("PayNote/Backward Payment Requested", built.getAsText(eventPath + "/type/value"));
-        assertEquals("guarantorChannel", built.getAsText(eventPath + "/processor/value"));
-        assertEquals("payeeChannel", built.getAsText(eventPath + "/from/value"));
-        assertEquals("payerChannel", built.getAsText(eventPath + "/to/value"));
-        assertEquals("USD", built.getAsText(eventPath + "/currency/value"));
-        assertEquals("10000", String.valueOf(built.get(eventPath + "/amountMinor/value")));
-        assertEquals("voucher-activation", built.getAsText(eventPath + "/reason/value"));
-        assertEquals("facility-1", built.getAsText(eventPath + "/creditLineId/value"));
+        String abstractPath = "/contracts/bootstrap/steps/0/event";
+        assertEquals("PayNote/Backward Payment Requested", built.getAsText(abstractPath + "/type/value"));
+        assertEquals("guarantorChannel", built.getAsText(abstractPath + "/processor/value"));
+        assertEquals("payeeChannel", built.getAsText(abstractPath + "/from/value"));
+        assertEquals("payerChannel", built.getAsText(abstractPath + "/to/value"));
+        assertEquals("USD", built.getAsText(abstractPath + "/currency/value"));
+        assertEquals("10000", String.valueOf(built.get(abstractPath + "/amountMinor/value")));
+        assertEquals("voucher-activation", built.getAsText(abstractPath + "/reason/value"));
+        assertNull(built.getAsNode(abstractPath).getProperties().get("creditLineId"));
+
+        String hintedPath = "/contracts/bootstrap/steps/1/event";
+        assertEquals("PayNote/Backward Payment Requested", built.getAsText(hintedPath + "/type/value"));
+        assertEquals("facility-1", built.getAsText(hintedPath + "/creditLineId/value"));
     }
 
     @Test

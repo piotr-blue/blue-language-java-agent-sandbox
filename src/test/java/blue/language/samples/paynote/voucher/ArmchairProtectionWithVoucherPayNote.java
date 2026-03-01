@@ -31,9 +31,8 @@ public final class ArmchairProtectionWithVoucherPayNote {
                                 .to("payerChannel")
                                 .currency("USD")
                                 .amountMinor(10000)
-                                .viaCreditLine()
-                                    .creditLineId("facility-001")
-                                    .done()))
+                                .reason("voucher-activation")
+                                .attachPayNote(BalancedBowlVoucherPayNote.templateDoc())))
                 .buildDocument();
     }
 }

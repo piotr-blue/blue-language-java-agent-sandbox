@@ -70,7 +70,8 @@ class DocBuilderVoucherPayNoteIntegrationTest {
         assertEquals("payerChannel", readValue(voucherPaymentRequest, "/to/value"));
         assertEquals("USD", readValue(voucherPaymentRequest, "/currency/value"));
         assertEquals("10000", String.valueOf(voucherPaymentRequest.get("/amountMinor/value")));
-        assertEquals("facility-001", readValue(voucherPaymentRequest, "/creditLineId/value"));
+        assertEquals("voucher-activation", readValue(voucherPaymentRequest, "/reason/value"));
+        assertEquals("Balanced Bowl Voucher - 100 USD", readValue(voucherPaymentRequest, "/attachedPayNote/name/value"));
 
         DocumentProcessingResult balancedAfterMonitoringApproval = balancedProcessor.processDocument(
                 initializedBalanced.document(),
