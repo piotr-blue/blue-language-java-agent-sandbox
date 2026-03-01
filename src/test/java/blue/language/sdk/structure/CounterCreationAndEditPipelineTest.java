@@ -138,6 +138,67 @@ class CounterCreationAndEditPipelineTest {
         assertTrue(finalDsl.contains("100"));
     }
 
+    @Test
+    void fullLifecycleFromCreationThroughStoredAndStubEdits() {
+        Node created = createCounterViaLlmDsl();
+
+        String storedDsl = DslGenerator.generate(created);
+        assertNotNull(storedDsl);
+        Node creationCr = ChangeRequestCompiler.compile(new Node(), created);
+        Node appliedCreation = ChangeRequestApplier.apply(new Node(), creationCr);
+        assertCanonicalEquals(appliedCreation, created);
+
+        Node edited = applyDecrementEdit(created.clone());
+        Node editCr = ChangeRequestCompiler.compile(created, edited);
+        assertChangesetContains(editCr, "replace", "/description");
+        assertSectionModifyKey(editCr, "counterOps");
+        assertChangesetHasNoContractPaths(editCr);
+        Node appliedEdit = ChangeRequestApplier.apply(created.clone(), editCr);
+        assertCanonicalEquals(appliedEdit, edited);
+
+        String regeneratedStoredDsl = DslGenerator.generate(edited);
+        assertTrue(regeneratedStoredDsl.contains(".operation(\"incrementByOne\")"));
+        assertTrue(regeneratedStoredDsl.contains(".operation(\"decrementByOne\")"));
+        assertTrue(regeneratedStoredDsl.contains(".section(\"counterOps\""));
+        assertTrue(regeneratedStoredDsl.contains(".section(\"participants\""));
+        storedDsl = regeneratedStoredDsl;
+        assertNotNull(storedDsl);
+
+        String stubDsl = DslStubGenerator.generate(edited);
+        assertTrue(stubDsl.contains(".operation(\"incrementByOne\")"));
+        assertTrue(stubDsl.contains(".operation(\"decrementByOne\")"));
+        assertFalse(stubDsl.contains("document('/counter') + 1"));
+        assertFalse(stubDsl.contains("document('/counter') - 1"));
+        assertTrue(stubDsl.contains("// implementation in document JSON"));
+
+        Node withReset = DocBuilder.from(edited.clone())
+                .section("counterOps")
+                .operation("reset")
+                    .channel("ownerChannel")
+                    .description("Reset counter to zero")
+                    .noRequest()
+                    .steps(steps -> steps.replaceValue("Reset", "/counter", 0))
+                    .done()
+                .endSection()
+                .buildDocument();
+        Node resetCr = ChangeRequestCompiler.compile(edited, withReset);
+        Node appliedReset = ChangeRequestApplier.apply(edited.clone(), resetCr);
+        assertCanonicalEquals(appliedReset, withReset);
+
+        String finalDsl = DslGenerator.generate(withReset);
+        assertNotNull(getContract(withReset, "incrementByOne"));
+        assertNotNull(getContract(withReset, "decrementByOne"));
+        assertNotNull(getContract(withReset, "reset"));
+        assertTrue(finalDsl.contains(".operation(\"incrementByOne\")"));
+        assertTrue(finalDsl.contains(".operation(\"decrementByOne\")"));
+        assertTrue(finalDsl.contains(".operation(\"reset\")"));
+        assertTrue(finalDsl.contains("document('/counter') + 1"));
+        assertTrue(finalDsl.contains("document('/counter') - 1"));
+        assertTrue(finalDsl.contains(".replaceValue(\"Reset\", \"/counter\", 0)"));
+        assertTrue(finalDsl.contains(".section(\"counterOps\""));
+        assertTrue(finalDsl.contains(".section(\"participants\""));
+    }
+
     private static Node createCounterViaLlmDsl() {
         return DocBuilder.doc()
                 .name("Counter")
