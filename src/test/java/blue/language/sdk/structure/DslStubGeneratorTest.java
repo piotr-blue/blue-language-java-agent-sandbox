@@ -9,6 +9,11 @@ import blue.language.types.myos.SingleDocumentPermissionGranted;
 import blue.language.types.myos.SubscriptionToSessionInitiated;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,6 +62,20 @@ class DslStubGeneratorTest {
         assertFalse(stub.contains(".jsRaw("));
     }
 
+    @Test
+    void keepsSectionStructureInStubWhenSectionsAvailable() {
+        Node document = counterDoc();
+        addSection(document, "counterOps", "Counter", "Owner counter operations",
+                List.of("/counter"),
+                List.of("increment", "incrementImpl"));
+
+        String stub = DslStubGenerator.generate(document);
+        assertTrue(stub.contains(".section(\"counterOps\", \"Counter\", \"Owner counter operations\")"));
+        assertTrue(stub.contains(".operation(\"increment\")"));
+        assertTrue(stub.contains(".endSection()"));
+        assertTrue(stub.indexOf(".section(\"counterOps\"") < stub.indexOf(".operation(\"increment\")"));
+    }
+
     private static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
@@ -92,5 +111,42 @@ class DslStubGeneratorTest {
                         SubscriptionToSessionInitiated.class,
                         steps -> steps.replaceValue("SetReady", "/status", "ready"))
                 .buildDocument();
+    }
+
+    private static void addSection(Node document,
+                                   String key,
+                                   String title,
+                                   String summary,
+                                   List<String> relatedFields,
+                                   List<String> relatedContracts) {
+        Map<String, Node> contracts = ensureContracts(document);
+        contracts.put(key, new Node()
+                .type("Conversation/Document Section")
+                .properties("title", new Node().value(title))
+                .properties("summary", new Node().value(summary))
+                .properties("relatedFields", listNode(relatedFields))
+                .properties("relatedContracts", listNode(relatedContracts)));
+    }
+
+    private static Map<String, Node> ensureContracts(Node document) {
+        if (document.getProperties() == null) {
+            document.properties(new LinkedHashMap<String, Node>());
+        }
+        Node contractsNode = document.getProperties().get("contracts");
+        if (contractsNode == null) {
+            contractsNode = new Node().properties(new LinkedHashMap<String, Node>());
+            document.getProperties().put("contracts", contractsNode);
+        } else if (contractsNode.getProperties() == null) {
+            contractsNode.properties(new LinkedHashMap<String, Node>());
+        }
+        return contractsNode.getProperties();
+    }
+
+    private static Node listNode(List<String> values) {
+        Node node = new Node().items(new ArrayList<Node>());
+        for (String value : values) {
+            node.getItems().add(new Node().value(value));
+        }
+        return node;
     }
 }
