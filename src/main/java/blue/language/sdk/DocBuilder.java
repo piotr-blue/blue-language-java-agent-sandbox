@@ -22,6 +22,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     private static final Blue BLUE = new Blue();
 
     protected final Node document;
+    private String activeSectionKey;
 
     protected DocBuilder() {
         this.document = new Node();
@@ -70,9 +71,39 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return self();
     }
 
+    public T section(String key, String title, String summary) {
+        require(key, "section key");
+        Node sectionNode = ensureSectionContract(key);
+        if (title != null) {
+            sectionNode.properties("title", new Node().value(title));
+        }
+        if (summary != null) {
+            sectionNode.properties("summary", new Node().value(summary));
+        }
+        ensureSectionListNode(sectionNode, "relatedFields");
+        ensureSectionListNode(sectionNode, "relatedContracts");
+        activeSectionKey = key;
+        return self();
+    }
+
+    public T section(String key) {
+        require(key, "section key");
+        Node sectionNode = ensureSectionContract(key);
+        ensureSectionListNode(sectionNode, "relatedFields");
+        ensureSectionListNode(sectionNode, "relatedContracts");
+        activeSectionKey = key;
+        return self();
+    }
+
+    public T endSection() {
+        activeSectionKey = null;
+        return self();
+    }
+
     public T channel(String channelKey) {
         require(channelKey, "channel key");
         contracts().timelineChannel(channelKey);
+        addContractToActiveSection(channelKey);
         return self();
     }
 
@@ -83,6 +114,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         pruneEmptyEventProperty(channelNode);
         channelNode.type(TypeRef.of(channelContract.getClass()).alias());
         contracts().putRaw(channelKey, channelNode);
+        addContractToActiveSection(channelKey);
         return self();
     }
 
@@ -99,6 +131,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
     public T compositeChannel(String compositeChannelKey, String... channelKeys) {
         require(compositeChannelKey, "composite channel key");
         contracts().compositeTimelineChannel(compositeChannelKey, channelKeys);
+        addContractToActiveSection(compositeChannelKey);
         return self();
     }
 
@@ -124,6 +157,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
             contracts.operation(key, channelKey, requestTypeClass, description);
         }
         contracts.implementOperation(key + "Impl", key, implementation);
+        addContractToActiveSection(key);
+        addContractToActiveSection(key + "Impl");
         return self();
     }
 
@@ -285,11 +320,23 @@ public class DocBuilder<T extends DocBuilder<T>> {
 
     public T set(String pointer, Object value) {
         setPointer(pointer, toNode(value));
+        addFieldToActiveSection(pointer);
+        return self();
+    }
+
+    public T field(String pointer, Object value) {
+        return set(pointer, value);
+    }
+
+    public T field(String pointer) {
+        require(pointer, "pointer");
+        addFieldToActiveSection(pointer);
         return self();
     }
 
     public T replace(String pointer, Object value) {
         setPointer(pointer, toNode(value));
+        addFieldToActiveSection(pointer);
         return self();
     }
 
@@ -358,6 +405,66 @@ public class DocBuilder<T extends DocBuilder<T>> {
             child.properties(new LinkedHashMap<String, Node>());
         }
         return child.getProperties();
+    }
+
+    private Node ensureSectionContract(String sectionKey) {
+        Map<String, Node> contracts = ensureMap(document, "contracts");
+        Node section = contracts.get(sectionKey);
+        if (section == null) {
+            section = new Node().type("Conversation/Document Section");
+            section.properties("title", new Node().value(sectionKey));
+            section.properties("summary", new Node().value("Auto-generated section"));
+            contracts.put(sectionKey, section);
+        } else if (section.getType() == null) {
+            section.type("Conversation/Document Section");
+        }
+        return section;
+    }
+
+    private static Node ensureSectionListNode(Node section, String key) {
+        if (section.getProperties() == null) {
+            section.properties(new LinkedHashMap<String, Node>());
+        }
+        Node listNode = section.getProperties().get(key);
+        if (listNode == null) {
+            listNode = new Node().items(new ArrayList<Node>());
+            section.getProperties().put(key, listNode);
+            return listNode;
+        }
+        if (listNode.getItems() == null) {
+            listNode.items(new ArrayList<Node>());
+        }
+        return listNode;
+    }
+
+    private void addFieldToActiveSection(String pointer) {
+        if (activeSectionKey == null || pointer == null || pointer.isBlank()) {
+            return;
+        }
+        Node section = ensureSectionContract(activeSectionKey);
+        Node relatedFields = ensureSectionListNode(section, "relatedFields");
+        addStringToListIfMissing(relatedFields, pointer.trim());
+    }
+
+    private void addContractToActiveSection(String contractKey) {
+        if (activeSectionKey == null || contractKey == null || contractKey.isBlank()) {
+            return;
+        }
+        Node section = ensureSectionContract(activeSectionKey);
+        Node relatedContracts = ensureSectionListNode(section, "relatedContracts");
+        addStringToListIfMissing(relatedContracts, contractKey.trim());
+    }
+
+    private static void addStringToListIfMissing(Node listNode, String value) {
+        if (listNode == null || listNode.getItems() == null) {
+            return;
+        }
+        for (Node item : listNode.getItems()) {
+            if (item != null && value.equals(item.getValue())) {
+                return;
+            }
+        }
+        listNode.getItems().add(new Node().value(value));
     }
 
     private void setPointer(String pointer, Node valueNode) {
