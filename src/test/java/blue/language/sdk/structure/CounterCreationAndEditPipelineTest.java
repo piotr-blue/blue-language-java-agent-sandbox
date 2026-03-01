@@ -58,6 +58,7 @@ class CounterCreationAndEditPipelineTest {
         Node changeRequest = ChangeRequestCompiler.compile(beforeEdit, afterEdit);
         assertChangesetContains(changeRequest, "replace", "/description");
         assertChangesetHasNoContractPaths(changeRequest);
+        assertSectionModifyKey(changeRequest, "counterOps");
         assertSectionChangesIncludeContract(changeRequest, "incrementByOne");
         assertSectionChangesIncludeContract(changeRequest, "decrementByOne");
 
@@ -101,6 +102,8 @@ class CounterCreationAndEditPipelineTest {
         assertTrue(regenerated.contains("document('/counter') - 1"));
         assertTrue(regenerated.contains("increment and decrement"));
         assertTrue(regenerated.contains(".field(\"/counter\""));
+        assertTrue(regenerated.contains(".section(\"counterOps\""));
+        assertTrue(regenerated.contains(".section(\"participants\""));
     }
 
     @Test
@@ -139,26 +142,32 @@ class CounterCreationAndEditPipelineTest {
         return DocBuilder.doc()
                 .name("Counter")
                 .description("Simple counter with increment operation for owner.")
-                .set("/counter", 0)
+                .section("participants", "Participants", "Document owner")
                 .channel("ownerChannel")
+                .endSection()
+                .section("counterOps", "Counter", "Owner can increment counter by one.")
+                .field("/counter", 0)
                 .operation("incrementByOne")
-                .channel("ownerChannel")
-                .description("Increment counter by one")
-                .noRequest()
-                .steps(steps -> steps.replaceExpression("Inc", "/counter", "document('/counter') + 1"))
-                .done()
+                    .channel("ownerChannel")
+                    .description("Increment counter by one")
+                    .noRequest()
+                    .steps(steps -> steps.replaceExpression("Inc", "/counter", "document('/counter') + 1"))
+                    .done()
+                .endSection()
                 .buildDocument();
     }
 
     private static Node applyDecrementEdit(Node currentNode) {
         return DocBuilder.from(currentNode)
                 .description("Simple counter with increment and decrement operations for owner.")
+                .section("counterOps")
                 .operation("decrementByOne")
-                .channel("ownerChannel")
-                .description("Decrement counter by one")
-                .noRequest()
-                .steps(steps -> steps.replaceExpression("Dec", "/counter", "document('/counter') - 1"))
-                .done()
+                    .channel("ownerChannel")
+                    .description("Decrement counter by one")
+                    .noRequest()
+                    .steps(steps -> steps.replaceExpression("Dec", "/counter", "document('/counter') - 1"))
+                    .done()
+                .endSection()
                 .buildDocument();
     }
 
@@ -203,6 +212,20 @@ class CounterCreationAndEditPipelineTest {
             found = found || hasContract(entry, contractKey);
         }
         assertTrue(found, "Contract not present in section changes: " + contractKey);
+    }
+
+    private static void assertSectionModifyKey(Node changeRequest, String sectionKey) {
+        Node sectionChanges = readNode(changeRequest, "sectionChanges");
+        assertNotNull(sectionChanges);
+        boolean found = false;
+        for (Node entry : readItems(sectionChanges, "modify")) {
+            String key = readText(entry, "sectionKey");
+            if (sectionKey.equals(key)) {
+                found = true;
+                break;
+            }
+        }
+        assertTrue(found, "Missing sectionChanges.modify entry for section key: " + sectionKey);
     }
 
     private static boolean hasContract(Node sectionEntry, String key) {

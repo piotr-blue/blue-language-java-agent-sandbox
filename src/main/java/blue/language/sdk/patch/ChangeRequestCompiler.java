@@ -200,6 +200,10 @@ public class ChangeRequestCompiler {
             }
             contractsNode.getProperties().put(contractKey, contractNode.clone());
         }
+        Node explicitSectionContract = afterContracts.get(sectionKey);
+        if (explicitSectionContract != null) {
+            contractsNode.getProperties().put(sectionKey, explicitSectionContract.clone());
+        }
 
         return new Node()
                 .type("Conversation/Document Section Change Entry")

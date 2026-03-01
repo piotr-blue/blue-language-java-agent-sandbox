@@ -106,7 +106,10 @@ public final class ChangeRequestApplier {
 
         Node sectionNode = readProperty(entryNode, "section");
         boolean sectionExistedInReference = sectionReference.sections.containsKey(sectionKey);
-        if (sectionNode != null && sectionExistedInReference) {
+        boolean sectionContractProvidedInEntry = contractsNode != null
+                && contractsNode.getProperties() != null
+                && contractsNode.getProperties().containsKey(sectionKey);
+        if (sectionNode != null && (sectionExistedInReference || sectionContractProvidedInEntry)) {
             contracts.put(sectionKey, sectionNode.clone());
         }
     }
