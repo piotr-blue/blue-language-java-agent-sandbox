@@ -229,6 +229,9 @@ public class DocStructure {
         if (alias.contains("composite timeline channel")) {
             return ContractKind.COMPOSITE_CHANNEL;
         }
+        if (alias.contains("core/channel")) {
+            return ContractKind.CHANNEL;
+        }
         if (alias.contains("timeline channel")) {
             return ContractKind.CHANNEL;
         }

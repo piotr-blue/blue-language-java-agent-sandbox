@@ -70,6 +70,7 @@ class DocBuilderMyOsDslParityTest {
                                 "sync",
                                 Map.of("value", 1))
                         .myOs().subscribeToSession(
+                                "ownerChannel",
                                 DocBuilder.expr("document('/targetSessionId')"),
                                 "SUB_1")
                         .myOs().startWorkerSession("agentChannel", workerConfig)
@@ -113,6 +114,7 @@ class DocBuilderMyOsDslParityTest {
 
         assertEquals("MyOS/Subscribe to Session Requested",
                 built.getAsText(stepsPath + "/5/event/type/value"));
+        assertEquals("ownerChannel", built.getAsText(stepsPath + "/5/event/onBehalfOf/value"));
         assertEquals("${document('/targetSessionId')}", built.getAsText(stepsPath + "/5/event/targetSessionId/value"));
         assertEquals("SUB_1", built.getAsText(stepsPath + "/5/event/subscription/id/value"));
         assertEquals(0, built.getAsNode(stepsPath + "/5/event/subscription/events").getItems().size());
@@ -241,7 +243,7 @@ class DocBuilderMyOsDslParityTest {
         IllegalArgumentException subscribeFailure = assertThrows(IllegalArgumentException.class, () ->
                 DocBuilder.doc()
                         .name("Invalid subscribe")
-                        .onInit("bootstrap", steps -> steps.myOs().subscribeToSession("session-1", " "))
+                        .onInit("bootstrap", steps -> steps.myOs().subscribeToSession("ownerChannel", "session-1", " "))
                         .buildDocument());
         assertEquals("subscriptionId is required", subscribeFailure.getMessage());
 

@@ -24,7 +24,7 @@ class DocStructureTest {
     void counterDocumentExtractsOperationAndChannelKinds() {
         Node document = DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                     .channel("ownerChannel")
@@ -66,7 +66,7 @@ class DocStructureTest {
     void directChangeRecognizesOperationAndRootFields() {
         Node document = DocBuilder.doc()
                 .name("Direct change")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .channel("ownerChannel")
                 .directChange("applyPatch", "ownerChannel", "Apply patch")
                 .buildDocument();
@@ -109,8 +109,8 @@ class DocStructureTest {
                 .buildDocument();
 
         DocStructure structure = DocStructure.from(document);
-        assertEquals(ContractKind.OPERATION, structure.contracts.get("myOsAdminUpdate").kind);
-        assertEquals(ContractKind.OPERATION_IMPL, structure.contracts.get("myOsAdminUpdateImpl").kind);
+        assertEquals(ContractKind.OPERATION, structure.contracts.get("myOsAdminEmit").kind);
+        assertEquals(ContractKind.OPERATION_IMPL, structure.contracts.get("myOsAdminEmitImpl").kind);
     }
 
     @Test
@@ -118,7 +118,7 @@ class DocStructureTest {
         Node document = DocBuilder.doc()
                 .name("AI agent")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
+                .field("/llmProviderSessionId", "session-llm-001")
                 .channel("ownerChannel")
                 .onInit("requestLlmAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
@@ -128,7 +128,10 @@ class DocStructureTest {
                 .onMyOsResponse("onLlmAccessGranted",
                         SingleDocumentPermissionGranted.class,
                         "REQ_LLM",
-                        steps -> steps.myOs().subscribeToSession(DocBuilder.expr("document('/llmProviderSessionId')"), "SUB_1"))
+                        steps -> steps.myOs().subscribeToSession(
+                                "ownerChannel",
+                                DocBuilder.expr("document('/llmProviderSessionId')"),
+                                "SUB_1"))
                 .onSubscriptionUpdate("onLlmUpdate",
                         "SUB_1",
                         SubscriptionToSessionInitiated.class,
@@ -171,13 +174,13 @@ class DocStructureTest {
                 .amountMinor(1000)
                 .reserve().requestOnInit().done()
                 .capture().requestOnInit().done()
-                .refund().requestOnInit().done()
+                .release().requestOnInit().done()
                 .buildDocument();
 
         DocStructure structure = DocStructure.from(document);
         assertEquals(ContractKind.WORKFLOW, structure.contracts.get("reserveRequestOnInit").kind);
         assertEquals(ContractKind.WORKFLOW, structure.contracts.get("captureRequestOnInit").kind);
-        assertEquals(ContractKind.WORKFLOW, structure.contracts.get("refundRequestOnInit").kind);
+        assertEquals(ContractKind.WORKFLOW, structure.contracts.get("releaseRequestOnInit").kind);
     }
 
     @Test

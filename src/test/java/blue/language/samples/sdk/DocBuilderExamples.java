@@ -35,6 +35,7 @@ public final class DocBuilderExamples {
                         "REQ_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/providerSessionId')"),
                                         "SUB_PROVIDER")
                                 .replaceValue("MarkReady", "/status", "ready"))
@@ -109,6 +110,7 @@ public final class DocBuilderExamples {
                         "REQ_RECRUITMENT_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("document('/llmProviderSessionId')"),
                                         "SUB_RECRUITMENT_PROVIDER"))
                 .buildDocument();

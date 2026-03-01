@@ -55,10 +55,10 @@ final class ExampleDocs {
                 .replace("/llmProviderSessionId", "session-llm-002")
                 .buildDocument()));
         scenarios.add(new Scenario("ai-add-second-provider", aiDoc(), doc -> DocBuilder.from(doc)
-                .set("/secondaryProviderSessionId", "session-llm-003")
+                .field("/secondaryProviderSessionId", "session-llm-003")
                 .buildDocument()));
         scenarios.add(new Scenario("ai-change-prompt", aiDoc(), doc -> DocBuilder.from(doc)
-                .set("/promptTemplate", "Generate a concise response")
+                .field("/promptTemplate", "Generate a concise response")
                 .buildDocument()));
         scenarios.add(new Scenario("paynote-add-reserve", simpleCapturePayNote(), doc -> DocBuilder.from(doc)
                 .onInit("reserveRequestOnInit", steps -> steps.triggerEvent("RequestReserve", new Node().type("PayNote/Reserve Funds Requested")))
@@ -80,7 +80,7 @@ final class ExampleDocs {
                 .buildDocument()));
         scenarios.add(new Scenario("empty-to-counter", new Node(), doc -> DocBuilder.from(doc)
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                     .channel("ownerChannel")
@@ -99,31 +99,31 @@ final class ExampleDocs {
                 .description("Counter description updated")
                 .buildDocument()));
         scenarios.add(new Scenario("counter-add-status", counterDoc(), doc -> DocBuilder.from(doc)
-                .set("/status", "active")
+                .field("/status", "active")
                 .buildDocument()));
         scenarios.add(new Scenario("sample-simple-agent-add-channel", DocBuilderExamples.simpleAgentWithPermissions(), doc -> DocBuilder.from(doc)
                 .channel("observerChannel")
                 .buildDocument()));
         scenarios.add(new Scenario("sample-agent-participant-add-field", DocBuilderExamples.agentAddsParticipantAndWaits(), doc -> DocBuilder.from(doc)
-                .set("/audit/version", "v2")
+                .field("/audit/version", "v2")
                 .buildDocument()));
         scenarios.add(new Scenario("myos-cookbook-weather-status", MyOsCookbookExamples.simplePermissionAndSubscribe(), doc -> DocBuilder.from(doc)
                 .replace("/status", "paused")
                 .buildDocument()));
         scenarios.add(new Scenario("myos-cookbook-linked-docs-note", MyOsCookbookExamples.linkedDocsWithUpdates(), doc -> DocBuilder.from(doc)
-                .set("/lastSyncStatus", "partial")
+                .field("/lastSyncStatus", "partial")
                 .buildDocument()));
         scenarios.add(new Scenario("paynote-cookbook-shipment-add-channel", PayNoteCookbookExamples.shipmentEscrowSimple(), doc -> DocBuilder.from(doc)
                 .channel("shipmentCompanyChannel")
                 .buildDocument()));
-        scenarios.add(new Scenario("paynote-cookbook-refund-window-note", PayNoteCookbookExamples.refundLockedUntilWindowOpens(), doc -> DocBuilder.from(doc)
-                .set("/refundNote", "window-open")
+        scenarios.add(new Scenario("paynote-cookbook-release-window-note", PayNoteCookbookExamples.releaseLockedUntilWindowOpens(), doc -> DocBuilder.from(doc)
+                .field("/releaseNote", "window-open")
                 .buildDocument()));
         scenarios.add(new Scenario("paynote-cookbook-doc-update-note", PayNoteCookbookExamples.captureTriggeredFromDocUpdate(), doc -> DocBuilder.from(doc)
-                .set("/deliveryComment", "verified")
+                .field("/deliveryComment", "verified")
                 .buildDocument()));
         scenarios.add(new Scenario("voucher-balanced-add-version", BalancedBowlVoucherPayNote.templateDoc(), doc -> DocBuilder.from(doc)
-                .set("/voucherVersion", 2)
+                .field("/voucherVersion", 2)
                 .buildDocument()));
         return scenarios;
     }
@@ -146,7 +146,7 @@ final class ExampleDocs {
     static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                     .channel("ownerChannel")
@@ -168,7 +168,7 @@ final class ExampleDocs {
     static Node directChangeDoc() {
         return DocBuilder.doc()
                 .name("Direct change")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .channel("ownerChannel")
                 .directChange("applyPatch", "ownerChannel", "Apply patch")
                 .buildDocument();
@@ -178,7 +178,7 @@ final class ExampleDocs {
         return DocBuilder.doc()
                 .name("MyOS Doc")
                 .type(Agent.class)
-                .set("/sessionId", "session-1")
+                .field("/sessionId", "session-1")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
                 .buildDocument();
@@ -188,8 +188,8 @@ final class ExampleDocs {
         return DocBuilder.doc()
                 .name("AI Doc")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/status", "idle")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/status", "idle")
                 .channel("ownerChannel")
                 .onInit("requestLlmAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
@@ -199,7 +199,10 @@ final class ExampleDocs {
                 .onMyOsResponse("onLlmAccessGranted",
                         SingleDocumentPermissionGranted.class,
                         "REQ_LLM",
-                        steps -> steps.myOs().subscribeToSession(DocBuilder.expr("document('/llmProviderSessionId')"), "SUB_LLM"))
+                        steps -> steps.myOs().subscribeToSession(
+                                "ownerChannel",
+                                DocBuilder.expr("document('/llmProviderSessionId')"),
+                                "SUB_LLM"))
                 .onSubscriptionUpdate("onLlmUpdate",
                         "SUB_LLM",
                         SubscriptionToSessionInitiated.class,

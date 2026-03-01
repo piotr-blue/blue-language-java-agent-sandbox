@@ -50,7 +50,7 @@ class DslGeneratorTest {
                 .buildDocument();
 
         String dsl = DslGenerator.generate(document);
-        assertTrue(dsl.contains(".myOsAdmin(\"myOsAdminChannel\")"));
+        assertTrue(dsl.contains(".myOsAdmin(\"myOsAdminChannel\")") || dsl.contains(".myOsAdmin()"));
         assertFalse(dsl.contains("myOsAdminUpdateImpl"));
     }
 
@@ -157,7 +157,7 @@ class DslGeneratorTest {
     private static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                 .channel("ownerChannel")
@@ -172,8 +172,8 @@ class DslGeneratorTest {
         return DocBuilder.doc()
                 .name("AI Doc")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/status", "idle")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/status", "idle")
                 .channel("ownerChannel")
                 .onInit("requestLlmAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
@@ -183,7 +183,10 @@ class DslGeneratorTest {
                 .onMyOsResponse("onLlmAccessGranted",
                         SingleDocumentPermissionGranted.class,
                         "REQ_LLM",
-                        steps -> steps.myOs().subscribeToSession(DocBuilder.expr("document('/llmProviderSessionId')"), "SUB_LLM"))
+                        steps -> steps.myOs().subscribeToSession(
+                                "ownerChannel",
+                                DocBuilder.expr("document('/llmProviderSessionId')"),
+                                "SUB_LLM"))
                 .onSubscriptionUpdate("onLlmUpdate",
                         "SUB_LLM",
                         SubscriptionToSessionInitiated.class,

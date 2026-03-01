@@ -28,9 +28,9 @@ class PayNoteBuilderDslParityTest {
         assertEquals("PayNote/PayNote", built.getAsText("/type/value"));
         assertEquals("USD", built.getAsText("/currency/value"));
         assertEquals(1500, built.getAsInteger("/amount/total/value").intValue());
-        assertEquals("Conversation/Timeline Channel", built.getAsText("/contracts/payerChannel/type/value"));
-        assertEquals("Conversation/Timeline Channel", built.getAsText("/contracts/payeeChannel/type/value"));
-        assertEquals("Conversation/Timeline Channel", built.getAsText("/contracts/guarantorChannel/type/value"));
+        assertEquals("Core/Channel", built.getAsText("/contracts/payerChannel/type/value"));
+        assertEquals("Core/Channel", built.getAsText("/contracts/payeeChannel/type/value"));
+        assertEquals("Core/Channel", built.getAsText("/contracts/guarantorChannel/type/value"));
     }
 
     @Test

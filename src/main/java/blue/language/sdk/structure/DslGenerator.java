@@ -509,12 +509,23 @@ public class DslGenerator {
         if (operation == null || operation.kind != ContractKind.OPERATION || operation.channel == null) {
             return false;
         }
-        if (!operation.key.endsWith("Update")) {
-            return false;
-        }
         if (emittedContracts.contains(operation.key)) {
             return false;
         }
+
+        Node channelContract = contracts.get(operation.channel);
+        String channelAlias = alias(channelContract == null ? null : channelContract.getType());
+        if (channelAlias == null || !channelAlias.contains("MyOS Timeline")) {
+            return false;
+        }
+
+        String derivedEmitKey = deriveEmitOperationKey(operation.channel);
+        boolean defaultMyOsShortcut = "myOsAdminChannel".equals(operation.channel)
+                && "myOsEmit".equals(operation.key);
+        if (!operation.key.equals(derivedEmitKey) && !defaultMyOsShortcut) {
+            return false;
+        }
+
         Node impl = contracts.get(operation.key + "Impl");
         if (impl == null) {
             return false;
@@ -529,7 +540,20 @@ public class DslGenerator {
         }
         Node firstStep = steps.getItems().get(0);
         String code = readText(firstStep, "code");
-        return code != null && code.contains("event?.message?.request ?? []");
+        return code != null
+                && (code.contains("events: event")
+                || code.contains("event?.message?.request ?? []"));
+    }
+
+    private static String deriveEmitOperationKey(String channelKey) {
+        if (channelKey == null) {
+            return null;
+        }
+        String trimmed = channelKey.trim();
+        if (trimmed.endsWith("Channel") && trimmed.length() > "Channel".length()) {
+            return trimmed.substring(0, trimmed.length() - "Channel".length()) + "Emit";
+        }
+        return trimmed + "Emit";
     }
 
     private static boolean hasContractPrefix(DocStructure structure, String prefix) {

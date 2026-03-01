@@ -11,6 +11,7 @@ public final class TypeAliases {
     public static final String CORE_DOCUMENT_UPDATE_CHANNEL = "Document Update Channel";
     public static final String CORE_LIFECYCLE_EVENT_CHANNEL = "Lifecycle Event Channel";
     public static final String CORE_TRIGGERED_EVENT_CHANNEL = "Triggered Event Channel";
+    public static final String CORE_CHANNEL = "Core/Channel";
 
     // Conversation
     public static final String CONVERSATION_OPERATION = "Conversation/Operation";

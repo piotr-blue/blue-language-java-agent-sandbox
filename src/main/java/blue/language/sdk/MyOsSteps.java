@@ -111,8 +111,11 @@ public final class MyOsSteps {
         return emitBean("CallOperation", CallOperationRequested.class, event);
     }
 
-    public StepsBuilder subscribeToSession(Object targetSessionId, String subscriptionId) {
+    public StepsBuilder subscribeToSession(String onBehalfOf,
+                                           Object targetSessionId,
+                                           String subscriptionId) {
         SubscribeToSessionRequested event = new SubscribeToSessionRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
                 .targetSessionId(asText(targetSessionId, "targetSessionId is required"))
                 .subscription(BLUE.objectToNode(new SubscriptionSpec(
                         requireText(subscriptionId, "subscriptionId is required"),

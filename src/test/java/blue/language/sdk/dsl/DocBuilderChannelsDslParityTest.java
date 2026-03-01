@@ -22,7 +22,7 @@ class DocBuilderChannelsDslParityTest {
                 name: Channel parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                 """);
     }
 
@@ -58,9 +58,9 @@ class DocBuilderChannelsDslParityTest {
                 name: Channels parity
                 contracts:
                   nameA:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   nameB:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                 """);
     }
 
@@ -76,9 +76,9 @@ class DocBuilderChannelsDslParityTest {
                 name: Composite channel parity
                 contracts:
                   payerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   payeeChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   participantUnionChannel:
                     type: Conversation/Composite Timeline Channel
                     channels:
@@ -102,7 +102,7 @@ class DocBuilderChannelsDslParityTest {
                 counter: 0
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   onIncrementEvent:
                     type: Conversation/Sequential Workflow
                     channel: ownerChannel
@@ -133,7 +133,7 @@ class DocBuilderChannelsDslParityTest {
                 .buildDocument();
 
         assertNotSame(template, specialized);
-        assertEquals("Conversation/Timeline Channel",
+        assertEquals("Core/Channel",
                 template.getAsText("/contracts/adminChannel/type/value"));
         assertDslMatchesYaml(specialized, """
                 name: Channel template

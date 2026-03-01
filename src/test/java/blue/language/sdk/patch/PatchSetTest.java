@@ -20,8 +20,8 @@ class PatchSetTest {
 
     @Test
     void addOneRootFieldProducesSingleAddEntryAndApplies() {
-        Node before = DocBuilder.doc().name("Doc").set("/counter", 1).buildDocument();
-        Node after = DocBuilder.from(before.clone()).set("/status", "ready").buildDocument();
+        Node before = DocBuilder.doc().name("Doc").field("/counter", 1).buildDocument();
+        Node after = DocBuilder.from(before.clone()).field("/status", "ready").buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
         assertEquals(1, patch.entries.size());
@@ -32,7 +32,7 @@ class PatchSetTest {
 
     @Test
     void replaceScalarFieldProducesSingleReplaceEntry() {
-        Node before = DocBuilder.doc().name("Doc").set("/counter", 1).buildDocument();
+        Node before = DocBuilder.doc().name("Doc").field("/counter", 1).buildDocument();
         Node after = DocBuilder.from(before.clone()).replace("/counter", 2).buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -43,7 +43,7 @@ class PatchSetTest {
 
     @Test
     void removeFieldProducesSingleRemoveEntry() {
-        Node before = DocBuilder.doc().name("Doc").set("/counter", 1).set("/status", "ready").buildDocument();
+        Node before = DocBuilder.doc().name("Doc").field("/counter", 1).field("/status", "ready").buildDocument();
         Node after = DocBuilder.from(before.clone()).remove("/status").buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -56,11 +56,11 @@ class PatchSetTest {
     void nestedObjectChangesReplaceWholeObject() {
         Node before = DocBuilder.doc()
                 .name("Doc")
-                .set("/settings", new Node().properties("a", new Node().value(1)))
+                .field("/settings", new Node().properties("a", new Node().value(1)))
                 .buildDocument();
         Node after = DocBuilder.doc()
                 .name("Doc")
-                .set("/settings", new Node().properties("a", new Node().value(2)).properties("b", new Node().value(true)))
+                .field("/settings", new Node().properties("a", new Node().value(2)).properties("b", new Node().value(true)))
                 .buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -73,15 +73,15 @@ class PatchSetTest {
     void mixedAddReplaceRemoveProducesThreeEntriesAndApplies() {
         Node before = DocBuilder.doc()
                 .name("Doc")
-                .set("/a", 1)
-                .set("/b", 2)
-                .set("/c", 3)
+                .field("/a", 1)
+                .field("/b", 2)
+                .field("/c", 3)
                 .buildDocument();
         Node after = DocBuilder.doc()
                 .name("Doc")
-                .set("/a", 1)
-                .set("/b", 20)
-                .set("/d", 4)
+                .field("/a", 1)
+                .field("/b", 20)
+                .field("/d", 4)
                 .buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -91,7 +91,7 @@ class PatchSetTest {
 
     @Test
     void noChangesProducesEmptyPatch() {
-        Node before = DocBuilder.doc().name("Doc").set("/counter", 1).buildDocument();
+        Node before = DocBuilder.doc().name("Doc").field("/counter", 1).buildDocument();
         Node after = before.clone();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -164,13 +164,13 @@ class PatchSetTest {
     void applyRoundTripMatchesModifiedDocument() {
         Node before = DocBuilder.doc()
                 .name("Roundtrip")
-                .set("/count", 1)
-                .set("/state", "idle")
+                .field("/count", 1)
+                .field("/state", "idle")
                 .buildDocument();
         Node after = DocBuilder.from(before.clone())
                 .replace("/count", 5)
                 .remove("/state")
-                .set("/done", true)
+                .field("/done", true)
                 .buildDocument();
 
         PatchSet patch = PatchSet.diff(before, after, DiffScope.ROOT_FIELDS_ONLY);
@@ -181,7 +181,7 @@ class PatchSetTest {
     private static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                     .channel("ownerChannel")

@@ -45,7 +45,7 @@ class DocBuilderSectionsDslParityTest {
                 counter: 0
                 contracts:
                   aliceTimeline:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   participants:
                     type: Conversation/Document Section
                     title: Participants

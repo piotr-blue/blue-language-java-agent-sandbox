@@ -41,7 +41,7 @@ class ChangeRequestCompilerTest {
     @Test
     void rootOnlyAddFieldProducesAddChangesetEntry() {
         Node before = counterDoc();
-        Node after = DocBuilder.from(before.clone()).set("/status", "ready").buildDocument();
+        Node after = DocBuilder.from(before.clone()).field("/status", "ready").buildDocument();
 
         Node changeRequest = ChangeRequestCompiler.compile(before, after);
         assertEquals("add", readText(readItems(changeRequest, "/changeset").get(0), "op"));
@@ -50,7 +50,7 @@ class ChangeRequestCompilerTest {
 
     @Test
     void rootOnlyRemoveFieldProducesRemoveChangesetEntry() {
-        Node before = DocBuilder.from(counterDoc()).set("/status", "ready").buildDocument();
+        Node before = DocBuilder.from(counterDoc()).field("/status", "ready").buildDocument();
         Node after = DocBuilder.from(before.clone()).remove("/status").buildDocument();
 
         Node changeRequest = ChangeRequestCompiler.compile(before, after);
@@ -155,7 +155,7 @@ class ChangeRequestCompilerTest {
     void mixedStatusAndWorkflowModificationPopulateBothContainers() {
         Node before = DocBuilder.doc()
                 .name("Workflow")
-                .set("/status", "idle")
+                .field("/status", "idle")
                 .onInit("initialize", steps -> steps.replaceValue("Set", "/status", "ready"))
                 .buildDocument();
         Node after = DocBuilder.from(before.clone())
@@ -251,7 +251,7 @@ class ChangeRequestCompilerTest {
     void roundtripDirectChangeAddSecondParticipant() {
         Node before = DocBuilder.doc()
                 .name("Direct change")
-                .set("/counter", 1)
+                .field("/counter", 1)
                 .channel("ownerChannel")
                 .directChange("applyPatch", "ownerChannel", "Apply patch")
                 .buildDocument();
@@ -277,7 +277,7 @@ class ChangeRequestCompilerTest {
         Node before = aiDoc();
         Node after = DocBuilder.from(before.clone())
                 .replace("/llmProviderSessionId", "session-llm-002")
-                .set("/secondaryProviderSessionId", "session-llm-003")
+                .field("/secondaryProviderSessionId", "session-llm-003")
                 .buildDocument();
         assertRoundtrip(before, after);
     }
@@ -347,7 +347,7 @@ class ChangeRequestCompilerTest {
     private static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                     .channel("ownerChannel")
@@ -373,7 +373,7 @@ class ChangeRequestCompilerTest {
         return DocBuilder.doc()
                 .name("MyOS Doc")
                 .type(Agent.class)
-                .set("/sessionId", "session-1")
+                .field("/sessionId", "session-1")
                 .channel("ownerChannel")
                 .myOsAdmin("myOsAdminChannel")
                 .buildDocument();
@@ -383,8 +383,8 @@ class ChangeRequestCompilerTest {
         return DocBuilder.doc()
                 .name("AI Doc")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/status", "idle")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/status", "idle")
                 .channel("ownerChannel")
                 .onInit("requestLlmAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
@@ -394,7 +394,10 @@ class ChangeRequestCompilerTest {
                 .onMyOsResponse("onLlmAccessGranted",
                         SingleDocumentPermissionGranted.class,
                         "REQ_LLM",
-                        steps -> steps.myOs().subscribeToSession(DocBuilder.expr("document('/llmProviderSessionId')"), "SUB_LLM"))
+                        steps -> steps.myOs().subscribeToSession(
+                                "ownerChannel",
+                                DocBuilder.expr("document('/llmProviderSessionId')"),
+                                "SUB_LLM"))
                 .onSubscriptionUpdate("onLlmUpdate",
                         "SUB_LLM",
                         SubscriptionToSessionInitiated.class,
@@ -426,11 +429,11 @@ class ChangeRequestCompilerTest {
         return DocBuilder.doc()
                 .name("Meal Planner")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/mealRequest", "")
-                .set("/mealPlan", new Node().properties("days", new Node().items(new ArrayList<Node>())))
-                .set("/totalCalories", 0)
-                .set("/planStatus", "idle")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/mealRequest", "")
+                .field("/mealPlan", new Node().properties("days", new Node().items(new ArrayList<Node>())))
+                .field("/totalCalories", 0)
+                .field("/planStatus", "idle")
                 .channel("ownerChannel")
                 .operation("requestMealPlan")
                     .channel("ownerChannel")

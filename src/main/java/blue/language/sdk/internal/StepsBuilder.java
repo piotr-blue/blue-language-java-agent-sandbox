@@ -2,7 +2,12 @@ package blue.language.sdk.internal;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.sdk.MyOsPermissions;
 import blue.language.sdk.MyOsSteps;
+import blue.language.sdk.ai.AIIntegrationConfig;
+import blue.language.sdk.ai.AITaskTemplate;
+import blue.language.sdk.ai.NamedEventExpectation;
+import blue.language.sdk.ai.TypeReference;
 import blue.language.types.common.NamedEvent;
 import blue.language.types.conversation.DocumentBootstrapRequested;
 import blue.language.types.payments.PaymentRequests;
@@ -16,9 +21,11 @@ import blue.language.types.payments.fields.SepaPaymentFields;
 import blue.language.types.payments.fields.WirePaymentFields;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -27,18 +34,18 @@ public final class StepsBuilder {
     private static final Blue BLUE = new Blue();
 
     private final List<Node> steps = new ArrayList<Node>();
-    private final Map<String, AiIntegrationConfig> aiIntegrations;
+    private final Map<String, AIIntegrationConfig> aiIntegrations;
 
     public StepsBuilder() {
         this(null);
     }
 
-    public StepsBuilder(Map<String, AiIntegrationConfig> aiIntegrations) {
-        this.aiIntegrations = new LinkedHashMap<String, AiIntegrationConfig>();
+    public StepsBuilder(Map<String, AIIntegrationConfig> aiIntegrations) {
+        this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
         if (aiIntegrations != null) {
-            for (Map.Entry<String, AiIntegrationConfig> entry : aiIntegrations.entrySet()) {
+            for (Map.Entry<String, AIIntegrationConfig> entry : aiIntegrations.entrySet()) {
                 String key = entry.getKey();
-                AiIntegrationConfig value = entry.getValue();
+                AIIntegrationConfig value = entry.getValue();
                 if (key == null || value == null) {
                     continue;
                 }
@@ -81,10 +88,14 @@ public final class StepsBuilder {
     }
 
     public StepsBuilder triggerEvent(String name, Node event) {
-        Node step = new Node().type(TypeAliases.CONVERSATION_TRIGGER_EVENT);
-        if (name != null) {
-            step.name(name);
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("step name is required");
         }
+        if (event == null) {
+            throw new IllegalArgumentException("event cannot be null");
+        }
+        Node step = new Node().type(TypeAliases.CONVERSATION_TRIGGER_EVENT);
+        step.name(name.trim());
         step.properties("event", event);
         steps.add(step);
         return this;
@@ -97,11 +108,10 @@ public final class StepsBuilder {
         return triggerEvent(name, BLUE.objectToNode(typedEvent));
     }
 
-    public StepsBuilder emit(Object typedEvent) {
-        return emit(null, typedEvent);
-    }
-
     public StepsBuilder emitType(String name, Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        if (eventTypeClass == null) {
+            throw new IllegalArgumentException("eventTypeClass cannot be null");
+        }
         Node event = new Node().type(TypeRef.of(eventTypeClass).asTypeNode());
         if (payloadCustomizer != null) {
             NodeObjectBuilder builder = NodeObjectBuilder.create();
@@ -116,17 +126,12 @@ public final class StepsBuilder {
         return triggerEvent(name, event);
     }
 
-    public StepsBuilder emitType(Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
-        return emitType(null, eventTypeClass, payloadCustomizer);
-    }
-
-    public StepsBuilder emitType(Class<?> eventTypeClass) {
-        return emitType(null, eventTypeClass, null);
-    }
-
-    public StepsBuilder emitAdHocEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+    public StepsBuilder namedEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
+        if (eventName == null || eventName.trim().isEmpty()) {
+            throw new IllegalArgumentException("eventName cannot be blank");
+        }
         Node event = new Node().type(TypeRef.of(NamedEvent.class).asTypeNode());
-        event.properties("name", new Node().value(eventName));
+        event.properties("name", new Node().value(eventName.trim()));
         if (payloadCustomizer != null) {
             NodeObjectBuilder payloadBuilder = NodeObjectBuilder.create();
             payloadCustomizer.accept(payloadBuilder);
@@ -135,12 +140,8 @@ public final class StepsBuilder {
         return triggerEvent(name, event);
     }
 
-    public StepsBuilder namedEvent(String name, String eventName, Consumer<NodeObjectBuilder> payloadCustomizer) {
-        return emitAdHocEvent(name, eventName, payloadCustomizer);
-    }
-
     public StepsBuilder namedEvent(String name, String eventName) {
-        return emitAdHocEvent(name, eventName, null);
+        return namedEvent(name, eventName, null);
     }
 
     public StepsBuilder triggerPayment(String name,
@@ -151,7 +152,7 @@ public final class StepsBuilder {
 
     public StepsBuilder triggerPayment(Class<?> paymentEventTypeClass,
                                        Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
-        return triggerPayment(null, paymentEventTypeClass, payloadCustomizer);
+        return triggerPayment("TriggerPayment", paymentEventTypeClass, payloadCustomizer);
     }
 
     public StepsBuilder bootstrapDocument(String stepName,
@@ -194,33 +195,26 @@ public final class StepsBuilder {
     }
 
     public StepsBuilder requestBackwardPayment(Consumer<PaymentRequestPayloadBuilder> payloadCustomizer) {
-        return requestBackwardPayment(null, payloadCustomizer);
+        return requestBackwardPayment("RequestBackwardPayment", payloadCustomizer);
     }
 
     public StepsBuilder askAI(String aiName,
                               String stepName,
-                              Consumer<AiPromptBuilder> promptCustomizer) {
-        AiIntegrationConfig integration = requireAiIntegration(aiName);
-        AiPromptBuilder prompt = new AiPromptBuilder();
-        if (promptCustomizer != null) {
-            promptCustomizer.accept(prompt);
+                              Consumer<AskAIBuilder> askCustomizer) {
+        AskAIBuilder askBuilder = new AskAIBuilder(this, requireAiIntegration(aiName), stepName);
+        if (askCustomizer != null) {
+            askCustomizer.accept(askBuilder);
         }
-
-        Node request = new Node().properties(new LinkedHashMap<String, Node>());
-        request.properties("requester", new Node().value(integration.requesterId));
-        request.properties("instructions", new Node().value(expr(prompt.toExpression())));
-        request.properties("context", new Node().value(expr("document('" + escapeSingleQuoted(integration.contextPath) + "')")));
-
-        return emitType(stepName, blue.language.types.myos.CallOperationRequested.class, payload -> payload
-                .put("onBehalfOf", integration.permissionFrom)
-                .put("targetSessionId", integration.sessionId)
-                .put("operation", "provideInstructions")
-                .putNode("request", request));
+        return askBuilder.build();
     }
 
     public StepsBuilder askAI(String aiName,
-                              Consumer<AiPromptBuilder> promptCustomizer) {
-        return askAI(aiName, null, promptCustomizer);
+                              Consumer<AskAIBuilder> askCustomizer) {
+        return askAI(aiName, "AskAI", askCustomizer);
+    }
+
+    public AISteps ai(String aiName) {
+        return new AISteps(this, requireAiIntegration(aiName));
     }
 
     public StepsBuilder replaceValue(String name, String path, Object value) {
@@ -291,15 +285,25 @@ public final class StepsBuilder {
         bootstrapOptions.applyTo(payload);
     }
 
-    private AiIntegrationConfig requireAiIntegration(String aiName) {
+    private AIIntegrationConfig requireAiIntegration(String aiName) {
         if (aiName == null || aiName.trim().isEmpty()) {
             throw new IllegalArgumentException("ai name is required");
         }
-        AiIntegrationConfig config = aiIntegrations.get(aiName.trim());
+        AIIntegrationConfig config = aiIntegrations.get(aiName.trim());
         if (config == null) {
             throw new IllegalArgumentException("Unknown AI integration: " + aiName);
         }
         return config;
+    }
+
+    private StepsBuilder emitCallOperationRequested(String stepName,
+                                                    AIIntegrationConfig integration,
+                                                    Node requestPayload) {
+        return emitType(stepName, blue.language.types.myos.CallOperationRequested.class, payload -> payload
+                .put("onBehalfOf", integration.permissionFromChannel())
+                .put("targetSessionId", integration.sessionIdExpression())
+                .put("operation", "provideInstructions")
+                .putNode("request", requestPayload));
     }
 
     private static String escapeSingleQuoted(String text) {
@@ -452,86 +456,6 @@ public final class StepsBuilder {
 
         public PaymentRequestPayloadBuilder viaCrypto(CryptoPaymentFields fields) {
             return rail(fields);
-        }
-
-        @Deprecated
-        public AchRailBuilder ach() {
-            return viaAch();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder ach(AchPaymentFields fields) {
-            return viaAch(fields);
-        }
-
-        @Deprecated
-        public SepaRailBuilder sepa() {
-            return viaSepa();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder sepa(SepaPaymentFields fields) {
-            return viaSepa(fields);
-        }
-
-        @Deprecated
-        public WireRailBuilder wire() {
-            return viaWire();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder wire(WirePaymentFields fields) {
-            return viaWire(fields);
-        }
-
-        @Deprecated
-        public CardRailBuilder card() {
-            return viaCard();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder card(CardPaymentFields fields) {
-            return viaCard(fields);
-        }
-
-        @Deprecated
-        public CardTokenRailBuilder tokenizedCard() {
-            return viaTokenizedCard();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder tokenizedCard(CardTokenPaymentFields fields) {
-            return viaTokenizedCard(fields);
-        }
-
-        @Deprecated
-        public CreditLineRailBuilder creditLine() {
-            return viaCreditLine();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder creditLine(CreditLinePaymentFields fields) {
-            return viaCreditLine(fields);
-        }
-
-        @Deprecated
-        public LedgerRailBuilder ledger() {
-            return viaLedger();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder ledger(LedgerPaymentFields fields) {
-            return viaLedger(fields);
-        }
-
-        @Deprecated
-        public CryptoRailBuilder crypto() {
-            return viaCrypto();
-        }
-
-        @Deprecated
-        public PaymentRequestPayloadBuilder crypto(CryptoPaymentFields fields) {
-            return viaCrypto(fields);
         }
 
         public PaymentRequestPayloadBuilder rail(Object railFieldsBean) {
@@ -841,29 +765,288 @@ public final class StepsBuilder {
         }
     }
 
-    public static final class AiPromptBuilder {
+    public static final class AskAIBuilder {
+        private final StepsBuilder parent;
+        private final AIIntegrationConfig integration;
+        private final String stepName;
+        private final PromptExpressionBuilder prompt = new PromptExpressionBuilder();
+        private final List<TypeReference> inlineExpectedResponses = new ArrayList<TypeReference>();
+        private final List<NamedEventExpectation> inlineNamedExpectedResponses = new ArrayList<NamedEventExpectation>();
+        private String taskName;
+
+        private AskAIBuilder(StepsBuilder parent, AIIntegrationConfig integration, String stepName) {
+            this.parent = parent;
+            this.integration = integration;
+            this.stepName = stepName;
+        }
+
+        public AskAIBuilder task(String taskName) {
+            if (taskName == null || taskName.trim().isEmpty()) {
+                throw new IllegalArgumentException("taskName is required");
+            }
+            this.taskName = taskName.trim();
+            return this;
+        }
+
+        public AskAIBuilder instruction(String text) {
+            prompt.text(text);
+            return this;
+        }
+
+        public AskAIBuilder expects(Class<?> eventTypeClass) {
+            inlineExpectedResponses.add(TypeReference.of(eventTypeClass));
+            return this;
+        }
+
+        public AskAIBuilder expects(Node eventTypeNode) {
+            inlineExpectedResponses.add(TypeReference.of(eventTypeNode));
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName) {
+            inlineNamedExpectedResponses.add(NamedEventExpectation.named(eventName).build());
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName,
+                                         Consumer<NamedEventExpectation.Builder> fieldsCustomizer) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldsCustomizer != null) {
+                fieldsCustomizer.accept(builder);
+            }
+            inlineNamedExpectedResponses.add(builder.build());
+            return this;
+        }
+
+        public AskAIBuilder expectsNamed(String eventName, String... fieldNames) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldNames != null) {
+                for (String fieldName : fieldNames) {
+                    builder.field(fieldName);
+                }
+            }
+            inlineNamedExpectedResponses.add(builder.build());
+            return this;
+        }
+
+        @Deprecated
+        public AskAIBuilder text(String value) {
+            return instruction(value);
+        }
+
+        @Deprecated
+        public AskAIBuilder expression(String expression) {
+            prompt.expression(expression);
+            return this;
+        }
+
+        private StepsBuilder build() {
+            PromptExpressionBuilder merged = new PromptExpressionBuilder();
+            List<TypeReference> mergedExpectedResponses = new ArrayList<TypeReference>();
+            List<NamedEventExpectation> mergedNamedExpectedResponses =
+                    new ArrayList<NamedEventExpectation>();
+
+            if (taskName != null) {
+                AITaskTemplate task = integration.task(taskName);
+                if (task == null) {
+                    throw new IllegalStateException("Unknown task '" + taskName
+                            + "' for AI integration '" + integration.name() + "'");
+                }
+                for (String instruction : task.instructions()) {
+                    merged.text(instruction);
+                }
+                mergedExpectedResponses.addAll(task.expectedResponses());
+                mergedNamedExpectedResponses.addAll(task.expectedNamedEvents());
+            }
+
+            merged.append(prompt);
+            mergedExpectedResponses.addAll(inlineExpectedResponses);
+            mergedNamedExpectedResponses.addAll(inlineNamedExpectedResponses);
+
+            if (merged.isEmpty()) {
+                throw new IllegalStateException("askAI('" + integration.name() + "', '" + stepName
+                        + "'): at least one instruction is required");
+            }
+
+            Node request = new Node().properties(new LinkedHashMap<String, Node>());
+            request.properties("requester", new Node().value(integration.requesterId()));
+            request.properties("instructions", new Node().value(expr(merged.toExpression())));
+            request.properties("context", new Node().value(expr("document('"
+                    + escapeSingleQuoted(integration.contextPath()) + "')")));
+            if (taskName != null) {
+                request.properties("taskName", new Node().value(taskName));
+            }
+
+            Node expectedResponsesNode = expectedResponsesNode(mergedExpectedResponses, mergedNamedExpectedResponses);
+            if (expectedResponsesNode != null) {
+                request.properties("expectedResponses", expectedResponsesNode);
+            }
+
+            return parent.emitCallOperationRequested(stepName, integration, request);
+        }
+
+        private static Node expectedResponsesNode(List<TypeReference> references,
+                                                  List<NamedEventExpectation> namedExpectations) {
+            boolean noTypeReferences = references == null || references.isEmpty();
+            boolean noNamed = namedExpectations == null || namedExpectations.isEmpty();
+            if (noTypeReferences && noNamed) {
+                return null;
+            }
+            Set<String> dedup = new LinkedHashSet<String>();
+            List<Node> items = new ArrayList<Node>();
+            if (references != null) {
+                for (TypeReference reference : references) {
+                    if (reference == null) {
+                        continue;
+                    }
+                    String key = reference.dedupKey();
+                    if (!dedup.add(key)) {
+                        continue;
+                    }
+                    Node node = reference.toNode();
+                    if (node != null) {
+                        items.add(node);
+                    }
+                }
+            }
+            if (namedExpectations != null) {
+                for (NamedEventExpectation named : namedExpectations) {
+                    if (named == null) {
+                        continue;
+                    }
+                    String key = named.dedupKey();
+                    if (!dedup.add(key)) {
+                        continue;
+                    }
+                    items.add(namedEventExpectationNode(named));
+                }
+            }
+            if (items.isEmpty()) {
+                return null;
+            }
+            return new Node().items(items);
+        }
+
+        private static Node namedEventExpectationNode(NamedEventExpectation named) {
+            Node event = new Node().type(TypeRef.of(NamedEvent.class).asTypeNode());
+            event.properties("name", new Node().value(named.eventName()));
+            if (named.fields() != null && !named.fields().isEmpty()) {
+                Node payload = new Node().properties(new LinkedHashMap<String, Node>());
+                for (NamedEventExpectation.FieldExpectation field : named.fields()) {
+                    Node descriptor = new Node().properties(new LinkedHashMap<String, Node>());
+                    if (field.description() != null && !field.description().isEmpty()) {
+                        descriptor.properties("description", new Node().value(field.description()));
+                    }
+                    payload.properties(field.name(), descriptor);
+                }
+                event.properties("payload", payload);
+            }
+            return event;
+        }
+    }
+
+    public static final class AISteps {
+        private final StepsBuilder parent;
+        private final AIIntegrationConfig integration;
+
+        private AISteps(StepsBuilder parent, AIIntegrationConfig integration) {
+            this.parent = parent;
+            this.integration = integration;
+        }
+
+        public StepsBuilder requestPermission() {
+            return requestPermission("RequestPermission");
+        }
+
+        public StepsBuilder requestPermission(String stepName) {
+            return parent.emitType(stepName,
+                    blue.language.types.myos.SingleDocumentPermissionGrantRequested.class,
+                    payload -> payload
+                            .put("onBehalfOf", integration.permissionFromChannel())
+                            .put("requestId", integration.requestId())
+                            .put("targetSessionId", integration.sessionIdExpression())
+                            .putNode("permissions",
+                                    MyOsPermissions.create().read(true).singleOps("provideInstructions").build()));
+        }
+
+        public StepsBuilder subscribe() {
+            return subscribe("Subscribe");
+        }
+
+        public StepsBuilder subscribe(String stepName) {
+            Node subscription = new Node().properties(new LinkedHashMap<String, Node>());
+            subscription.properties("id", new Node().value(integration.subscriptionId()));
+            subscription.properties("events", new Node().items(new ArrayList<Node>()));
+            return parent.emitType(stepName,
+                    blue.language.types.myos.SubscribeToSessionRequested.class,
+                    payload -> payload
+                            .put("onBehalfOf", integration.permissionFromChannel())
+                            .put("targetSessionId", integration.sessionIdExpression())
+                            .putNode("subscription", subscription));
+        }
+    }
+
+    private static final class PromptExpressionBuilder {
         private final List<PromptSegment> segments = new ArrayList<PromptSegment>();
 
-        public AiPromptBuilder text(String value) {
+        private void append(PromptExpressionBuilder other) {
+            if (other == null || other.segments.isEmpty()) {
+                return;
+            }
+            if (!segments.isEmpty()) {
+                segments.add(PromptSegment.literal("\n"));
+            }
+            for (PromptSegment segment : other.segments) {
+                segments.add(segment);
+            }
+        }
+
+        private void text(String value) {
             if (value == null) {
-                return this;
+                return;
             }
             if (!segments.isEmpty()) {
                 segments.add(PromptSegment.literal("\n"));
             }
             parseInterpolatedText(value);
-            return this;
         }
 
-        public AiPromptBuilder expression(String expression) {
+        private void expression(String expression) {
             if (expression == null || expression.trim().isEmpty()) {
-                return this;
+                return;
             }
             if (!segments.isEmpty()) {
                 segments.add(PromptSegment.literal("\n"));
             }
             segments.add(PromptSegment.expression(unwrapExpression(expression.trim())));
-            return this;
+        }
+
+        private boolean isEmpty() {
+            return segments.isEmpty();
+        }
+
+        private String toExpression() {
+            if (segments.isEmpty()) {
+                return "''";
+            }
+            StringBuilder expression = new StringBuilder();
+            for (int i = 0; i < segments.size(); i++) {
+                PromptSegment segment = segments.get(i);
+                if (i > 0) {
+                    expression.append(" + ");
+                }
+                if (segment.expression) {
+                    expression.append("(").append(segment.value).append(")");
+                } else {
+                    expression.append("'")
+                            .append(segment.value
+                                    .replace("\\", "\\\\")
+                                    .replace("'", "\\'")
+                                    .replace("\n", "\\n"))
+                            .append("'");
+                }
+            }
+            return expression.toString();
         }
 
         private void parseInterpolatedText(String rawText) {
@@ -893,74 +1076,11 @@ public final class StepsBuilder {
             }
         }
 
-        private String toExpression() {
-            if (segments.isEmpty()) {
-                return "''";
-            }
-            StringBuilder expression = new StringBuilder();
-            for (int i = 0; i < segments.size(); i++) {
-                PromptSegment segment = segments.get(i);
-                if (i > 0) {
-                    expression.append(" + ");
-                }
-                if (segment.expression) {
-                    expression.append("(").append(segment.value).append(")");
-                } else {
-                    expression.append("'")
-                            .append(segment.value
-                                    .replace("\\", "\\\\")
-                                    .replace("'", "\\'")
-                                    .replace("\n", "\\n"))
-                            .append("'");
-                }
-            }
-            return expression.toString();
-        }
-
         private static String unwrapExpression(String expression) {
             if (expression.startsWith("${") && expression.endsWith("}")) {
                 return expression.substring(2, expression.length() - 1).trim();
             }
             return expression;
-        }
-    }
-
-    public static final class AiIntegrationConfig {
-        public String name;
-        public String sessionId;
-        public String permissionFrom;
-        public String requesterId;
-        public String contextPath;
-        public String subscriptionId;
-
-        public AiIntegrationConfig name(String name) {
-            this.name = name;
-            return this;
-        }
-
-        public AiIntegrationConfig sessionId(String sessionId) {
-            this.sessionId = sessionId;
-            return this;
-        }
-
-        public AiIntegrationConfig permissionFrom(String permissionFrom) {
-            this.permissionFrom = permissionFrom;
-            return this;
-        }
-
-        public AiIntegrationConfig requesterId(String requesterId) {
-            this.requesterId = requesterId;
-            return this;
-        }
-
-        public AiIntegrationConfig contextPath(String contextPath) {
-            this.contextPath = contextPath;
-            return this;
-        }
-
-        public AiIntegrationConfig subscriptionId(String subscriptionId) {
-            this.subscriptionId = subscriptionId;
-            return this;
         }
     }
 

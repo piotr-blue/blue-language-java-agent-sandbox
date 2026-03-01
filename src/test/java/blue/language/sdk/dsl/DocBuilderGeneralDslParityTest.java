@@ -92,7 +92,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation request parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   increment:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -128,7 +128,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   ping:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -163,7 +163,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation builder parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   ack:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -202,7 +202,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Operation builder request description parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   increment:
                     type: Conversation/Operation
                     channel: ownerChannel
@@ -247,6 +247,34 @@ class DocBuilderGeneralDslParityTest {
                           - op: replace
                             path: /n
                             val: 1
+                """);
+    }
+
+    @Test
+    void onNamedEventMatchesYamlDefinition() {
+        Node fromDsl = DocBuilder.doc()
+                .name("On named event parity")
+                .onNamedEvent("onOrderReady", "order-ready", steps -> steps.replaceValue("SetReady", "/status", "ready"))
+                .buildDocument();
+
+        assertDslMatchesYaml(fromDsl, """
+                name: On named event parity
+                contracts:
+                  triggeredEventChannel:
+                    type: Triggered Event Channel
+                  onOrderReady:
+                    type: Conversation/Sequential Workflow
+                    channel: triggeredEventChannel
+                    event:
+                      type: Common/Named Event
+                      name: order-ready
+                    steps:
+                      - name: SetReady
+                        type: Conversation/Update Document
+                        changeset:
+                          - op: replace
+                            path: /status
+                            val: ready
                 """);
     }
 
@@ -522,7 +550,7 @@ class DocBuilderGeneralDslParityTest {
                 name: Direct change parity
                 contracts:
                   ownerChannel:
-                    type: Conversation/Timeline Channel
+                    type: Core/Channel
                   applyPatch:
                     type: Conversation/Operation
                     channel: ownerChannel

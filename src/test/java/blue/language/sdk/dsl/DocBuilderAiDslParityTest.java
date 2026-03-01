@@ -6,6 +6,8 @@ import blue.language.types.conversation.ChatMessage;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -41,6 +43,8 @@ class DocBuilderAiDslParityTest {
 
         assertEquals("MyOS/Subscribe to Session Requested",
                 built.getAsText("/contracts/aiMEALAISubscribe/steps/0/event/type/value"));
+        assertEquals("ownerChannel",
+                built.getAsText("/contracts/aiMEALAISubscribe/steps/0/event/onBehalfOf/value"));
         assertEquals("SUB_MEALAI",
                 built.getAsText("/contracts/aiMEALAISubscribe/steps/0/event/subscription/id/value"));
 
@@ -69,10 +73,10 @@ class DocBuilderAiDslParityTest {
                 .operation("requestMealPlan")
                     .channel("ownerChannel")
                     .description("Request meal plan")
-                    .steps(steps -> steps.askAI("mealAI", "GeneratePlan", prompt -> prompt
-                            .text(DocBuilder.expr("document('/prompt')"))
-                            .text("Keep total calories <= ${document('/maxCalories')}")
-                            .text("Meal request: ${event.message.request}")))
+                    .steps(steps -> steps.askAI("mealAI", "GeneratePlan", ask -> ask
+                            .instruction(DocBuilder.expr("document('/prompt')"))
+                            .instruction("Keep total calories <= ${document('/maxCalories')}")
+                            .instruction("Meal request: ${event.message.request}")))
                     .done()
                 .buildDocument();
 
@@ -147,8 +151,8 @@ class DocBuilderAiDslParityTest {
                     .requesterId("BOB_VALIDATOR")
                     .done()
                 .onInit("kickoff", steps -> steps
-                        .askAI("analyst", "AskAnalyst", prompt -> prompt.text("Analyze"))
-                        .askAI("validator", "AskValidator", prompt -> prompt.text("Validate")))
+                        .askAI("analyst", "AskAnalyst", ask -> ask.instruction("Analyze"))
+                        .askAI("validator", "AskValidator", ask -> ask.instruction("Validate")))
                 .buildDocument();
 
         String first = "/contracts/kickoff/steps/0/event";
@@ -195,9 +199,334 @@ class DocBuilderAiDslParityTest {
                         .name("AI unknown integration")
                         .operation("ask")
                             .channel("ownerChannel")
-                            .steps(steps -> steps.askAI("missing", prompt -> prompt.text("hello")))
+                            .steps(steps -> steps.askAI("missing", ask -> ask.instruction("hello")))
                             .done()
                         .buildDocument());
         assertTrue(ex.getMessage().contains("Unknown AI integration"));
+    }
+
+    @Test
+    void aiTaskTemplateCanBeReusedAndExtendedInline() {
+        Node built = DocBuilder.doc()
+                .name("AI task parity")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-tasks")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .task("summarize")
+                        .instruction("Summarize input in bullet points.")
+                        .expects(ChatMessage.class)
+                        .expectsNamed("meal-plan-ready", fields -> fields
+                                .field("planId", "Plan identifier")
+                                .field("totalCalories"))
+                        .done()
+                    .done()
+                .operation("run")
+                    .channel("ownerChannel")
+                    .steps(steps -> steps.askAI("provider", "RunTask", ask -> ask
+                            .task("summarize")
+                            .expectsNamed("meal-plan-warning")
+                            .instruction("Input: ${event.message.request}")))
+                    .done()
+                .buildDocument();
+
+        String requestPath = "/contracts/runImpl/steps/0/event/request";
+        assertEquals("summarize", built.getAsText(requestPath + "/taskName/value"));
+        String instructions = built.getAsText(requestPath + "/instructions/value");
+        assertTrue(instructions.contains("Summarize input in bullet points"), instructions);
+        assertTrue(instructions.contains("event.message.request"), instructions);
+        assertEquals("Conversation/Chat Message",
+                built.getAsText(requestPath + "/expectedResponses/0/value"));
+        assertEquals("Common/Named Event",
+                built.getAsText(requestPath + "/expectedResponses/1/type/value"));
+        assertEquals("meal-plan-ready",
+                built.getAsText(requestPath + "/expectedResponses/1/name/value"));
+        assertEquals("Plan identifier",
+                built.getAsText(requestPath + "/expectedResponses/1/payload/planId/description/value"));
+        assertEquals("meal-plan-warning",
+                built.getAsText(requestPath + "/expectedResponses/2/name/value"));
+    }
+
+    @Test
+    void expectsNamedVarargsSupportsFieldNamesInTaskAndInline() {
+        Node built = DocBuilder.doc()
+                .name("AI named varargs parity")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-varargs")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .task("summarize")
+                        .instruction("Summarize.")
+                        .expectsNamed("summary-ready", "summaryId", "quality")
+                        .done()
+                    .done()
+                .operation("run")
+                    .channel("ownerChannel")
+                    .steps(steps -> steps.askAI("provider", "RunTask", ask -> ask
+                            .task("summarize")
+                            .instruction("Input: ${event.message.request}")
+                            .expectsNamed("summary-warning", "code", "message")))
+                    .done()
+                .buildDocument();
+
+        String requestPath = "/contracts/runImpl/steps/0/event/request";
+        assertEquals("summary-ready",
+                built.getAsText(requestPath + "/expectedResponses/0/name/value"));
+        assertNotNull(built.getAsNode(requestPath + "/expectedResponses/0/payload/summaryId"));
+        assertNotNull(built.getAsNode(requestPath + "/expectedResponses/0/payload/quality"));
+
+        assertEquals("summary-warning",
+                built.getAsText(requestPath + "/expectedResponses/1/name/value"));
+        assertNotNull(built.getAsNode(requestPath + "/expectedResponses/1/payload/code"));
+        assertNotNull(built.getAsNode(requestPath + "/expectedResponses/1/payload/message"));
+    }
+
+    @Test
+    void askAIRejectsUnknownTaskForIntegration() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                DocBuilder.doc()
+                        .name("AI unknown task")
+                        .channel("ownerChannel")
+                        .myOsAdmin()
+                        .field("/llmProviderSessionId", "session-task-missing")
+                        .ai("provider")
+                            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                            .permissionFrom("ownerChannel")
+                            .task("known")
+                                .instruction("known instruction")
+                                .done()
+                            .done()
+                        .operation("run")
+                            .channel("ownerChannel")
+                            .steps(steps -> steps.askAI("provider", ask -> ask.task("missing")))
+                            .done()
+                        .buildDocument());
+        assertTrue(ex.getMessage().contains("Unknown task 'missing'"));
+    }
+
+    @Test
+    void askAIRequiresAtLeastOneInstructionFromTaskOrInline() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                DocBuilder.doc()
+                        .name("AI empty ask")
+                        .channel("ownerChannel")
+                        .myOsAdmin()
+                        .field("/llmProviderSessionId", "session-empty")
+                        .ai("provider")
+                            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                            .permissionFrom("ownerChannel")
+                            .done()
+                        .operation("run")
+                            .channel("ownerChannel")
+                            .steps(steps -> steps.askAI("provider", ask -> { }))
+                            .done()
+                        .buildDocument());
+        assertTrue(ex.getMessage().contains("at least one instruction"));
+    }
+
+    @Test
+    void aiPermissionOnEventBuildsPermissionWorkflowOnTriggeredChannel() {
+        Node built = DocBuilder.doc()
+                .name("AI permission on event")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-evt")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .requestPermissionOnEvent(ChatMessage.class)
+                    .done()
+                .buildDocument();
+
+        assertEquals("triggeredEventChannel",
+                built.getAsText("/contracts/aiPROVIDERRequestPermission/channel/value"));
+        assertEquals("Conversation/Chat Message",
+                built.getAsText("/contracts/aiPROVIDERRequestPermission/event/type/value"));
+    }
+
+    @Test
+    void aiPermissionOnDocChangeBuildsPermissionWorkflowWithDocUpdateChannel() {
+        Node built = DocBuilder.doc()
+                .name("AI permission on doc change")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-doc")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .requestPermissionOnDocChange("/status")
+                    .done()
+                .buildDocument();
+
+        assertEquals("Document Update Channel",
+                built.getAsText("/contracts/aiPROVIDERRequestPermissionDocUpdateChannel/type/value"));
+        assertEquals("/status",
+                built.getAsText("/contracts/aiPROVIDERRequestPermissionDocUpdateChannel/path/value"));
+        assertEquals("aiPROVIDERRequestPermissionDocUpdateChannel",
+                built.getAsText("/contracts/aiPROVIDERRequestPermission/channel/value"));
+    }
+
+    @Test
+    void aiPermissionManualSkipsAutoPermissionWorkflowAndSupportsManualStep() {
+        Node built = DocBuilder.doc()
+                .name("AI permission manual")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-manual")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .requestPermissionManually()
+                    .done()
+                .operation("activate")
+                    .channel("ownerChannel")
+                    .steps(steps -> steps.ai("provider").requestPermission("RequestNow"))
+                    .done()
+                .buildDocument();
+
+        assertNull(built.getAsNode("/contracts").getProperties().get("aiPROVIDERRequestPermission"));
+        assertEquals("MyOS/Single Document Permission Grant Requested",
+                built.getAsText("/contracts/activateImpl/steps/0/event/type/value"));
+        assertEquals("RequestNow",
+                built.getAsText("/contracts/activateImpl/steps/0/name"));
+    }
+
+    @Test
+    void onAIResponseSupportsTaskFilteredMatcher() {
+        Node built = DocBuilder.doc()
+                .name("AI task response matcher")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-filter")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .task("summarize")
+                        .instruction("Summarize.")
+                        .done()
+                    .done()
+                .onAIResponse("provider", "onSummary", ChatMessage.class, "summarize", steps -> steps
+                        .replaceValue("MarkSeen", "/seen", true))
+                .buildDocument();
+
+        assertEquals("summarize",
+                built.getAsText("/contracts/onSummary/event/update/inResponseTo/incomingEvent/taskName/value"));
+        assertEquals("Conversation/Chat Message",
+                built.getAsText("/contracts/onSummary/event/update/type/value"));
+    }
+
+    @Test
+    void onAIResponseSupportsNamedEventMatcher() {
+        Node built = DocBuilder.doc()
+                .name("AI named event matcher")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-named-response")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .done()
+                .onAIResponse("provider", "onMealPlanReady", "meal-plan-ready", steps -> steps
+                        .replaceValue("MarkSeen", "/seen", true))
+                .buildDocument();
+
+        assertEquals("SUB_PROVIDER",
+                built.getAsText("/contracts/onMealPlanReady/event/subscriptionId/value"));
+        assertEquals("Common/Named Event",
+                built.getAsText("/contracts/onMealPlanReady/event/update/type/value"));
+        assertEquals("meal-plan-ready",
+                built.getAsText("/contracts/onMealPlanReady/event/update/name/value"));
+        assertEquals("/ai/provider/context",
+                built.getAsText("/contracts/onMealPlanReady/steps/0/changeset/0/path/value"));
+    }
+
+    @Test
+    void onAIResponseSupportsNamedEventAndTaskFilteredMatcher() {
+        Node built = DocBuilder.doc()
+                .name("AI named event task matcher")
+                .channel("ownerChannel")
+                .myOsAdmin()
+                .field("/llmProviderSessionId", "session-named-task-response")
+                .ai("provider")
+                    .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                    .permissionFrom("ownerChannel")
+                    .task("summarize")
+                        .instruction("Summarize.")
+                        .done()
+                    .done()
+                .onAIResponse("provider", "onMealPlanReady", "meal-plan-ready", "summarize", steps -> steps
+                        .replaceValue("MarkSeen", "/seen", true))
+                .buildDocument();
+
+        assertEquals("Common/Named Event",
+                built.getAsText("/contracts/onMealPlanReady/event/update/type/value"));
+        assertEquals("meal-plan-ready",
+                built.getAsText("/contracts/onMealPlanReady/event/update/name/value"));
+        assertEquals("summarize",
+                built.getAsText("/contracts/onMealPlanReady/event/update/inResponseTo/incomingEvent/taskName/value"));
+    }
+
+    @Test
+    void onAIResponseRejectsUnknownTaskName() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                DocBuilder.doc()
+                        .name("AI bad response task")
+                        .channel("ownerChannel")
+                        .myOsAdmin()
+                        .field("/llmProviderSessionId", "session-bad-response-task")
+                        .ai("provider")
+                            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                            .permissionFrom("ownerChannel")
+                            .task("known")
+                                .instruction("known")
+                                .done()
+                            .done()
+                        .onAIResponse("provider", "onBad", ChatMessage.class, "missing", steps -> { })
+                        .buildDocument());
+        assertTrue(ex.getMessage().contains("Unknown task 'missing'"));
+    }
+
+    @Test
+    void aiTaskWithoutInstructionIsRejected() {
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                DocBuilder.doc()
+                        .name("AI bad task")
+                        .channel("ownerChannel")
+                        .myOsAdmin()
+                        .field("/llmProviderSessionId", "session-bad-task")
+                        .ai("provider")
+                            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                            .permissionFrom("ownerChannel")
+                            .task("empty")
+                                .done()
+                            .done()
+                        .buildDocument());
+        assertTrue(ex.getMessage().contains("at least one instruction"));
+    }
+
+    @Test
+    void aiDuplicateTaskNameIsRejected() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                DocBuilder.doc()
+                        .name("AI duplicate task")
+                        .channel("ownerChannel")
+                        .myOsAdmin()
+                        .field("/llmProviderSessionId", "session-dup-task")
+                        .ai("provider")
+                            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+                            .permissionFrom("ownerChannel")
+                            .task("same")
+                                .instruction("one")
+                                .done()
+                            .task("same")
+                                .instruction("two")
+                                .done()
+                            .done()
+                        .buildDocument());
+        assertTrue(ex.getMessage().contains("Duplicate AI task name"));
     }
 }

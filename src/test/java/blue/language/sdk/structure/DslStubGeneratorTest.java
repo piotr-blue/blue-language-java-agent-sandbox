@@ -79,7 +79,7 @@ class DslStubGeneratorTest {
     private static Node counterDoc() {
         return DocBuilder.doc()
                 .name("Counter")
-                .set("/counter", 0)
+                .field("/counter", 0)
                 .channel("ownerChannel")
                 .operation("increment")
                 .channel("ownerChannel")
@@ -94,8 +94,8 @@ class DslStubGeneratorTest {
         return DocBuilder.doc()
                 .name("AI Doc")
                 .type(Agent.class)
-                .set("/llmProviderSessionId", "session-llm-001")
-                .set("/status", "idle")
+                .field("/llmProviderSessionId", "session-llm-001")
+                .field("/status", "idle")
                 .channel("ownerChannel")
                 .onInit("requestLlmAccess", steps -> steps.myOs().requestSingleDocPermission(
                         "ownerChannel",
@@ -105,7 +105,10 @@ class DslStubGeneratorTest {
                 .onMyOsResponse("onLlmAccessGranted",
                         SingleDocumentPermissionGranted.class,
                         "REQ_LLM",
-                        steps -> steps.myOs().subscribeToSession(DocBuilder.expr("document('/llmProviderSessionId')"), "SUB_LLM"))
+                        steps -> steps.myOs().subscribeToSession(
+                                "ownerChannel",
+                                DocBuilder.expr("document('/llmProviderSessionId')"),
+                                "SUB_LLM"))
                 .onSubscriptionUpdate("onLlmUpdate",
                         "SUB_LLM",
                         SubscriptionToSessionInitiated.class,

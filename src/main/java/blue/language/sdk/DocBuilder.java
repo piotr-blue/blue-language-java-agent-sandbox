@@ -4,11 +4,16 @@ import blue.language.Blue;
 import blue.language.model.Constraints;
 import blue.language.model.Node;
 import blue.language.processor.util.PointerUtils;
+import blue.language.sdk.ai.AIIntegrationConfig;
+import blue.language.sdk.ai.AITaskTemplate;
+import blue.language.sdk.ai.NamedEventExpectation;
+import blue.language.sdk.ai.TypeReference;
 import blue.language.sdk.internal.ContractsBuilder;
 import blue.language.sdk.internal.PoliciesBuilder;
 import blue.language.sdk.internal.StepsBuilder;
 import blue.language.sdk.internal.TypeAliases;
 import blue.language.sdk.internal.TypeRef;
+import blue.language.types.common.NamedEvent;
 import blue.language.types.conversation.Response;
 import blue.language.types.myos.SingleDocumentPermissionGranted;
 import blue.language.types.myos.SingleDocumentPermissionRejected;
@@ -29,8 +34,8 @@ public class DocBuilder<T extends DocBuilder<T>> {
     private static final Blue BLUE = new Blue();
 
     protected final Node document;
-    private final Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations =
-            new LinkedHashMap<String, StepsBuilder.AiIntegrationConfig>();
+    private final Map<String, AIIntegrationConfig> aiIntegrations =
+            new LinkedHashMap<String, AIIntegrationConfig>();
     private SectionContext currentSection;
 
     protected DocBuilder() {
@@ -238,6 +243,15 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return self();
     }
 
+    public T onNamedEvent(String workflowKey,
+                          String eventName,
+                          Consumer<StepsBuilder> customizer) {
+        require(eventName, "event name");
+        NamedEventMatcher matcher = new NamedEventMatcher();
+        matcher.name = eventName.trim();
+        return onTriggeredWithMatcher(workflowKey, NamedEvent.class, matcher, customizer);
+    }
+
     public T onDocChange(String workflowKey, String path, Consumer<StepsBuilder> customizer) {
         require(workflowKey, "workflow key");
         require(path, "path");
@@ -277,10 +291,6 @@ public class DocBuilder<T extends DocBuilder<T>> {
         trackContract(channelKey);
         canEmit(channelKey, deriveEmitOperationKey(channelKey));
         return self();
-    }
-
-    public T myOs() {
-        return myOsAdmin();
     }
 
     public T canEmit(String channelKey) {
@@ -444,24 +454,80 @@ public class DocBuilder<T extends DocBuilder<T>> {
                           String workflowKey,
                           Class<?> responseTypeClass,
                           Consumer<StepsBuilder> customizer) {
+        return onAIResponse(integrationName, workflowKey, responseTypeClass, null, customizer);
+    }
+
+    public T onAIResponse(String integrationName,
+                          String workflowKey,
+                          Class<?> responseTypeClass,
+                          String taskName,
+                          Consumer<StepsBuilder> customizer) {
         require(responseTypeClass, "response type");
         require(customizer, "steps");
-        StepsBuilder.AiIntegrationConfig integration = requireAiIntegration(integrationName);
+        AIIntegrationConfig integration = requireAiIntegration(integrationName);
+        String normalizedTask = normalizeTaskName(taskName);
+        if (normalizedTask != null && integration.task(normalizedTask) == null) {
+            throw new IllegalStateException("Unknown task '" + normalizedTask
+                    + "' for AI integration '" + integration.name() + "'");
+        }
 
         SubscriptionUpdateMatcher matcher = new SubscriptionUpdateMatcher();
-        matcher.subscriptionId = integration.subscriptionId;
+        matcher.subscriptionId = integration.subscriptionId();
 
         AIResponseMatcher responseMatcher = new AIResponseMatcher();
         responseMatcher.inResponseTo = new AIResponseInResponseToMatcher();
         responseMatcher.inResponseTo.incomingEvent = new AIIncomingEventMatcher();
-        responseMatcher.inResponseTo.incomingEvent.requester = integration.requesterId;
+        responseMatcher.inResponseTo.incomingEvent.requester = integration.requesterId();
+        responseMatcher.inResponseTo.incomingEvent.taskName = normalizedTask;
 
         Node updateMatcher = BLUE.objectToNode(responseMatcher);
         updateMatcher.type(TypeRef.of(responseTypeClass).alias());
         matcher.update = updateMatcher;
 
         return onTriggeredWithMatcher(workflowKey, SubscriptionUpdate.class, matcher, steps -> {
-            steps.replaceExpression("_SaveAIContext", integration.contextPath, "event.update.context");
+            steps.replaceExpression("_SaveAIContext", integration.contextPath(), "event.update.context");
+            customizer.accept(steps);
+        });
+    }
+
+    public T onAIResponse(String integrationName,
+                          String workflowKey,
+                          String namedEventName,
+                          Consumer<StepsBuilder> customizer) {
+        return onAIResponse(integrationName, workflowKey, namedEventName, null, customizer);
+    }
+
+    public T onAIResponse(String integrationName,
+                          String workflowKey,
+                          String namedEventName,
+                          String taskName,
+                          Consumer<StepsBuilder> customizer) {
+        require(namedEventName, "named event name");
+        require(customizer, "steps");
+        AIIntegrationConfig integration = requireAiIntegration(integrationName);
+        String normalizedTask = normalizeTaskName(taskName);
+        if (normalizedTask != null && integration.task(normalizedTask) == null) {
+            throw new IllegalStateException("Unknown task '" + normalizedTask
+                    + "' for AI integration '" + integration.name() + "'");
+        }
+
+        SubscriptionUpdateMatcher matcher = new SubscriptionUpdateMatcher();
+        matcher.subscriptionId = integration.subscriptionId();
+
+        AINamedEventResponseMatcher responseMatcher = new AINamedEventResponseMatcher();
+        responseMatcher.name = namedEventName.trim();
+        if (normalizedTask != null) {
+            responseMatcher.inResponseTo = new AIResponseInResponseToMatcher();
+            responseMatcher.inResponseTo.incomingEvent = new AIIncomingEventMatcher();
+            responseMatcher.inResponseTo.incomingEvent.taskName = normalizedTask;
+        }
+
+        Node updateMatcher = BLUE.objectToNode(responseMatcher);
+        updateMatcher.type(TypeRef.of(NamedEvent.class).alias());
+        matcher.update = updateMatcher;
+
+        return onTriggeredWithMatcher(workflowKey, SubscriptionUpdate.class, matcher, steps -> {
+            steps.replaceExpression("_SaveAIContext", integration.contextPath(), "event.update.context");
             customizer.accept(steps);
         });
     }
@@ -555,9 +621,9 @@ public class DocBuilder<T extends DocBuilder<T>> {
         return new Node().type("List");
     }
 
-    private StepsBuilder.AiIntegrationConfig requireAiIntegration(String integrationName) {
+    private AIIntegrationConfig requireAiIntegration(String integrationName) {
         require(integrationName, "ai integration");
-        StepsBuilder.AiIntegrationConfig config = aiIntegrations.get(integrationName.trim());
+        AIIntegrationConfig config = aiIntegrations.get(integrationName.trim());
         if (config == null) {
             throw new IllegalArgumentException("Unknown AI integration: " + integrationName);
         }
@@ -573,44 +639,86 @@ public class DocBuilder<T extends DocBuilder<T>> {
         String contextPath = definition.contextPath.trim();
 
         String token = aiToken(name);
-        String requestId = "REQ_" + token;
-        String subscriptionId = "SUB_" + token;
-
-        StepsBuilder.AiIntegrationConfig config = new StepsBuilder.AiIntegrationConfig()
-                .name(name)
-                .sessionId(sessionId)
-                .permissionFrom(permissionFrom)
-                .requesterId(requesterId)
-                .contextPath(contextPath)
-                .subscriptionId(subscriptionId);
+        AIIntegrationConfig config = new AIIntegrationConfig(
+                name,
+                token,
+                sessionId,
+                permissionFrom,
+                statusPath,
+                contextPath,
+                requesterId,
+                definition.permissionTiming,
+                definition.permissionTriggerEventClass,
+                definition.permissionTriggerDocPath,
+                definition.tasks);
+        if (aiIntegrations.containsKey(name)) {
+            throw new IllegalStateException("Duplicate AI integration: " + name);
+        }
         aiIntegrations.put(name, config);
 
         set(statusPath, "pending");
         set(contextPath, new Node().properties(new LinkedHashMap<String, Node>()));
 
         String keyPrefix = "ai" + token;
-        onInit(keyPrefix + "RequestPermission", steps -> steps.myOs().requestSingleDocPermission(
+        Consumer<StepsBuilder> permissionSteps = steps -> steps.myOs().requestSingleDocPermission(
                 permissionFrom,
-                requestId,
+                config.requestId(),
                 sessionId,
-                MyOsPermissions.create().read(true).singleOps("provideInstructions")));
+                MyOsPermissions.create().read(true).singleOps("provideInstructions"));
+
+        switch (config.permissionTiming()) {
+            case ON_INIT:
+                onInit(keyPrefix + "RequestPermission", permissionSteps);
+                break;
+            case ON_EVENT:
+                if (config.permissionTriggerEventClass() == null) {
+                    throw new IllegalStateException("ai('" + name
+                            + "'): requestPermissionOnEvent requires event class");
+                }
+                onEvent(keyPrefix + "RequestPermission",
+                        config.permissionTriggerEventClass(),
+                        permissionSteps);
+                break;
+            case ON_DOC_CHANGE:
+                if (config.permissionTriggerDocPath() == null
+                        || config.permissionTriggerDocPath().trim().isEmpty()) {
+                    throw new IllegalStateException("ai('" + name
+                            + "'): requestPermissionOnDocChange requires path");
+                }
+                onDocChange(keyPrefix + "RequestPermission",
+                        config.permissionTriggerDocPath(),
+                        permissionSteps);
+                break;
+            case MANUAL:
+                break;
+            default:
+                throw new IllegalStateException("Unsupported permission timing: " + config.permissionTiming());
+        }
 
         onMyOsResponse(keyPrefix + "Subscribe",
                 SingleDocumentPermissionGranted.class,
-                requestId,
-                steps -> steps.myOs().subscribeToSession(sessionId, subscriptionId));
+                config.requestId(),
+                steps -> steps.myOs().subscribeToSession(permissionFrom, sessionId, config.subscriptionId()));
 
         onSubscriptionUpdate(keyPrefix + "SubscriptionReady",
-                subscriptionId,
+                config.subscriptionId(),
                 SubscriptionToSessionInitiated.class,
                 steps -> steps.replaceValue("Mark" + token + "Ready", statusPath, "ready"));
 
         onMyOsResponse(keyPrefix + "PermissionRejected",
                 SingleDocumentPermissionRejected.class,
-                requestId,
+                config.requestId(),
                 steps -> steps.replaceValue("Mark" + token + "Revoked", statusPath, "revoked"));
 
         return self();
+    }
+
+    private static String normalizeTaskName(String taskName) {
+        if (taskName == null) {
+            return null;
+        }
+        String normalized = taskName.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private static String aiToken(String name) {
@@ -936,12 +1044,22 @@ public class DocBuilder<T extends DocBuilder<T>> {
         public AIResponseInResponseToMatcher inResponseTo;
     }
 
+    private static final class AINamedEventResponseMatcher {
+        public String name;
+        public AIResponseInResponseToMatcher inResponseTo;
+    }
+
     private static final class AIResponseInResponseToMatcher {
         public AIIncomingEventMatcher incomingEvent;
     }
 
     private static final class AIIncomingEventMatcher {
         public String requester;
+        public String taskName;
+    }
+
+    private static final class NamedEventMatcher {
+        public String name;
     }
 
     private static final class AiIntegrationDefinition {
@@ -951,6 +1069,10 @@ public class DocBuilder<T extends DocBuilder<T>> {
         public String statusPath;
         public String contextPath;
         public String requesterId;
+        public AIIntegrationConfig.PermissionTiming permissionTiming = AIIntegrationConfig.PermissionTiming.ON_INIT;
+        public Class<?> permissionTriggerEventClass;
+        public String permissionTriggerDocPath;
+        public Map<String, AITaskTemplate> tasks = new LinkedHashMap<String, AITaskTemplate>();
     }
 
     public static final class AiIntegrationBuilder<P extends DocBuilder<P>> {
@@ -991,6 +1113,47 @@ public class DocBuilder<T extends DocBuilder<T>> {
             return this;
         }
 
+        public AiIntegrationBuilder<P> requestPermissionOnInit() {
+            this.definition.permissionTiming = AIIntegrationConfig.PermissionTiming.ON_INIT;
+            this.definition.permissionTriggerEventClass = null;
+            this.definition.permissionTriggerDocPath = null;
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> requestPermissionOnEvent(Class<?> eventClass) {
+            require(eventClass, "permission trigger event class");
+            this.definition.permissionTiming = AIIntegrationConfig.PermissionTiming.ON_EVENT;
+            this.definition.permissionTriggerEventClass = eventClass;
+            this.definition.permissionTriggerDocPath = null;
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> requestPermissionOnDocChange(String path) {
+            this.definition.permissionTiming = AIIntegrationConfig.PermissionTiming.ON_DOC_CHANGE;
+            this.definition.permissionTriggerDocPath = requireValue(path, "permission trigger doc path");
+            this.definition.permissionTriggerEventClass = null;
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> requestPermissionManually() {
+            this.definition.permissionTiming = AIIntegrationConfig.PermissionTiming.MANUAL;
+            this.definition.permissionTriggerEventClass = null;
+            this.definition.permissionTriggerDocPath = null;
+            return this;
+        }
+
+        public TaskBuilder<P> task(String taskName) {
+            return new TaskBuilder<P>(this, taskName);
+        }
+
+        private void registerTask(AITaskTemplate taskTemplate) {
+            String taskName = taskTemplate.name();
+            if (definition.tasks.containsKey(taskName)) {
+                throw new IllegalArgumentException("Duplicate AI task name: " + taskName);
+            }
+            definition.tasks.put(taskName, taskTemplate);
+        }
+
         public P done() {
             requireValue(definition.sessionId, "sessionId");
             requireValue(definition.permissionFrom, "permissionFrom");
@@ -1005,6 +1168,75 @@ public class DocBuilder<T extends DocBuilder<T>> {
                 throw new IllegalArgumentException(fieldName + " is required");
             }
             return value.trim();
+        }
+    }
+
+    public static final class TaskBuilder<P extends DocBuilder<P>> {
+        private final AiIntegrationBuilder<P> parent;
+        private final String taskName;
+        private final List<String> instructions = new ArrayList<String>();
+        private final List<TypeReference> expectedResponses = new ArrayList<TypeReference>();
+        private final List<NamedEventExpectation> expectedNamedEvents = new ArrayList<NamedEventExpectation>();
+
+        private TaskBuilder(AiIntegrationBuilder<P> parent, String taskName) {
+            this.parent = parent;
+            if (taskName == null || taskName.trim().isEmpty()) {
+                throw new IllegalArgumentException("task name is required");
+            }
+            this.taskName = taskName.trim();
+        }
+
+        public TaskBuilder<P> instruction(String text) {
+            if (text == null || text.trim().isEmpty()) {
+                return this;
+            }
+            instructions.add(text.trim());
+            return this;
+        }
+
+        public TaskBuilder<P> expects(Class<?> eventTypeClass) {
+            expectedResponses.add(TypeReference.of(eventTypeClass));
+            return this;
+        }
+
+        public TaskBuilder<P> expects(Node eventTypeNode) {
+            expectedResponses.add(TypeReference.of(eventTypeNode));
+            return this;
+        }
+
+        public TaskBuilder<P> expectsNamed(String eventName) {
+            expectedNamedEvents.add(NamedEventExpectation.named(eventName).build());
+            return this;
+        }
+
+        public TaskBuilder<P> expectsNamed(String eventName,
+                                           Consumer<NamedEventExpectation.Builder> fieldsCustomizer) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldsCustomizer != null) {
+                fieldsCustomizer.accept(builder);
+            }
+            expectedNamedEvents.add(builder.build());
+            return this;
+        }
+
+        public TaskBuilder<P> expectsNamed(String eventName, String... fieldNames) {
+            NamedEventExpectation.Builder builder = NamedEventExpectation.named(eventName);
+            if (fieldNames != null) {
+                for (String fieldName : fieldNames) {
+                    builder.field(fieldName);
+                }
+            }
+            expectedNamedEvents.add(builder.build());
+            return this;
+        }
+
+        public AiIntegrationBuilder<P> done() {
+            if (instructions.isEmpty()) {
+                throw new IllegalStateException(
+                        "Task '" + taskName + "': at least one instruction required");
+            }
+            parent.registerTask(new AITaskTemplate(taskName, instructions, expectedResponses, expectedNamedEvents));
+            return parent;
         }
     }
 

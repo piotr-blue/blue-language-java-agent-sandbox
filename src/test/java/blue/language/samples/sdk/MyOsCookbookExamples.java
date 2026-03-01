@@ -52,6 +52,7 @@ public final class MyOsCookbookExamples {
                         "REQ_WEATHER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/weatherSessionId')"),
                                         "SUB_WEATHER")
                                 .replaceValue("MarkSubscribing", "/status", "subscribing"))
@@ -82,6 +83,7 @@ public final class MyOsCookbookExamples {
                         "REQ_LLM",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "ownerChannel",
                                         DocBuilder.expr("document('/llmSessionId')"),
                                         "SUB_LLM_PROVIDER"))
                 .operation("analyze")
@@ -148,6 +150,7 @@ public final class MyOsCookbookExamples {
                         "REQ_INVOICES",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "accountingChannel",
                                         DocBuilder.expr("event.targetSessionId"),
                                         DocBuilder.expr("document('/invoiceSubscriptionId')")))
                 .onSubscriptionUpdate("onInvoiceUpdate",
@@ -193,6 +196,7 @@ public final class MyOsCookbookExamples {
                         "REQ_RECRUITMENT_CVS",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("event.targetSessionId"),
                                         DocBuilder.expr("document('/cvSubscriptionId')")))
                 .onMyOsResponse("onLlmProviderAccessGranted",
@@ -200,6 +204,7 @@ public final class MyOsCookbookExamples {
                         "REQ_RECRUITMENT_PROVIDER",
                         steps -> steps
                                 .myOs().subscribeToSession(
+                                        "recruitmentChannel",
                                         DocBuilder.expr("document('/llmProviderSessionId')"),
                                         "SUB_RECRUITMENT_PROVIDER"))
                 .onSubscriptionUpdate("onCvArrived",

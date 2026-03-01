@@ -73,7 +73,7 @@ class DocBuilderStepsDslParityTest {
                         .emit("EmitBean", new ChatMessage().message("from-bean"))
                         .emitType("EmitTyped", Integer.class,
                                 payload -> payload.put("value", 7).putExpression("total", "document('/counter') + 3"))
-                        .emitAdHocEvent("EmitAdHoc", "AD_HOC", payload -> payload.put("flag", true))
+                        .namedEvent("EmitAdHoc", "AD_HOC", payload -> payload.put("flag", true))
                         .namedEvent("EmitNamed", "NAMED")
                         .namedEvent("EmitNamedWithPayload", "NAMED_PAYLOAD", payload -> payload.put("status", "ok"))
                         .replaceValue("ReplaceValue", "/status", "ready")
@@ -370,6 +370,22 @@ class DocBuilderStepsDslParityTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> steps.ext(ignored -> null));
         assertEquals("extensionFactory cannot return null", exception.getMessage());
+    }
+
+    @Test
+    void eventEmitHelpersRequireExplicitStepNames() {
+        StepsBuilder steps = new StepsBuilder();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> steps.triggerEvent(null, new Node().type("Conversation/Event")));
+        assertThrows(IllegalArgumentException.class,
+                () -> steps.emit(" ", new ChatMessage().message("x")));
+        assertThrows(IllegalArgumentException.class,
+                () -> steps.emitType("", ChatMessage.class, payload -> payload.put("message", "x")));
+        assertThrows(IllegalArgumentException.class,
+                () -> steps.namedEvent("", "event-name"));
+        assertThrows(IllegalArgumentException.class,
+                () -> steps.namedEvent("Named", " "));
     }
 
     @Test

@@ -1,49 +1,30 @@
-# SDK DSL Mapping Reference
+# SDK DSL Developer Reference
 
-This is the canonical reference for the current runtime DSL under:
-- `blue.language.sdk`
-- `blue.language.sdk.paynote`
-- `blue.language.sdk.internal` (used indirectly through DSL methods)
+This guide is for Java developers authoring Blue documents with the runtime DSL.
 
-It explains:
-1. What each DSL method does.
-2. Where it writes in the `Node` document.
-3. How generated contract/workflow keys are named.
-4. How to compose document, MyOS, AI, payment, and PayNote flows.
+Scope:
+- `blue.language.sdk.DocBuilder` / `SimpleDocBuilder`
+- `blue.language.sdk.internal.StepsBuilder` (inside step lambdas)
+- `blue.language.sdk.MyOsSteps` / `MyOsPermissions`
+- `blue.language.sdk.paynote.PayNotes` / `PayNoteBuilder`
 
-If you are new to this DSL, read sections in order.
+Use this document for authoring patterns and complete API usage.
+Use `sdk-dsl-mapping-audit-reference.md` for exact output mapping shapes.
 
----
+## 1) Quick Start
 
-## 1) Mental Model
-
-A built document is a `Node` tree with three main areas:
-- Document fields: root properties (for example `/counter`, `/status`, `/amount/total`)
-- Contracts: `/contracts/*`
-- Policies: `/policies/*`
-
-The DSL is additive: you call fluent methods that write to these areas.
-
-Core ideas:
-- `field(...)` writes document data.
-- `channel(...)`, `operation(...)`, `onEvent(...)`, etc. write contracts.
-- Step lambdas use `StepsBuilder` to produce workflow steps.
-
----
-
-## 2) Quick Start
-
-### 2.1 Smallest useful doc
+Minimal counter document:
 
 ```java
 Node doc = DocBuilder.doc()
     .name("Counter")
+    .description("Simple counter")
     .field("/counter", 0)
     .channel("ownerChannel")
     .operation("increment")
         .channel("ownerChannel")
         .requestType(Integer.class)
-        .description("Increment counter")
+        .description("Increment by request amount")
         .steps(steps -> steps.replaceExpression(
             "Inc",
             "/counter",
@@ -52,114 +33,48 @@ Node doc = DocBuilder.doc()
     .buildDocument();
 ```
 
-Equivalent shape:
+## 2) Choosing Builder Entry Points
 
-```yaml
-name: Counter
-counter: 0
-contracts:
-  ownerChannel:
-    type: Conversation/Timeline Channel
-  increment:
-    type: Conversation/Operation
-    channel: ownerChannel
-    description: Increment counter
-    request:
-      type: Integer
-  incrementImpl:
-    type: Conversation/Sequential Workflow Operation
-    operation: increment
-    steps:
-      - name: Inc
-        type: Conversation/Update Document
-        changeset:
-          - op: replace
-            path: /counter
-            val: ${document('/counter') + event.message.request}
+| Goal | Entry |
+|---|---|
+| Build new document | `DocBuilder.doc()` or `SimpleDocBuilder.doc()` |
+| Edit existing in place | `DocBuilder.edit(existing)` |
+| Edit clone (safe template reuse) | `DocBuilder.from(existing)` |
+| Build PayNote | `PayNotes.payNote(name)` |
+
+`DocBuilder.edit(existing)` mutates the given node.
+`DocBuilder.from(existing)` clones first.
+
+## 3) Document Structure API
+
+### 3.1 Identity
+
+```java
+.name("My Doc")
+.description("...")
+.type("MyOS/Agent")
+.type(MyAgentType.class)
 ```
 
----
+### 3.2 Fields
 
-## 3) API Surface Map
+Public field API is `field(...)`.
 
-| Area | Main types |
-|---|---|
-| Generic document DSL | `DocBuilder`, `SimpleDocBuilder` |
-| Step DSL (inside workflows/operations) | `StepsBuilder`, `ChangesetBuilder`, `NodeObjectBuilder` |
-| MyOS extension | `MyOsSteps`, `MyOsPermissions` |
-| PayNote DSL | `PayNoteBuilder`, `PayNotes` |
-
----
-
-## 4) DocBuilder / SimpleDocBuilder
-
-## 4.1 Entry points and edit mode
-
-| DSL | Behavior |
-|---|---|
-| `DocBuilder.doc()` / `SimpleDocBuilder.doc()` | New empty document |
-| `DocBuilder.edit(node)` / `SimpleDocBuilder.edit(node)` | Edit provided node in place (mutating) |
-| `DocBuilder.from(node)` / `SimpleDocBuilder.from(node)` | Clone first, then edit clone |
-
-Use:
-- `edit(...)` when you intentionally mutate a template node.
-- `from(...)` when you want template immutability.
-
-## 4.2 Identity and type
-
-| DSL | Mapping |
-|---|---|
-| `.name("X")` | `/name: X` |
-| `.description("...")` | `/description: ...` |
-| `.type("Alias")` | `/type: Alias` |
-| `.type(SomeClass.class)` | `/type` from `TypeRef.of(SomeClass)` |
-
-## 4.3 Public field API (no public `set`)
-
-Public field writing is `field(...)`.
-
-### Quick form
+Quick form:
 
 ```java
 .field("/counter", 0)
-.field("/profile", profileBean)
-.field("/meta", metaNode)
+.field("/status", "ready")
+.field("/meta", new Node())
+.field("/address", addressBean)
 ```
 
-Behavior:
-- Primitive/string/boolean/number -> `value`
-- `Node` -> inserted as node
-- Bean/map/list/array -> `Blue.objectToNode(...)`
-- `java.time.*` values -> stored as `toString()` text
-
-### Supported `field(...)` forms
+Builder form:
 
 ```java
-// 1) Value only
-.field("/x", 1)
-
-// 2) Schema/metadata only
-.field("/x").type(Integer.class).description("Some desc").done()
-
-// 3) Value + metadata
-.field("/x").value(1).type(Integer.class).description("Some desc").done()
-
-// 4) Whole node value
-.field("/x", someNode)
-
-// 5) Bean value
-.field("/x", someBean) // converted through Blue.objectToNode(...)
-```
-
-Note:
-- `.field("/x").done()` with no other builder calls does not create `/x` (no-op write), but still tracks `/x` if called inside an open section.
-
-### Builder form
-
-```java
-.field("/x")
+.field("/score")
     .type(Integer.class)
-    .description("Score")
+    .description("Current score")
     .required(true)
     .minimum(0)
     .maximum(100)
@@ -167,554 +82,561 @@ Note:
     .done()
 ```
 
-Supported builder methods:
-- `.type(Class<?>)`
-- `.type(String)`
-- `.type(Node)`
-- `.description(String)`
-- `.value(Object)`
-- `.required(boolean)`
-- `.minimum(Number)`
-- `.maximum(Number)`
-- `.done()`
-
-Constraints map to node constraints (`/field/constraints/*`).
-
-## 4.4 Sections (`Conversation/Document Section`)
-
-Sections group related fields and contracts for readability/LLM context.
+Also available:
 
 ```java
-.section("counterOps", "Counter operations", "Increment/decrement flow")
+.replace("/counter", 10)
+.remove("/obsolete")
+```
+
+Pointer notes:
+- Use JSON pointer paths (`/a/b/c`).
+- Missing objects/arrays are created during writes.
+- Root write/remove (`/`) is rejected.
+
+### 3.3 Expression helper
+
+```java
+DocBuilder.expr("document('/counter') + 1") // -> ${document('/counter') + 1}
+```
+
+If the input is already wrapped (`${...}`), it is returned unchanged.
+
+### 3.3 Sections (for organization + LLM context)
+
+```java
+.section("participants", "Participants", "Document channels")
+    .channel("ownerChannel")
+.endSection()
+
+.section("counterOps", "Counter operations", "Increment/decrement logic")
     .field("/counter", 0)
-    .operation("increment") ...
+    .operation("increment")
+        .channel("ownerChannel")
+        .requestType(Integer.class)
+        .steps(steps -> steps.replaceExpression(
+            "Inc",
+            "/counter",
+            "document('/counter') + event.message.request"))
+        .done()
 .endSection()
 ```
 
-Generated contract:
-
-```yaml
-counterOps:
-  type: Conversation/Document Section
-  title: Counter operations
-  summary: Increment/decrement flow
-  relatedFields:
-    - /counter
-  relatedContracts:
-    - increment
-    - incrementImpl
-```
-
-Rules:
-- One active section at a time.
-- Nested sections are rejected.
-- `buildDocument()` fails if section not closed.
-- Outside a section, tracking is no-op.
-
-### What gets auto-tracked in a section
-
-| Method | Tracked keys |
-|---|---|
-| `channel("x")` | `x` |
-| `channels("a","b")` | `a`, `b` |
-| `compositeChannel("u",...)` | `u` |
-| `operation("k",...)` | `k` and `kImpl` when impl exists |
-| `operation("k").steps(...).done()` | `k`, `kImpl` |
-| `onInit("wf",...)` | `wf` |
-| `onEvent("wf",...)` | `wf` |
-| `onChannelEvent("wf",...)` | `wf` |
-| `onDocChange("wf",...)` | `wfDocUpdateChannel`, `wf` |
-| `onMyOsResponse(...)` / `onTriggeredWith*` / `onSubscriptionUpdate(...)` | workflow key |
-| `myOsAdmin(...)` | admin channel + generated emit operation/impl |
-| `ai("name").done()` | generated AI workflow keys |
-| `field("/path", ...)` or `field("/path")...done()` | `/path` |
-
-## 4.5 Channels
-
-| DSL | Mapping |
-|---|---|
-| `.channel("ownerChannel")` | `/contracts/ownerChannel/type: Conversation/Timeline Channel` |
-| `.channel("key", channelContractObject)` | object converted with `Blue.objectToNode(...)`, then type normalized from object class alias |
-| `.channels("a","b")` | repeated `.channel(...)` |
-| `.compositeChannel("union", "a", "b")` | `Conversation/Composite Timeline Channel` + `/channels: [a,b]` |
-
-Recommended:
-- Pass a typed channel bean (for example `MyOsTimelineChannel`).
-- Raw `Node` works syntactically but is not recommended here because type is still normalized from runtime class.
-
-## 4.6 Operations
-
-### Inline forms
-
-| DSL | Mapping |
-|---|---|
-| `.operation(key, channel, description)` | only operation contract |
-| `.operation(key, channel, reqType, description)` | operation contract + request type |
-| `.operation(key, channel, description, steps)` | operation contract + `keyImpl` sequential workflow operation |
-| `.operation(key, channel, reqType, description, steps)` | same + request type |
-
-### Builder form
+Edit existing section membership without changing title/summary:
 
 ```java
-.operation("confirmShipment")
-    .channel("shipmentCompanyChannel")
-    .description("Confirm shipment")
-    .requestType(Integer.class)
-    .requestDescription("Value to confirm")
-    .steps(steps -> ...)
+.section("counterOps")
+    .operation("decrement")
+        .channel("ownerChannel")
+        .requestType(Integer.class)
+        .steps(steps -> steps.replaceExpression(
+            "Dec",
+            "/counter",
+            "document('/counter') - event.message.request"))
+        .done()
+.endSection()
+```
+
+## 4) Channels and Participants
+
+### 4.1 Core channel
+
+```java
+.channel("ownerChannel") // type: Core/Channel
+.channels("aliceChannel", "bobChannel")
+```
+
+### 4.2 Channel from bean
+
+```java
+.channel("ownerChannel", new TimelineChannel().timelineId("timeline-123"))
+```
+
+### 4.3 Composite channel
+
+```java
+.compositeChannel("owners", "aliceChannel", "bobChannel")
+```
+
+### 4.4 MyOS admin and emit helpers
+
+```java
+.myOsAdmin()              // creates myOsAdminChannel + myOsEmit + myOsEmitImpl
+.myOsAdmin("adminChannel")
+
+.canEmit("aliceChannel")
+.canEmit("bobChannel", EventA.class, EventB.class)
+.canEmit("celineChannel", allowedShape1, allowedShape2)
+```
+
+`canEmit(...)` creates:
+- `<derivedEmitKey>` operation with `List` request
+- `<derivedEmitKey>Impl` with JS step `return { events: event };`
+
+## 5) Operations
+
+### 5.1 Inline forms
+
+```java
+.operation("approve", "ownerChannel", "Approve order")
+.operation("approve", "ownerChannel", ApprovalRequest.class, "Approve order")
+
+.operation("approve", "ownerChannel", "Approve order", steps -> steps
+    .namedEvent("EmitApproved", "order-approved"))
+```
+
+If steps are provided, DSL generates both:
+- `approve` (`Conversation/Operation`)
+- `approveImpl` (`Conversation/Sequential Workflow Operation`)
+
+### 5.2 Operation builder (recommended)
+
+```java
+.operation("approve")
+    .channel("ownerChannel")
+    .description("Approve order")
+    .requestType(ApprovalRequest.class)
+    .requestDescription("Approval payload")
+    .steps(steps -> steps
+        .namedEvent("EmitApproved", "order-approved")
+        .replaceValue("Mark", "/status", "approved"))
     .done()
 ```
 
-Builder methods:
-- `.channel(...)`
-- `.description(...)`
-- `.requestType(Class<?>)`
-- `.request(Object)` (custom request schema object/node)
-- `.requestDescription(...)`
-- `.noRequest()`
-- `.steps(...)`
-- `.done()`
+Other request controls:
 
-Implementation mapping (when steps exist):
-- `/contracts/{key}Impl/type: Conversation/Sequential Workflow Operation`
-- `/contracts/{key}Impl/operation: {key}`
-- `/contracts/{key}Impl/steps: [...]`
-
-## 4.7 Workflow contracts
-
-| DSL | Mapping |
-|---|---|
-| `.onChannelEvent(wf, channel, Event.class, steps)` | `Conversation/Sequential Workflow` on explicit channel |
-| `.onEvent(wf, Event.class, steps)` | ensures `triggeredEventChannel`; workflow on it |
-| `.onDocChange(wf, "/path", steps)` | adds `{wf}DocUpdateChannel` + workflow keyed `{wf}` |
-| `.onInit(wf, steps)` | ensures `initLifecycleChannel`; workflow on it |
-
-Auto channels:
-- `triggeredEventChannel`: `Triggered Event Channel`
-- `initLifecycleChannel`: `Lifecycle Event Channel` with `Document Processing Initiated`
-- `{wf}DocUpdateChannel`: `Document Update Channel` with `path`
-
-## 4.8 Triggered-event matchers and MyOS response helpers
-
-| DSL | Mapping |
-|---|---|
-| `.onMyOsResponse(wf, Resp.class, requestId, steps)` | typed triggered matcher + requestId correlation |
-| `.onMyOsResponse(wf, Resp.class, steps)` | typed triggered matcher only |
-| `.onTriggeredWithId(wf, Event.class, "requestId", id, steps)` | matcher with `requestId` + `inResponseTo.requestId` |
-| `.onTriggeredWithId(wf, Event.class, "subscriptionId", id, steps)` | matcher with `subscriptionId` |
-| `.onTriggeredWithMatcher(wf, Event.class, bean, steps)` | bean converted to matcher; type forced to `Event.class` |
-| `.onSubscriptionUpdate(wf, subId, updateType, steps)` | `MyOS/Subscription Update` matcher + optional `update.type` |
-| `.onSubscriptionUpdate(wf, subId, steps)` | same without update type |
-
-`onTriggeredWithId` supports only `requestId` and `subscriptionId` field names.
-
-## 4.9 MyOS admin and emission convenience
-
-| DSL | Mapping |
-|---|---|
-| `.myOsAdmin()` | creates `myOsAdminChannel` (`MyOS/MyOS Timeline`) + `myOsEmit` operation + `myOsEmitImpl` |
-| `.myOsAdmin("adminChannel")` | same behavior for provided key (`adminEmit`, etc.) |
-| `.myOs()` | alias to `.myOsAdmin()` |
-| `.canEmit("aliceChannel")` | creates `aliceEmit` + `aliceEmitImpl`, request type `List` |
-| `.canEmit("bobChannel", Ev1.class, Ev2.class)` | same + request items typed from classes |
-| `.canEmit("celineChannel", shape1, shape2)` | same + request items from provided object/node shapes |
-
-Emit implementation step code:
-
-```js
-return { events: event };
+```java
+.request(customRequestSchemaBeanOrNode)
+.noRequest()
 ```
 
-Operation key derivation:
-- If channel ends with `Channel`: `myOsAdminChannel -> myOsAdminEmit`
-- Otherwise: `<channel>Emit`
+Top-level helper:
 
-## 4.10 Direct change policy helper
+```java
+.requestDescription("approve", "Approval payload")
+```
+
+### 5.3 Direct change operation helper
 
 ```java
 .directChange("applyPatch", "ownerChannel", "Apply incoming changeset")
 ```
 
-Adds:
-- operation `applyPatch`
+This creates:
+- `applyPatch` operation
 - `applyPatchImpl` with:
-  1. JS step `CollectChangeset`
-  2. Update-document step from `steps.CollectChangeset.changeset`
-- policy:
+1. JS step that reads `event.message.request.changeset`
+2. `updateDocumentFromExpression(...)` applying that changeset
+- policy `contractsChangePolicy` with `mode = direct-change`
 
-```yaml
-policies:
-  contractsChangePolicy:
-    mode: direct-change
-    reason: operation applies request changeset
+## 6) Workflow Contracts
+
+### 6.1 Lifecycle and event workflows
+
+```java
+.onInit("initialize", steps -> ...)
+.onEvent("onFundsCaptured", FundsCaptured.class, steps -> ...)
+.onNamedEvent("onReady", "provider-ready", steps -> ...)
+.onChannelEvent("onOwnerMsg", "ownerChannel", ChatMessage.class, steps -> ...)
+.onDocChange("onCounterChanged", "/counter", steps -> ...)
 ```
 
-## 4.11 Pointer editing
+### 6.2 Correlated matching helpers
 
-| DSL | Behavior |
-|---|---|
-| `.field("/a/b", value)` | set/create deep path |
-| `.replace("/a/b", value)` | same write semantics |
-| `.remove("/a/b")` | remove property/array element if exists |
+```java
+.onMyOsResponse("onGranted", SingleDocumentPermissionGranted.class, "REQ_X", steps -> ...)
+.onMyOsResponse("onGrantedAny", SingleDocumentPermissionGranted.class, steps -> ...)
 
-Rules:
-- Root `/` is rejected for replace/remove/write internals.
-- Missing containers are created for writes.
-- Array segments must be numeric when traversing arrays.
+.onTriggeredWithId("onReq", SomeResponse.class, "requestId", "REQ_1", steps -> ...)
+.onTriggeredWithId("onSub", SomeEvent.class, "subscriptionId", "SUB_1", steps -> ...)
 
-## 4.12 Build and expression helper
+.onTriggeredWithMatcher("onCustom", SomeEvent.class, matcherBean, steps -> ...)
 
-| DSL | Behavior |
-|---|---|
-| `.buildDocument()` | returns current in-memory node |
-| `DocBuilder.expr("...")` | wraps into `${...}` unless already wrapped |
+.onSubscriptionUpdate("onSubAny", "SUB_1", steps -> ...)
+.onSubscriptionUpdate("onSubTyped", "SUB_1", SomeUpdateType.class, steps -> ...)
+```
 
----
+## 7) StepsBuilder (inside lambdas)
 
-## 5) AI Integration DSL
+You use `StepsBuilder` in `.steps(...)`, `.onInit(...)`, `.onEvent(...)`, etc.
+
+### 7.1 Core step constructors
+
+```java
+.jsRaw("Compute", "return { changeset: [] };")
+
+.updateDocument("Apply", cs -> cs
+    .replaceValue("/status", "ready")
+    .replaceExpression("/total", "document('/a') + document('/b')")
+    .addValue("/items/0", "x")
+    .remove("/obsolete"))
+
+.updateDocumentFromExpression("ApplyDynamic", "steps.Compute.changeset")
+
+.triggerEvent("EmitRaw", rawEventNode)
+.emit("EmitBean", new ChatMessage().message("hello"))
+.emitType("EmitTyped", FundsCaptured.class, payload -> payload.put("amount", 100))
+.namedEvent("EmitNamed", "order-confirmed")
+.namedEvent("EmitNamedPayload", "order-confirmed", payload -> payload
+    .put("orderId", "123")
+    .put("total", 2500))
+
+.replaceValue("Mark", "/status", "done")
+.replaceExpression("Calc", "/total", "document('/x') + 1")
+.raw(customStepNode)
+```
+
+Important:
+- `triggerEvent` / `emit` / `emitType` / `namedEvent` require explicit non-blank step names.
+
+### 7.2 `capture()` namespace
+
+```java
+steps.capture().lock();
+steps.capture().unlock();
+steps.capture().markLocked();
+steps.capture().markUnlocked();
+steps.capture().requestNow();
+steps.capture().requestPartial("event.message.request.amount");
+steps.capture().releaseFull();
+```
+
+### 7.3 Step extensions
+
+```java
+steps.ext(MyCustomSteps::new).doSomething();
+```
+
+## 8) AI Integration DSL
 
 AI integration is a first-class `DocBuilder` primitive.
 
-## 5.1 Define an AI integration
+### 8.1 Define integration
 
 ```java
 .ai("provider")
     .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
     .permissionFrom("ownerChannel")
-    .statusPath("/provider/status")
-    .contextPath("/provider/context")
-    .requesterId("MEAL_PLANNER")
+    .statusPath("/provider/status")          // optional, default /ai/provider/status
+    .contextPath("/provider/context")        // optional, default /ai/provider/context
+    .requesterId("MEAL_PLANNER")             // optional, default tokenized name
+    .requestPermissionOnInit()                // default
     .done()
 ```
 
-Default builder values before override:
-- `statusPath = /ai/<name>/status`
-- `contextPath = /ai/<name>/context`
-- `requesterId = <ALNUM-UPPER token from name>`
-
-Auto-generated assets on `.done()`:
-- `/statusPath = "pending"`
-- `/contextPath = {}`
-- `ai<TOKEN>RequestPermission` (`onInit`) -> `MyOS/Single Document Permission Grant Requested`
-- `ai<TOKEN>Subscribe` (`onMyOsResponse` for granted)
-- `ai<TOKEN>SubscriptionReady` (`onSubscriptionUpdate`) -> status `ready`
-- `ai<TOKEN>PermissionRejected` (`onMyOsResponse`) -> status `revoked`
-
-`TOKEN` = uppercase alphanumeric characters from integration name.
-
-## 5.2 Ask AI from steps
+Permission timing options:
 
 ```java
-steps.askAI("provider", "Generate", prompt -> prompt
-    .text(DocBuilder.expr("document('/prompt')"))
-    .text("Max: ${document('/maxCalories')}")
-    .text("Request: ${event.message.request}"));
+.requestPermissionOnInit()
+.requestPermissionOnEvent(AllParticipantsReady.class)
+.requestPermissionOnDocChange("/status")
+.requestPermissionManually()
 ```
 
-Emits `MyOS/Call Operation Requested` with:
-- `onBehalfOf` from `permissionFrom`
-- `targetSessionId` from integration config
-- `operation = provideInstructions`
-- `request.requester` from integration config
-- `request.context = ${document('<contextPath>')}`
-- `request.instructions` as concatenated expression
-
-Prompt behavior:
-- Each `.text(...)` or `.expression(...)` appends a new line between segments.
-- `${...}` interpolations in `.text(...)` are preserved as expressions.
-
-## 5.3 Handle AI responses
+### 8.2 Reusable AI tasks
 
 ```java
-.onAIResponse("provider", "onPlan", steps -> ...)
-.onAIResponse("provider", "onPlan", ResponseSubclass.class, steps -> ...)
+.ai("provider")
+    .sessionId(...)
+    .permissionFrom("ownerChannel")
+    .task("summarize")
+        .instruction("Summarize input in bullet points.")
+        .expects(ChatMessage.class)
+        .expectsNamed("meal-plan-ready", "planId", "totalCalories")
+        .done()
+    .done()
 ```
 
-Matcher behavior:
-- Triggered event type: `MyOS/Subscription Update`
-- `subscriptionId` bound to integration subscription id
-- `update.type` defaults to `Conversation/Response` (or explicit class)
-- `update.inResponseTo.incomingEvent.requester` must match integration requester id
-
-Auto-inserted first step:
-- `replaceExpression("_SaveAIContext", <contextPath>, "event.update.context")`
-
-Then your custom steps run.
-
----
-
-## 6) StepsBuilder (inside workflow/operation lambdas)
-
-`StepsBuilder` is used in:
-- `operation(..., steps -> ...)`
-- `onInit(..., steps -> ...)`
-- `onEvent(..., steps -> ...)`
-- etc.
-
-## 6.1 Core step constructors
-
-| DSL | Step mapping |
-|---|---|
-| `.jsRaw(name, code)` | `Conversation/JavaScript Code` |
-| `.updateDocument(name, changeset -> ...)` | `Conversation/Update Document` + array changeset |
-| `.updateDocumentFromExpression(name, expr)` | `Conversation/Update Document` + expression changeset |
-| `.triggerEvent(name, eventNode)` | `Conversation/Trigger Event` |
-| `.emit(name, bean)` | bean -> event node |
-| `.emitType(name, Event.class, payload)` | typed event with payload |
-| `.emitAdHocEvent(name, eventName, payload)` | `Common/Named Event` |
-| `.namedEvent(...)` | alias of `emitAdHocEvent` |
-| `.replaceValue(...)` | convenience update-document replace |
-| `.replaceExpression(...)` | convenience update-document replace expr |
-| `.raw(stepNode)` | appends exact node |
-
-## 6.2 ChangesetBuilder
-
-Used by `.updateDocument(...)`.
-
-| Method | Entry |
-|---|---|
-| `replaceValue(path, value)` | `{ op: replace, path, val }` |
-| `replaceExpression(path, expr)` | `{ op: replace, path, val: ${...} }` |
-| `addValue(path, value)` | `{ op: add, path, val }` |
-| `remove(path)` | `{ op: remove, path }` |
-
-Guardrail:
-- Mutations under reserved processor-managed paths are rejected.
-
-## 6.3 NodeObjectBuilder payload helper
-
-Used by `emitType(...)` and other payload customizers.
-
-| Method | Behavior |
-|---|---|
-| `type("Alias")` / `type(Class<?>)` | set node type |
-| `put(key, value)` | set property (`Node` preserved if provided) |
-| `putNode(key, node)` | set node property |
-| `putExpression(key, expr)` | set `${...}` |
-| `putStringMap(key, map)` | dictionary object from `Map<String,String>` |
-
-## 6.4 Capture step namespace
-
-`steps.capture()` methods:
-
-| Method | Emits event type |
-|---|---|
-| `lock()` | `PayNote/Card Transaction Capture Lock Requested` |
-| `unlock()` | `PayNote/Card Transaction Capture Unlock Requested` |
-| `markLocked()` | `PayNote/Card Transaction Capture Locked` |
-| `markUnlocked()` | `PayNote/Card Transaction Capture Unlocked` |
-| `requestNow()` | `PayNote/Capture Funds Requested` (`amount = ${document('/amount/total')}`) |
-| `requestPartial(expr)` | `PayNote/Capture Funds Requested` (`amount = ${expr}`) |
-| `releaseFull()` | `PayNote/Reservation Release Requested` (`amount = ${document('/amount/total')}`) |
-
-## 6.5 Bootstrap steps
-
-| DSL | Emits |
-|---|---|
-| `bootstrapDocument(name, doc, bindings)` | `Conversation/Document Bootstrap Requested` |
-| `bootstrapDocument(name, doc, bindings, options)` | same + options |
-| `bootstrapDocumentExpr(name, expr, bindings, options)` | same with expression document |
-
-Options (`BootstrapOptionsBuilder`):
-- `.assignee(channelKey)` -> `bootstrapAssignee`
-- `.defaultMessage(text)` -> `initialMessages.defaultMessage`
-- `.channelMessage(key, text)` -> `initialMessages.perChannel[key]`
-
-## 6.6 Extensions
-
-| DSL | Behavior |
-|---|---|
-| `steps.ext(factory)` | generic extension hook (`Function<StepsBuilder,E>`) |
-| `steps.myOs()` / `steps.myOs(adminChannel)` | returns `MyOsSteps` extension |
-
----
-
-## 7) Payment Request DSL
-
-Payment requests are emitted from `StepsBuilder`.
-
-## 7.1 Entry methods
-
-| DSL | Event type |
-|---|---|
-| `triggerPayment(name, PaymentType.class, payload -> ...)` | provided payment class |
-| `requestBackwardPayment(name, payload -> ...)` | `PayNote/Backward Payment Requested` |
-
-Required field:
-- `processor(...)` must be set, otherwise build fails.
-
-## 7.2 Core payload fields
-
-| Payload DSL | Event field |
-|---|---|
-| `processor("...")` | `processor` |
-| `payer("ref")` / `payer(node)` | `payer` |
-| `payee("ref")` / `payee(node)` | `payee` |
-| `from("ref")` / `from(node)` | `from` |
-| `to("ref")` / `to(node)` | `to` |
-| `currency("USD")` | `currency` |
-| `amountMinor(1234)` | `amountMinor` |
-| `amountMinorExpression("...")` | `amountMinor: ${...}` |
-| `reason("...")` | `reason` |
-| `attachPayNote(node)` | `attachedPayNote` |
-
-## 7.3 Rail namespaces (`via*`)
-
-| Namespace | Fields |
-|---|---|
-| `viaAch()` | routingNumber, accountNumber, accountType, network, companyEntryDescription |
-| `viaSepa()` | ibanFrom, ibanTo, bicTo, remittanceInformation |
-| `viaWire()` | bankSwift, bankName, accountNumber, beneficiaryName, beneficiaryAddress |
-| `viaCard()` | cardOnFileRef, merchantDescriptor |
-| `viaTokenizedCard()` | networkToken, tokenProvider, cryptogram |
-| `viaCreditLine()` | creditLineId, merchantAccountId, cardholderAccountId |
-| `viaLedger()` | ledgerAccountFrom, ledgerAccountTo, memo |
-| `viaCrypto()` | asset, chain, fromWalletRef, toAddress, txPolicy |
-
-Each namespace returns `.done()` back to the main payload builder.
-
-Bean shortcuts are supported for each rail, for example:
-- `.viaAch(AchPaymentFields bean)`
-- `.viaCreditLine(CreditLinePaymentFields bean)`
-
-Deprecated aliases still exist (`ach()`, `sepa()`, etc.) but `via*` is the preferred API.
-
-## 7.4 Generic custom/extension fields
-
-| DSL | Behavior |
-|---|---|
-| `rail(bean)` | merges bean fields into payload (skips `type`) |
-| `putCustom(key, value)` | custom key-value |
-| `putCustomExpression(key, expr)` | custom expression |
-| `ext(factory)` | extension point over payload builder |
-
-Guardrail:
-- `processor` cannot be set through `rail(...)` / `putCustom(...)`; must use `processor(...)`.
-
----
-
-## 8) MyOS Extension (`MyOsSteps`, `MyOsPermissions`)
-
-Use inside steps:
+Named expectation variants:
 
 ```java
-steps.myOs().requestSingleDocPermission(...)
+.expectsNamed("event-name")
+.expectsNamed("event-name", "fieldA", "fieldB")
+.expectsNamed("event-name", fields -> fields
+    .field("fieldA", "Description")
+    .field("fieldB"))
 ```
 
-## 8.1 `MyOsPermissions`
-
-Builder methods:
-- `create()`
-- `read(boolean)`
-- `write(boolean)`
-- `allOps(boolean)`
-- `singleOps(String...)`
-- `build()` -> `Node`
-
-Example:
+### 8.3 Ask AI
 
 ```java
-MyOsPermissions.create().read(true).singleOps("provideInstructions")
+steps.askAI("provider", "GeneratePlan", ask -> ask
+    .task("summarize")
+    .instruction("Request: ${event.message.request}")
+    .expectsNamed("meal-plan-warning", "code", "message"));
 ```
 
-## 8.2 MyOS methods and emitted event types
+Overloads:
 
-| DSL | Emits type |
-|---|---|
-| `requestSingleDocPermission(...)` | `MyOS/Single Document Permission Grant Requested` |
-| `requestLinkedDocsPermission(...)` | `MyOS/Linked Documents Permission Grant Requested` |
-| `revokeSingleDocPermission(...)` | `MyOS/Single Document Permission Revoke Requested` |
-| `revokeLinkedDocsPermission(...)` | `MyOS/Linked Documents Permission Revoke Requested` |
-| `grantWorkerAgencyPermission(...)` | `MyOS/Worker Agency Permission Grant Requested` |
-| `revokeWorkerAgencyPermission(...)` | `MyOS/Worker Agency Permission Revoke Requested` |
-| `addParticipant(...)` | `MyOS/Adding Participant Requested` |
-| `removeParticipant(...)` | `MyOS/Removing Participant Requested` |
-| `callOperation(...)` | `MyOS/Call Operation Requested` |
-| `subscribeToSession(...)` | `MyOS/Subscribe to Session Requested` |
-| `startWorkerSession(...)` | `MyOS/Start Worker Session Requested` |
-| `bootstrapDocument(...)` | `Conversation/Document Bootstrap Requested` |
+```java
+steps.askAI("provider", ask -> ask.instruction("...")); // default step name AskAI
+```
 
-Notes:
-- Input validation enforces required non-blank strings.
-- IDs/session refs are handled as text values (expression strings like `${...}` are allowed).
-- `bootstrapDocument(...)` in `MyOsSteps` auto-sets assignee to its admin channel unless overridden in options.
-- `callOperation(..., request = null)` currently serializes with an empty `request` container shape in emitted event payload (current behavior, covered by tests).
+Ask builder methods:
+- `task(...)`
+- `instruction(...)`
+- `expects(Class<?>)`
+- `expects(Node)`
+- `expectsNamed(...)` (all variants)
+- deprecated aliases still available: `text(...)`, `expression(...)`
 
----
+### 8.4 Handle AI responses
 
-## 9) PayNote DSL (`PayNoteBuilder`, `PayNotes`)
+Typed response handlers:
 
-## 9.1 Entry and defaults
+```java
+.onAIResponse("provider", "onResponse", steps -> ...)
+.onAIResponse("provider", "onChat", ChatMessage.class, steps -> ...)
+.onAIResponse("provider", "onSummary", ChatMessage.class, "summarize", steps -> ...)
+```
 
-| DSL | Mapping |
-|---|---|
-| `PayNotes.payNote("Name")` | creates paynote document |
-| Defaults | `/type: PayNote/PayNote` and channels `payerChannel`, `payeeChannel`, `guarantorChannel` |
+Named event handlers:
 
-## 9.2 Money helpers
+```java
+.onAIResponse("provider", "onPlanReady", "meal-plan-ready", steps -> ...)
+.onAIResponse("provider", "onPlanReady", "meal-plan-ready", "summarize", steps -> ...)
+```
 
-| DSL | Mapping |
-|---|---|
-| `.currency("usd")` | `/currency: USD` |
-| `.amountMinor(1234)` | `/amount/total: 1234` |
-| `.amountMajor("12.34")` / `.amountMajor(BigDecimal)` | major -> minor using ISO currency fraction digits |
+All `onAIResponse(...)` handlers automatically prepend context persistence:
+- `_SaveAIContext` -> replace `<contextPath>` with `event.update.context`
+
+### 8.5 Manual AI control from steps
+
+```java
+steps.ai("provider").requestPermission();
+steps.ai("provider").requestPermission("RequestNow");
+steps.ai("provider").subscribe();
+steps.ai("provider").subscribe("SubscribeNow");
+```
+
+## 9) MyOS Extension (`steps.myOs()`)
+
+Get extension:
+
+```java
+steps.myOs();
+steps.myOs("adminChannel");
+```
+
+Permission helpers:
+
+```java
+steps.myOs().requestSingleDocPermission(
+    "ownerChannel",
+    "REQ_PROVIDER",
+    DocBuilder.expr("document('/providerSessionId')"),
+    MyOsPermissions.create().read(true).singleOps("provideInstructions"));
+
+steps.myOs().requestLinkedDocsPermission(
+    "ownerChannel",
+    "REQ_LINKED",
+    DocBuilder.expr("document('/projectSessionId')"),
+    Map.of("invoices", MyOsPermissions.create().read(true).allOps(true)));
+
+steps.myOs().revokeSingleDocPermission("ownerChannel", "REQ_X", "session-1");
+steps.myOs().revokeLinkedDocsPermission("ownerChannel", "REQ_X", "session-1");
+```
+
+Participant/session helpers:
+
+```java
+steps.myOs().addParticipant("bobChannel", "bob@example.com");
+steps.myOs().removeParticipant("legacyChannel");
+steps.myOs().callOperation("ownerChannel", "session-1", "processData", requestBean);
+steps.myOs().subscribeToSession("ownerChannel", "session-1", "SUB_1");
+steps.myOs().startWorkerSession("agentChannel", workerConfigNode);
+```
+
+Worker agency helpers:
+
+```java
+steps.myOs().grantWorkerAgencyPermission("ownerChannel", "REQ_W", "session-1", permissionsBean);
+steps.myOs().revokeWorkerAgencyPermission("ownerChannel", "REQ_W", "session-1");
+```
+
+Bootstrap helper:
+
+```java
+steps.myOs().bootstrapDocument(
+    "BootstrapChild",
+    childDocNode,
+    Map.of("buyerChannel", "ownerChannel"),
+    options -> options
+        .defaultMessage("A new child document was created.")
+        .channelMessage("buyerChannel", "Please review and accept."));
+```
+
+### 9.1 MyOsPermissions builder
+
+```java
+MyOsPermissions.create()
+    .read(true)
+    .write(false)
+    .allOps(false)
+    .singleOps("provideInstructions", "getStatus")
+    .build();
+```
+
+## 10) Payment Request DSL
+
+### 10.1 Entry methods
+
+```java
+steps.triggerPayment("RequestPayment", PaymentRequests.PaymentRequested.class, payload -> payload ...);
+steps.triggerPayment(PaymentRequests.PaymentRequested.class, payload -> payload ...); // default step name TriggerPayment
+
+steps.requestBackwardPayment("VoucherCredit", payload -> payload ...);
+steps.requestBackwardPayment(payload -> payload ...); // default step name RequestBackwardPayment
+```
+
+### 10.2 Core payload fields
+
+```java
+payload
+    .processor("guarantorChannel") // required
+    .payer("payerChannel")
+    .payee("payeeChannel")
+    .from("payeeChannel")
+    .to("payerChannel")
+    .currency("USD")
+    .amountMinor(10000)
+    .amountMinorExpression("document('/amount/total')")
+    .reason("voucher-activation")
+    .attachPayNote(childPayNoteNode);
+```
+
+### 10.3 Rail namespaces (`via*`)
+
+```java
+payload.viaAch()
+    .routingNumber("111000025")
+    .accountNumber("123456")
+    .accountType("checking")
+    .network("ACH")
+    .companyEntryDescription("PAYROLL")
+    .done();
+
+payload.viaSepa().ibanFrom("DE123").ibanTo("DE456").bicTo("BIC").remittanceInformation("Inv").done();
+payload.viaWire().bankSwift("SWIFT").bankName("Bank").accountNumber("123").beneficiaryName("Jane").beneficiaryAddress("Addr").done();
+payload.viaCard().cardOnFileRef("cof-1").merchantDescriptor("Blue Shop").done();
+payload.viaTokenizedCard().networkToken("nt").tokenProvider("tp").cryptogram("cg").done();
+payload.viaCreditLine().creditLineId("facility-1").merchantAccountId("m-1").cardholderAccountId("c-1").done();
+payload.viaLedger().ledgerAccountFrom("from").ledgerAccountTo("to").memo("memo").done();
+payload.viaCrypto().asset("BTC").chain("bitcoin").fromWalletRef("wallet").toAddress("bc1...").txPolicy("fast").done();
+```
+
+Bean shortcuts:
+
+```java
+payload.viaAch(new AchPaymentFields()...);
+payload.viaCreditLine(new CreditLinePaymentFields()...);
+// ... same for all rails
+```
+
+Extension hooks:
+
+```java
+payload.rail(customRailBean);
+payload.putCustom("customField", "value");
+payload.putCustomExpression("customExpr", "document('/x')");
+payload.ext(DemoBankPaymentFields::new)
+    .creditFacilityId("facility-42")
+    .riskTier("tier-a");
+```
 
 Validation:
-- negative `amountMinor` rejected
-- `amountMajor` requires `currency()` first
-- invalid scale rejected (`RoundingMode.UNNECESSARY`)
+- `processor(...)` is mandatory.
+- `processor` cannot be set via `rail(...)` or `putCustom(...)`.
 
-## 9.3 Action builders
+## 11) Bootstrap DSL
 
-`PayNoteBuilder` exposes three action namespaces:
-- `capture()`
-- `reserve()`
-- `release()`
+Generic bootstrap from `StepsBuilder`:
 
-Each returns `ActionBuilder` with the same trigger API:
-- `lockOnInit()`
-- `unlockOnEvent(...)`
-- `unlockOnDocPathChange(...)`
-- `unlockOnOperation(...)`
-- `requestOnInit()`
-- `requestOnEvent(...)`
-- `requestOnDocPathChange(...)`
-- `requestOnOperation(...)`
-- `requestPartialOnOperation(...)`
-- `requestPartialOnEvent(...)`
-- `done()`
+```java
+steps.bootstrapDocument(
+    "BootstrapDeal",
+    childDocNode,
+    Map.of("buyerChannel", "ownerChannel"),
+    options -> options
+        .assignee("myOsAdminChannel")
+        .defaultMessage("A new deal has been created.")
+        .channelMessage("buyerChannel", "Please review and accept."));
 
-Event semantics:
-- `capture` uses capture lock/unlock/request events
-- `reserve` uses reserve lock/unlock and reserve funds requested
-- `release` uses reservation-release lock/unlock and reservation release requested
+steps.bootstrapDocumentExpr(
+    "BootstrapFromTemplate",
+    "document('/template')",
+    Map.of("participantA", "aliceChannel"),
+    options -> options.assignee("orchestratorChannel"));
+```
 
-Important:
-- `release()` means reservation release/cancel flow, not captured-funds refund flow.
+## 12) PayNote DSL
 
-Build-time guardrail:
-- For each action, if locked on init and no unlock path configured, `buildDocument()` throws.
+### 12.1 Create paynote
 
----
+```java
+Node payNote = PayNotes.payNote("Armchair")
+    .description("Payment with delivery confirmation")
+    .currency("USD")
+    .amountMinor(10000)
+    .capture()
+        .lockOnInit()
+        .unlockOnOperation("confirmSatisfaction", "payerChannel", "Buyer confirms satisfaction")
+        .done()
+    .buildDocument();
+```
 
-## 10) End-to-End Example: Sectioned Counter
+### 12.2 Action builders
+
+Capture:
+
+```java
+.capture()
+    .lockOnInit()
+    .unlockOnEvent(FundsCaptured.class)
+    .unlockOnDocPathChange("/approval/confirmed")
+    .unlockOnOperation("confirm", "payerChannel", "Confirm")
+    .requestOnInit()
+    .requestOnEvent(FundsReserved.class)
+    .requestOnDocPathChange("/approval/confirmed")
+    .requestOnOperation("requestCapture", "guarantorChannel", "Request capture")
+    .requestPartialOnOperation("requestPartialCapture", "guarantorChannel", "Partial", "event.message.request.amount")
+    .requestPartialOnEvent(ShipmentConfirmed.class, "event.message.request.amount")
+    .done()
+```
+
+Reserve and release use the same trigger API surface:
+
+```java
+.reserve() ... .done()
+.release() ... .done()
+```
+
+Important semantic note:
+- `release()` emits reservation-release requests (void/release of reserved funds), not refund of already captured funds.
+
+Validation note:
+- If action is `lockOnInit()`, at least one unlock path is required for that action.
+
+## 13) End-to-End Examples
+
+### 13.1 Counter with sections
 
 ```java
 Node counter = DocBuilder.doc()
     .name("Counter")
-    .section("participants", "Participants", "Alice timeline")
-        .channel("aliceTimeline")
+    .section("participants", "Participants", "Owner channel")
+        .channel("ownerChannel")
     .endSection()
     .section("counterOps", "Counter operations", "Increment/decrement")
         .field("/counter", 0)
         .operation("increment")
-            .channel("aliceTimeline")
+            .channel("ownerChannel")
             .requestType(Integer.class)
             .description("Increment")
-            .steps(steps -> steps.replaceExpression("Inc", "/counter", "event.message.request + document('/counter')"))
+            .steps(steps -> steps.replaceExpression("Inc", "/counter", "document('/counter') + event.message.request"))
             .done()
         .operation("decrement")
-            .channel("aliceTimeline")
+            .channel("ownerChannel")
             .requestType(Integer.class)
             .description("Decrement")
             .steps(steps -> steps.replaceExpression("Dec", "/counter", "document('/counter') - event.message.request"))
@@ -723,64 +645,47 @@ Node counter = DocBuilder.doc()
     .buildDocument();
 ```
 
----
-
-## 11) End-to-End Example: AI + MyOS + Response Handling
+### 13.2 AI integration + task + typed response
 
 ```java
-Node agent = DocBuilder.doc()
+Node mealPlanner = DocBuilder.doc()
     .name("Meal Planner")
-    .type("MyOS/Agent")
-    .section("participants", "Participants", "Owner and admin")
+    .channel("ownerChannel")
+    .myOsAdmin()
+    .field("/llmProviderSessionId", "session-llm-001")
+    .ai("provider")
+        .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
+        .permissionFrom("ownerChannel")
+        .task("summarize")
+            .instruction("Return concise meal plan JSON")
+            .expectsNamed("meal-plan-ready", "planId", "totalCalories")
+            .done()
+        .done()
+    .operation("requestMealPlan")
         .channel("ownerChannel")
-        .myOsAdmin("myOsAdminChannel")
-    .endSection()
-    .section("provider", "Provider integration", "LLM setup")
-        .field("/llmProviderSessionId", "session-001")
-        .ai("provider")
-            .sessionId(DocBuilder.expr("document('/llmProviderSessionId')"))
-            .permissionFrom("ownerChannel")
-            .statusPath("/provider/status")
-            .contextPath("/provider/context")
-            .requesterId("MEAL_PLANNER")
-            .done()
-    .endSection()
-    .section("flow", "Meal planning", "Request + process")
-        .field("/maxCalories", 3000)
-        .operation("requestMealPlan")
-            .channel("ownerChannel")
-            .requestType(String.class)
-            .steps(steps -> steps.askAI("provider", "Generate", prompt -> prompt
-                .text("Max: ${document('/maxCalories')}")
-                .text("Request: ${event.message.request}")))
-            .done()
-        .onAIResponse("provider", "onPlan", steps -> steps
-            .replaceValue("MarkDone", "/status", "done"))
-    .endSection()
+        .requestType(String.class)
+        .steps(steps -> steps.askAI("provider", "Generate", ask -> ask
+            .task("summarize")
+            .instruction("Request: ${event.message.request}")))
+        .done()
+    .onAIResponse("provider", "onPlanReady", "meal-plan-ready", steps -> steps
+        .replaceExpression("SavePlan", "/mealPlan", "event.update.payload"))
     .buildDocument();
 ```
 
----
-
-## 12) End-to-End Example: PayNote Armchair + Voucher + Reverse Payment
-
-This pattern captures funds for the primary purchase, then requests a backward payment (payee -> payer) for a voucher after capture.
+### 13.3 Armchair + voucher + abstract backward payment
 
 ```java
-Node armchairWithVoucher = PayNotes.payNote("Armchair Protection + Voucher")
-    .description("Capture unlocks after buyer satisfaction, then voucher credit is requested.")
+Node armchair = PayNotes.payNote("Armchair Protection + Voucher")
+    .description("Capture unlocks on satisfaction; voucher backward payment requested.")
     .currency("USD")
     .amountMinor(10000)
     .capture()
         .lockOnInit()
-        .unlockOnOperation(
-            "confirmSatisfaction",
-            "payerChannel",
-            "Buyer confirms satisfaction.")
+        .unlockOnOperation("confirmSatisfaction", "payerChannel", "Buyer confirms satisfaction")
         .done()
-    .onEvent("requestVoucherPayment", FundsCaptured.class, steps -> steps.requestBackwardPayment(
-        "VoucherCredit",
-        payload -> payload
+    .onEvent("requestVoucherPayment", FundsCaptured.class, steps -> steps
+        .requestBackwardPayment("VoucherCredit", payload -> payload
             .processor("guarantorChannel")
             .from("payeeChannel")
             .to("payerChannel")
@@ -789,7 +694,6 @@ Node armchairWithVoucher = PayNotes.payNote("Armchair Protection + Voucher")
             .reason("voucher-activation")
             .attachPayNote(
                 PayNotes.payNote("Balanced Bowl Voucher")
-                    .description("Child voucher paynote")
                     .currency("USD")
                     .amountMinor(10000)
                     .release()
@@ -799,109 +703,54 @@ Node armchairWithVoucher = PayNotes.payNote("Armchair Protection + Voucher")
     .buildDocument();
 ```
 
-This is the default and preferred shape: abstract intent only.  
-Processor decides execution rail (credit line, ACH credit, card refund, ledger entry, etc.).
-
-If needed, you can still provide an optional rail hint:
-
-```java
-.requestBackwardPayment("VoucherCredit", payload -> payload
-    .processor("guarantorChannel")
-    .from("payeeChannel")
-    .to("payerChannel")
-    .currency("USD")
-    .amountMinor(10000)
-    .reason("voucher-activation")
-    .viaCreditLine()
-        .creditLineId("facility-001")
-        .done())
-```
-
----
-
-## 13) End-to-End Example: Bootstrap a New Inline Document on Event
-
-This shows inline child-document definition directly in `bootstrapDocument(...)`.
-When funds are captured, the parent document bootstraps a new voucher document session.
+### 13.4 Bootstrap child document inline
 
 ```java
 Node orchestrator = DocBuilder.doc()
-    .name("Order Orchestrator")
-    .channel("payerChannel")
-    .channel("payeeChannel")
-    .myOsAdmin("myOsAdminChannel")
-    .onEvent("onFundsCaptured", FundsCaptured.class, steps -> steps
-        .myOs().bootstrapDocument(
-            "BootstrapVoucherDocument",
-            DocBuilder.doc()
-                .name("Balanced Bowl Voucher")
-                .description("Auto-created voucher document.")
-                .channel("voucherOwnerChannel")
-                .channel("voucherMerchantChannel")
-                .field("/voucher/status", "active")
-                .field("/voucher/amountMinor", 10000)
-                .operation("redeem")
-                    .channel("voucherOwnerChannel")
-                    .description("Redeem voucher.")
-                    .steps(s -> s.replaceValue("MarkRedeemed", "/voucher/status", "redeemed"))
-                    .done()
-                .buildDocument(),
-            Map.of(
-                "voucherOwnerChannel", "payerChannel",
-                "voucherMerchantChannel", "payeeChannel"),
-            options -> options
-                .defaultMessage("A voucher has been issued for your order.")
-                .channelMessage("voucherOwnerChannel", "You received a new voucher.")))
-    .onMyOsResponse("onVoucherBootstrapped",
-        DocumentBootstrapCompleted.class,
-        steps -> steps
-            .replaceExpression("SaveVoucherSessionId", "/voucher/sessionId", "event.message.sessionId")
-            .replaceValue("MarkVoucherLinked", "/voucher/linkStatus", "linked"))
+    .name("Orchestrator")
+    .channel("ownerChannel")
+    .myOsAdmin()
+    .onInit("bootstrapChild", steps -> steps.bootstrapDocument(
+        "BootstrapChild",
+        DocBuilder.doc()
+            .name("Child")
+            .channel("childOwner")
+            .field("/status", "created")
+            .buildDocument(),
+        Map.of("childOwner", "ownerChannel"),
+        options -> options
+            .assignee("myOsAdminChannel")
+            .defaultMessage("You were invited to a child document.")))
     .buildDocument();
 ```
 
----
-
 ## 14) Common Pitfalls
 
-1. Forgetting `endSection()`:
-- `buildDocument()` throws when a section remains open.
+1. Missing `endSection()`:
+- `buildDocument()` throws when section is still open.
 
-2. Using internal setter:
-- Public API for document data is `field(...)`.
-- `set(...)` is protected for internal SDK composition.
+2. Assuming operation impl always exists:
+- `<key>Impl` exists only when `.steps(...)` is provided.
 
-3. Expecting `operation(..., description)` to auto-create impl:
-- Impl contract appears only when steps are provided.
+3. Missing `processor` in payment requests:
+- `triggerPayment` / `requestBackwardPayment` throw.
 
-4. Misunderstanding `release()` in PayNote:
-- It is reservation release semantics, not refund of captured funds.
+4. Unknown AI integration/task:
+- `askAI` / `onAIResponse` validate integration and task names.
 
-5. Missing payment processor:
-- `triggerPayment` and `requestBackwardPayment` require `processor(...)`.
+5. Event helper without step name:
+- `triggerEvent`, `emit`, `emitType`, `namedEvent` require explicit non-blank step names.
 
-6. Unknown AI integration in `askAI`/`onAIResponse`:
-- Throws `Unknown AI integration: <name>` unless `.ai(name)...done()` was called first.
+## 15) API Checklist (Authoring)
 
----
-
-## 15) Migration Notes (current state)
-
-- Prefer `field(...)` over older `set(...)` usage in user code.
-- Prefer `viaAch()/viaSepa()/...` over deprecated payment aliases `ach()/sepa()/...`.
-- Prefer sectioned authoring for large documents to produce `Conversation/Document Section` metadata.
-
----
-
-## 16) Minimal Cheatsheet
-
-- Data: `field("/x", value)`
-- Grouping: `section(...).endSection()`
-- Participants/channels: `channel(...)`, `compositeChannel(...)`
-- Operations: `operation(...)` or `operation("k"). ... .done()`
-- Workflows: `onInit`, `onEvent`, `onChannelEvent`, `onDocChange`
-- Matchers: `onMyOsResponse`, `onSubscriptionUpdate`, `onTriggeredWithId/Matcher`
-- AI: `ai(...).done()`, `steps.askAI(...)`, `onAIResponse(...)`
-- MyOS requests: `steps.myOs().<method>(...)`
-- Payments: `steps.triggerPayment(...)`, `steps.requestBackwardPayment(...)`
-- PayNote: `PayNotes.payNote(...).capture()/reserve()/release()`
+- Data: `field`, `replace`, `remove`
+- Grouping: `section`, `endSection`
+- Channels: `channel`, `channels`, `compositeChannel`, `myOsAdmin`, `canEmit`
+- Operations: `operation(...)` inline + builder form
+- Workflows: `onInit`, `onEvent`, `onNamedEvent`, `onDocChange`, `onChannelEvent`
+- Matchers: `onMyOsResponse`, `onSubscriptionUpdate`, `onTriggeredWithId`, `onTriggeredWithMatcher`
+- Steps: `jsRaw`, `updateDocument`, `updateDocumentFromExpression`, `triggerEvent`, `emit`, `emitType`, `namedEvent`, `capture`
+- AI: `ai(...).done`, `steps.askAI`, `onAIResponse`, `steps.ai(...).requestPermission/subscribe`
+- MyOS: `steps.myOs().<requests>`
+- Payments: `triggerPayment`, `requestBackwardPayment`, `via*` rails, `rail/putCustom/ext`
+- PayNote: `PayNotes.payNote(...).capture/reserve/release`

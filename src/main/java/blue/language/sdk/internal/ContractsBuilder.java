@@ -1,6 +1,7 @@
 package blue.language.sdk.internal;
 
 import blue.language.model.Node;
+import blue.language.sdk.ai.AIIntegrationConfig;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -11,16 +12,16 @@ import java.util.function.Consumer;
 public final class ContractsBuilder {
 
     private final Map<String, Node> contracts;
-    private final Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations;
+    private final Map<String, AIIntegrationConfig> aiIntegrations;
 
     public ContractsBuilder(Map<String, Node> contracts) {
         this(contracts, null);
     }
 
     public ContractsBuilder(Map<String, Node> contracts,
-                            Map<String, StepsBuilder.AiIntegrationConfig> aiIntegrations) {
+                            Map<String, AIIntegrationConfig> aiIntegrations) {
         this.contracts = contracts;
-        this.aiIntegrations = new LinkedHashMap<String, StepsBuilder.AiIntegrationConfig>();
+        this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
         if (aiIntegrations != null) {
             this.aiIntegrations.putAll(aiIntegrations);
         }
@@ -32,7 +33,7 @@ public final class ContractsBuilder {
     }
 
     public ContractsBuilder timelineChannel(String key) {
-        contracts.put(key, new Node().type(TypeAliases.CONVERSATION_TIMELINE_CHANNEL));
+        contracts.put(key, new Node().type(TypeAliases.CORE_CHANNEL));
         return this;
     }
 
