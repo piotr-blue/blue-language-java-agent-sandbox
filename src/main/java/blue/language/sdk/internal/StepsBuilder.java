@@ -108,6 +108,10 @@ public final class StepsBuilder {
         return triggerEvent(name, BLUE.objectToNode(typedEvent));
     }
 
+    public StepsBuilder emitType(String name, Class<?> eventTypeClass) {
+        return emitType(name, eventTypeClass, null);
+    }
+
     public StepsBuilder emitType(String name, Class<?> eventTypeClass, Consumer<NodeObjectBuilder> payloadCustomizer) {
         if (eventTypeClass == null) {
             throw new IllegalArgumentException("eventTypeClass cannot be null");

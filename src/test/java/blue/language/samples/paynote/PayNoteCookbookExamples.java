@@ -1,6 +1,7 @@
 package blue.language.samples.paynote;
 
 import blue.language.model.Node;
+import blue.language.samples.paynote.types.domain.CookbookEvents.DeliveryConfirmed;
 import blue.language.samples.paynote.voucher.ArmchairProtectionWithVoucherPayNote;
 import blue.language.samples.paynote.voucher.BalancedBowlVoucherPayNote;
 import blue.language.samples.paynote.types.domain.CookbookEvents;
@@ -36,14 +37,14 @@ public final class PayNoteCookbookExamples {
                 .description("Capture is locked until guarantor confirms delivery.")
                 .currency("USD")
                 .amountMinor(120000)
+                .channel("shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
                     .unlockOnOperation(
                             "confirmDelivery",
-                            "guarantorChannel",
-                            "Guarantor confirms delivery.",
-                            steps -> steps.emitType("DeliveryConfirmed", CookbookEvents.DeliveryConfirmed.class, null))
-                    .requestOnOperation("requestCapture", "guarantorChannel", "Request full capture.")
+                            "shipmentCompanyChannel",
+                            "Shipment Company confirms delivery.",
+                            steps -> steps.emitType("DeliveryConfirmed", DeliveryConfirmed.class))
                     .done()
                 .buildDocument();
     }
@@ -56,14 +57,14 @@ public final class PayNoteCookbookExamples {
                 .channel("shipmentCompanyChannel")
                 .capture()
                     .lockOnInit()
-                    .unlockOnEvent(CookbookEvents.DeliveryConfirmed.class)
+                    .unlockOnEvent(DeliveryConfirmed.class)
                     .done()
                 .onChannelEvent("onShipmentConfirmed",
                         "shipmentCompanyChannel",
                         ShippingEvents.ShipmentConfirmed.class,
-                        steps -> steps.emitType("DeliveryConfirmed", CookbookEvents.DeliveryConfirmed.class, null))
+                        steps -> steps.emitType("DeliveryConfirmed", DeliveryConfirmed.class, null))
                 .onEvent("onDeliveryConfirmed",
-                        CookbookEvents.DeliveryConfirmed.class,
+                        DeliveryConfirmed.class,
                         steps -> steps.capture().requestNow())
                 .buildDocument();
     }
