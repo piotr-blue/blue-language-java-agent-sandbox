@@ -1,6 +1,7 @@
 package blue.language.samples.sdk;
 
 import blue.language.model.Node;
+import blue.language.types.TypeAlias;
 import blue.language.sdk.DocBuilder;
 import blue.language.sdk.MyOsPermissions;
 import blue.language.sdk.SimpleDocBuilder;
@@ -114,5 +115,110 @@ public final class DocBuilderExamples {
                                         DocBuilder.expr("document('/llmProviderSessionId')"),
                                         "SUB_RECRUITMENT_PROVIDER"))
                 .buildDocument();
+    }
+
+    public static Node orchestratorWithAccessAndAgency() {
+        return DocBuilder.doc()
+                .name("Procurement Orchestrator")
+                .description("Accesses catalog data and starts worker sessions through agency.")
+                .section("participants", "Participants", "User-facing channels")
+                    .channel("userChannel")
+                .endSection()
+                .section("state", "State", "Session references and tracking")
+                    .field("/catalogSessionId", "session-catalog-001")
+                    .field("/plannerSessionId", "session-planner-001")
+                    .field("/currentTask", "")
+                    .field("/negotiations/count", 0)
+                .endSection()
+                .section("capabilities", "Capabilities", "Access + AI + agency")
+                    .access("catalog")
+                        .targetSessionId(DocBuilder.expr("document('/catalogSessionId')"))
+                        .onBehalfOf("userChannel")
+                        .read(true)
+                        .operations("search", "getDetails")
+                        .requestPermissionOnInit()
+                        .subscribeAfterGranted()
+                        .statusPath("/catalog/status")
+                        .done()
+                    .ai("planner")
+                        .sessionId(DocBuilder.expr("document('/plannerSessionId')"))
+                        .permissionFrom("userChannel")
+                        .task("findBestDeal")
+                            .instruction("Find the best deal across catalog results.")
+                            .expectsNamed("deal-found", "vendorEmail", "productId", "price")
+                            .done()
+                        .done()
+                    .agency("procurement")
+                        .onBehalfOf("userChannel")
+                        .allowedTypes(Purchase.class)
+                        .allowedOperations("proposeOffer", "accept", "reject")
+                        .requestPermissionOnInit()
+                        .statusPath("/agency/status")
+                        .done()
+                .endSection()
+                .section("workflow", "Workflow", "Find, analyze, negotiate")
+                    .operation("findAndBuy")
+                        .channel("userChannel")
+                        .requestType(String.class)
+                        .description("Find and buy a product")
+                        .steps(steps -> steps
+                                .replaceExpression("SaveTask", "/currentTask", "event.message.request")
+                                .access("catalog").call("search", DocBuilder.expr("event.message.request")))
+                        .done()
+                    .onCallResponse("catalog", "onSearchResults", steps -> steps
+                            .replaceExpression("SaveResults", "/catalog/lastResults", "event.message.response")
+                            .askAI("planner", "Analyze", ask -> ask
+                                    .task("findBestDeal")
+                                    .instruction("Results: ${document('/catalog/lastResults')}")
+                                    .instruction("User wants: ${document('/currentTask')}")))
+                    .onAIResponse("planner", "onDealFound", "deal-found", steps -> steps
+                            .replaceExpression("SaveDeal", "/lastDeal", "event.update.payload")
+                            .viaAgency("procurement").startSession(
+                                    "StartPurchase",
+                                    DocBuilder.doc()
+                                            .name("Auto-Purchase")
+                                            .type(Purchase.class)
+                                            .channel("buyerChannel")
+                                            .channel("sellerChannel")
+                                            .field("/maxPrice", DocBuilder.expr("event.update.payload.price"))
+                                            .buildDocument(),
+                                    bindings -> bindings
+                                            .bindExpr("sellerChannel", "event.update.payload.vendorEmail")
+                                            .bindFromCurrentDoc("buyerChannel", "userChannel"),
+                                    options -> options
+                                            .initiator("buyerChannel")
+                                            .defaultMessage("Purchase negotiation started.")))
+                    .onSessionStarted("procurement", "onNegotiationStarted", steps -> steps
+                            .replaceExpression("Track", "/negotiations/count",
+                                    "document('/negotiations/count') + 1"))
+                .endSection()
+                .buildDocument();
+    }
+
+    public static Node linkedAccessMonitor() {
+        return DocBuilder.doc()
+                .name("Linked Access Monitor")
+                .channel("ownerChannel")
+                .field("/projectSessionId", "session-project-99")
+                .accessLinked("projectData")
+                    .targetSessionId(DocBuilder.expr("document('/projectSessionId')"))
+                    .onBehalfOf("ownerChannel")
+                    .link("invoices")
+                        .read(true)
+                        .operations("list", "get")
+                        .done()
+                    .link("shipments")
+                        .read(true)
+                        .operations("track")
+                        .done()
+                    .statusPath("/projectData/status")
+                    .done()
+                .onLinkedAccessGranted("projectData", "onLinkedGranted", steps -> steps
+                        .replaceValue("MarkReady", "/projectData/ready", true))
+                .buildDocument();
+    }
+
+    @TypeAlias("Example/Purchase")
+    public static final class Purchase {
     }
 }

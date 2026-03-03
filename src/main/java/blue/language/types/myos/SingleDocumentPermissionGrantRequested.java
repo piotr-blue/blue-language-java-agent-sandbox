@@ -11,6 +11,7 @@ public class SingleDocumentPermissionGrantRequested {
     public String requestId;
     public String targetSessionId;
     public Node permissions;
+    public Boolean grantSessionSubscriptionOnResult;
 
     public SingleDocumentPermissionGrantRequested onBehalfOf(String onBehalfOf) {
         this.onBehalfOf = onBehalfOf;
@@ -29,6 +30,12 @@ public class SingleDocumentPermissionGrantRequested {
 
     public SingleDocumentPermissionGrantRequested permissions(Node permissions) {
         this.permissions = permissions;
+        return this;
+    }
+
+    public SingleDocumentPermissionGrantRequested grantSessionSubscriptionOnResult(
+            Boolean grantSessionSubscriptionOnResult) {
+        this.grantSessionSubscriptionOnResult = grantSessionSubscriptionOnResult;
         return this;
     }
 }

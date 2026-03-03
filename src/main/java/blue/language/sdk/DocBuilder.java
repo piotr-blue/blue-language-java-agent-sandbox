@@ -15,10 +15,25 @@ import blue.language.sdk.internal.TypeAliases;
 import blue.language.sdk.internal.TypeRef;
 import blue.language.types.common.NamedEvent;
 import blue.language.types.conversation.Response;
+import blue.language.types.myos.AllParticipantsReady;
+import blue.language.types.myos.BootstrapFailed;
+import blue.language.types.myos.CallOperationResponded;
+import blue.language.types.myos.LinkedDocumentsPermissionGranted;
+import blue.language.types.myos.LinkedDocumentsPermissionRejected;
+import blue.language.types.myos.LinkedDocumentsPermissionRevoked;
+import blue.language.types.myos.ParticipantResolved;
 import blue.language.types.myos.SingleDocumentPermissionGranted;
 import blue.language.types.myos.SingleDocumentPermissionRejected;
+import blue.language.types.myos.SingleDocumentPermissionRevoked;
+import blue.language.types.myos.SubscribableSessionCreated;
+import blue.language.types.myos.SubscriptionToSessionFailed;
 import blue.language.types.myos.SubscriptionUpdate;
 import blue.language.types.myos.SubscriptionToSessionInitiated;
+import blue.language.types.myos.TargetDocumentSessionStarted;
+import blue.language.types.myos.WorkerAgencyPermissionGranted;
+import blue.language.types.myos.WorkerAgencyPermissionRejected;
+import blue.language.types.myos.WorkerAgencyPermissionRevoked;
+import blue.language.types.myos.WorkerSessionStarting;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,7 +51,14 @@ public class DocBuilder<T extends DocBuilder<T>> {
     protected final Node document;
     private final Map<String, AIIntegrationConfig> aiIntegrations =
             new LinkedHashMap<String, AIIntegrationConfig>();
+    private final Map<String, AccessConfig> accessConfigs =
+            new LinkedHashMap<String, AccessConfig>();
+    private final Map<String, LinkedAccessConfig> linkedAccessConfigs =
+            new LinkedHashMap<String, LinkedAccessConfig>();
+    private final Map<String, AgencyConfig> agencyConfigs =
+            new LinkedHashMap<String, AgencyConfig>();
     private SectionContext currentSection;
+    private boolean myOsAdminEnsured;
 
     protected DocBuilder() {
         this.document = new Node();
@@ -282,6 +304,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         contracts().putRaw("myOsAdminChannel", new Node().type("MyOS/MyOS Timeline"));
         trackContract("myOsAdminChannel");
         canEmit("myOsAdminChannel", "myOsEmit");
+        myOsAdminEnsured = true;
         return self();
     }
 
@@ -290,6 +313,7 @@ public class DocBuilder<T extends DocBuilder<T>> {
         contracts().putRaw(channelKey, new Node().type("MyOS/MyOS Timeline"));
         trackContract(channelKey);
         canEmit(channelKey, deriveEmitOperationKey(channelKey));
+        myOsAdminEnsured = true;
         return self();
     }
 
@@ -441,7 +465,23 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     public AiIntegrationBuilder<T> ai(String integrationName) {
+        ensureMyOsAdmin();
         return new AiIntegrationBuilder<T>(self(), integrationName);
+    }
+
+    public AccessBuilder<T> access(String accessName) {
+        ensureMyOsAdmin();
+        return new AccessBuilder<T>(self(), accessName);
+    }
+
+    public LinkedAccessBuilder<T> accessLinked(String linkedAccessName) {
+        ensureMyOsAdmin();
+        return new LinkedAccessBuilder<T>(self(), linkedAccessName);
+    }
+
+    public AgencyBuilder<T> agency(String agencyName) {
+        ensureMyOsAdmin();
+        return new AgencyBuilder<T>(self(), agencyName);
     }
 
     public T onAIResponse(String integrationName,
@@ -532,6 +572,123 @@ public class DocBuilder<T extends DocBuilder<T>> {
         });
     }
 
+    public T onAccessGranted(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AccessConfig config = requireAccessConfig(accessName);
+        return onMyOsResponse(workflowKey, SingleDocumentPermissionGranted.class, config.requestId(), customizer);
+    }
+
+    public T onAccessRejected(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AccessConfig config = requireAccessConfig(accessName);
+        return onMyOsResponse(workflowKey, SingleDocumentPermissionRejected.class, config.requestId(), customizer);
+    }
+
+    public T onAccessRevoked(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AccessConfig config = requireAccessConfig(accessName);
+        return onMyOsResponse(workflowKey, SingleDocumentPermissionRevoked.class, config.requestId(), customizer);
+    }
+
+    public T onCallResponse(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAccessConfig(accessName);
+        return onEvent(workflowKey, CallOperationResponded.class, customizer);
+    }
+
+    public T onCallResponse(String accessName,
+                            String workflowKey,
+                            Class<?> responseTypeClass,
+                            Consumer<StepsBuilder> customizer) {
+        requireAccessConfig(accessName);
+        return onEvent(workflowKey, responseTypeClass, customizer);
+    }
+
+    public T onUpdate(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AccessConfig config = requireAccessConfig(accessName);
+        return onSubscriptionUpdate(workflowKey, config.subscriptionId(), customizer);
+    }
+
+    public T onUpdate(String accessName,
+                      String workflowKey,
+                      Class<?> updateTypeClass,
+                      Consumer<StepsBuilder> customizer) {
+        AccessConfig config = requireAccessConfig(accessName);
+        return onSubscriptionUpdate(workflowKey, config.subscriptionId(), updateTypeClass, customizer);
+    }
+
+    public T onSessionCreated(String accessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAccessConfig(accessName);
+        return onEvent(workflowKey, SubscribableSessionCreated.class, customizer);
+    }
+
+    public T onLinkedAccessGranted(String linkedAccessName,
+                                   String workflowKey,
+                                   Consumer<StepsBuilder> customizer) {
+        LinkedAccessConfig config = requireLinkedAccessConfig(linkedAccessName);
+        return onMyOsResponse(workflowKey, LinkedDocumentsPermissionGranted.class, config.requestId(), customizer);
+    }
+
+    public T onLinkedAccessRejected(String linkedAccessName,
+                                    String workflowKey,
+                                    Consumer<StepsBuilder> customizer) {
+        LinkedAccessConfig config = requireLinkedAccessConfig(linkedAccessName);
+        return onMyOsResponse(workflowKey, LinkedDocumentsPermissionRejected.class, config.requestId(), customizer);
+    }
+
+    public T onLinkedAccessRevoked(String linkedAccessName,
+                                   String workflowKey,
+                                   Consumer<StepsBuilder> customizer) {
+        LinkedAccessConfig config = requireLinkedAccessConfig(linkedAccessName);
+        return onMyOsResponse(workflowKey, LinkedDocumentsPermissionRevoked.class, config.requestId(), customizer);
+    }
+
+    public T onLinkedDocGranted(String linkedAccessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireLinkedAccessConfig(linkedAccessName);
+        return onEvent(workflowKey, SingleDocumentPermissionGranted.class, customizer);
+    }
+
+    public T onLinkedDocRevoked(String linkedAccessName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireLinkedAccessConfig(linkedAccessName);
+        return onEvent(workflowKey, SingleDocumentPermissionRevoked.class, customizer);
+    }
+
+    public T onAgencyGranted(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AgencyConfig config = requireAgencyConfig(agencyName);
+        return onMyOsResponse(workflowKey, WorkerAgencyPermissionGranted.class, config.requestId(), customizer);
+    }
+
+    public T onAgencyRejected(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AgencyConfig config = requireAgencyConfig(agencyName);
+        return onMyOsResponse(workflowKey, WorkerAgencyPermissionRejected.class, config.requestId(), customizer);
+    }
+
+    public T onAgencyRevoked(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        AgencyConfig config = requireAgencyConfig(agencyName);
+        return onMyOsResponse(workflowKey, WorkerAgencyPermissionRevoked.class, config.requestId(), customizer);
+    }
+
+    public T onSessionStarting(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAgencyConfig(agencyName);
+        return onEvent(workflowKey, WorkerSessionStarting.class, customizer);
+    }
+
+    public T onSessionStarted(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAgencyConfig(agencyName);
+        return onEvent(workflowKey, TargetDocumentSessionStarted.class, customizer);
+    }
+
+    public T onSessionFailed(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAgencyConfig(agencyName);
+        return onEvent(workflowKey, BootstrapFailed.class, customizer);
+    }
+
+    public T onParticipantResolved(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAgencyConfig(agencyName);
+        return onEvent(workflowKey, ParticipantResolved.class, customizer);
+    }
+
+    public T onAllParticipantsReady(String agencyName, String workflowKey, Consumer<StepsBuilder> customizer) {
+        requireAgencyConfig(agencyName);
+        return onEvent(workflowKey, AllParticipantsReady.class, customizer);
+    }
+
     protected T set(String pointer, Object value) {
         setPointer(pointer, toNode(value));
         trackField(pointer);
@@ -580,7 +737,12 @@ public class DocBuilder<T extends DocBuilder<T>> {
     }
 
     private ContractsBuilder contracts() {
-        return new ContractsBuilder(ensureMap(document, "contracts"), aiIntegrations);
+        return new ContractsBuilder(
+                ensureMap(document, "contracts"),
+                aiIntegrations,
+                accessConfigs,
+                linkedAccessConfigs,
+                agencyConfigs);
     }
 
     private PoliciesBuilder policies() {
@@ -615,6 +777,84 @@ public class DocBuilder<T extends DocBuilder<T>> {
             return ((Node) value).clone();
         }
         return BLUE.objectToNode(value);
+    }
+
+    AccessConfig requireAccessConfig(String accessName) {
+        require(accessName, "access name");
+        AccessConfig config = accessConfigs.get(accessName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown access: " + accessName);
+        }
+        return config;
+    }
+
+    LinkedAccessConfig requireLinkedAccessConfig(String linkedAccessName) {
+        require(linkedAccessName, "linked access name");
+        LinkedAccessConfig config = linkedAccessConfigs.get(linkedAccessName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown linked access: " + linkedAccessName);
+        }
+        return config;
+    }
+
+    AgencyConfig requireAgencyConfig(String agencyName) {
+        require(agencyName, "agency name");
+        AgencyConfig config = agencyConfigs.get(agencyName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown agency: " + agencyName);
+        }
+        return config;
+    }
+
+    T registerAccessConfig(AccessConfig config) {
+        require(config, "access config");
+        if (accessConfigs.containsKey(config.name())) {
+            throw new IllegalStateException("Duplicate access config: " + config.name());
+        }
+        accessConfigs.put(config.name(), config);
+        return self();
+    }
+
+    T registerLinkedAccessConfig(LinkedAccessConfig config) {
+        require(config, "linked access config");
+        if (linkedAccessConfigs.containsKey(config.name())) {
+            throw new IllegalStateException("Duplicate linked access config: " + config.name());
+        }
+        linkedAccessConfigs.put(config.name(), config);
+        return self();
+    }
+
+    T registerAgencyConfig(AgencyConfig config) {
+        require(config, "agency config");
+        if (agencyConfigs.containsKey(config.name())) {
+            throw new IllegalStateException("Duplicate agency config: " + config.name());
+        }
+        agencyConfigs.put(config.name(), config);
+        return self();
+    }
+
+    private void ensureMyOsAdmin() {
+        if (myOsAdminEnsured) {
+            return;
+        }
+        myOsAdmin();
+    }
+
+    static String tokenOf(String input, String fallback) {
+        if (input == null) {
+            return fallback;
+        }
+        StringBuilder token = new StringBuilder();
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                token.append(Character.toUpperCase(c));
+            }
+        }
+        if (token.length() == 0) {
+            return fallback;
+        }
+        return token.toString();
     }
 
     private static Node listRequestSchema() {
@@ -738,14 +978,16 @@ public class DocBuilder<T extends DocBuilder<T>> {
     private void ensureTriggeredChannel() {
         Map<String, Node> contracts = ensureMap(document, "contracts");
         if (!contracts.containsKey("triggeredEventChannel")) {
-            new ContractsBuilder(contracts, aiIntegrations).triggeredEventChannel("triggeredEventChannel");
+            new ContractsBuilder(contracts, aiIntegrations, accessConfigs, linkedAccessConfigs, agencyConfigs)
+                    .triggeredEventChannel("triggeredEventChannel");
         }
     }
 
     private void ensureInitChannel() {
         Map<String, Node> contracts = ensureMap(document, "contracts");
         if (!contracts.containsKey("initLifecycleChannel")) {
-            new ContractsBuilder(contracts, aiIntegrations).lifecycleEventChannel(
+            new ContractsBuilder(contracts, aiIntegrations, accessConfigs, linkedAccessConfigs, agencyConfigs)
+                    .lifecycleEventChannel(
                     "initLifecycleChannel",
                     TypeAliases.CORE_DOCUMENT_PROCESSING_INITIATED);
         }

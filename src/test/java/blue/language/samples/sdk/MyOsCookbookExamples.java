@@ -13,6 +13,7 @@ import blue.language.types.myos.CallOperationResponded;
 import blue.language.types.myos.SessionEpochAdvanced;
 import blue.language.types.myos.SingleDocumentPermissionGranted;
 import blue.language.types.myos.SubscriptionToSessionInitiated;
+import blue.language.types.myos.TargetDocumentSessionStarted;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -29,6 +30,8 @@ public final class MyOsCookbookExamples {
         docs.put("addParticipantsDynamically", addParticipantsDynamically());
         docs.put("linkedDocsWithUpdates", linkedDocsWithUpdates());
         docs.put("cvClassifierFull", cvClassifierFull());
+        docs.put("accessAndAgencyOrchestrator", accessAndAgencyOrchestrator());
+        docs.put("linkedAccessPermissions", linkedAccessPermissions());
         return docs;
     }
 
@@ -232,6 +235,91 @@ public final class MyOsCookbookExamples {
                                         """)
                                 .updateDocumentFromExpression("PersistResult",
                                         "steps.ProcessResult.changeset"))
+                .buildDocument();
+    }
+
+    public static Node accessAndAgencyOrchestrator() {
+        return DocBuilder.doc()
+                .name("Access + Agency Orchestrator")
+                .description("Uses access(), ai(), and agency() together in one flow.")
+                .channel("userChannel")
+                .field("/catalogSessionId", "session-catalog-007")
+                .field("/plannerSessionId", "session-planner-007")
+                .field("/lastDeal", new Node())
+                .access("catalog")
+                    .targetSessionId(DocBuilder.expr("document('/catalogSessionId')"))
+                    .onBehalfOf("userChannel")
+                    .read(true)
+                    .operations("search", "getDetails")
+                    .subscribeAfterGranted()
+                    .statusPath("/catalog/status")
+                    .done()
+                .ai("planner")
+                    .sessionId(DocBuilder.expr("document('/plannerSessionId')"))
+                    .permissionFrom("userChannel")
+                    .task("findDeal")
+                        .instruction("Find the best deal from provided catalog results.")
+                        .expectsNamed("deal-found", "vendorEmail", "price")
+                        .done()
+                    .done()
+                .agency("procurement")
+                    .onBehalfOf("userChannel")
+                    .allowedOperations("proposeOffer", "accept")
+                    .statusPath("/agency/status")
+                    .done()
+                .operation("findAndStart")
+                    .channel("userChannel")
+                    .requestType(String.class)
+                    .description("Search catalog and start worker session for negotiation.")
+                    .steps(steps -> steps
+                            .access("catalog").call("search", DocBuilder.expr("event.message.request")))
+                    .done()
+                .onCallResponse("catalog", "onCatalogResults", steps -> steps
+                        .replaceExpression("SaveResults", "/catalog/results", "event.message.response")
+                        .askAI("planner", "Analyze", ask -> ask
+                                .task("findDeal")
+                                .instruction("Catalog results: ${document('/catalog/results')}")))
+                .onAIResponse("planner", "onDealFound", "deal-found", steps -> steps
+                        .replaceExpression("StoreDeal", "/lastDeal", "event.update.payload")
+                        .viaAgency("procurement").startSession(
+                                "StartNegotiation",
+                                DocBuilder.doc()
+                                        .name("Negotiation")
+                                        .channel("buyerChannel")
+                                        .channel("sellerChannel")
+                                        .field("/targetPrice", DocBuilder.expr("event.update.payload.price"))
+                                        .buildDocument(),
+                                bindings -> bindings
+                                        .bindFromCurrentDoc("buyerChannel", "userChannel")
+                                        .bindExpr("sellerChannel", "event.update.payload.vendorEmail")))
+                .onSessionStarted("procurement", "onSessionStarted", steps -> steps
+                        .replaceValue("MarkStarted", "/negotiation/status", "started"))
+                .buildDocument();
+    }
+
+    public static Node linkedAccessPermissions() {
+        return DocBuilder.doc()
+                .name("Linked Access Permissions")
+                .description("Shows accessLinked() with multiple link permission blocks.")
+                .channel("ownerChannel")
+                .field("/projectSessionId", "session-project-88")
+                .accessLinked("projectData")
+                    .targetSessionId(DocBuilder.expr("document('/projectSessionId')"))
+                    .onBehalfOf("ownerChannel")
+                    .statusPath("/projectData/status")
+                    .link("invoices")
+                        .read(true)
+                        .operations("list", "get")
+                        .done()
+                    .link("shipments")
+                        .read(true)
+                        .operations("track")
+                        .done()
+                    .done()
+                .onLinkedAccessGranted("projectData", "onProjectDataGranted", steps -> steps
+                        .replaceValue("MarkGranted", "/projectData/granted", true))
+                .onLinkedAccessRevoked("projectData", "onProjectDataRevoked", steps -> steps
+                        .replaceValue("MarkRevoked", "/projectData/revoked", true))
                 .buildDocument();
     }
 

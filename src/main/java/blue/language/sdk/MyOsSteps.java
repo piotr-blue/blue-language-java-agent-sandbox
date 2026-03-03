@@ -19,6 +19,7 @@ import blue.language.types.myos.WorkerAgencyPermissionRevokeRequested;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class MyOsSteps {
@@ -44,11 +45,22 @@ public final class MyOsSteps {
                                                    String requestId,
                                                    Object targetSessionId,
                                                    Object permissions) {
+        return requestSingleDocPermission(onBehalfOf, requestId, targetSessionId, permissions, false);
+    }
+
+    public StepsBuilder requestSingleDocPermission(String onBehalfOf,
+                                                   String requestId,
+                                                   Object targetSessionId,
+                                                   Object permissions,
+                                                   boolean grantSessionSubscriptionOnResult) {
         SingleDocumentPermissionGrantRequested event = new SingleDocumentPermissionGrantRequested()
                 .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
                 .requestId(requireText(requestId, "requestId is required"))
                 .targetSessionId(asText(targetSessionId, "targetSessionId is required"))
                 .permissions(toNode(permissions, true));
+        if (grantSessionSubscriptionOnResult) {
+            event.grantSessionSubscriptionOnResult(true);
+        }
         return emitBean("RequestSingleDocumentPermission", SingleDocumentPermissionGrantRequested.class, event);
     }
 
@@ -114,12 +126,19 @@ public final class MyOsSteps {
     public StepsBuilder subscribeToSession(String onBehalfOf,
                                            Object targetSessionId,
                                            String subscriptionId) {
+        return subscribeToSession(onBehalfOf, targetSessionId, subscriptionId, (Class<?>[]) null);
+    }
+
+    public StepsBuilder subscribeToSession(String onBehalfOf,
+                                           Object targetSessionId,
+                                           String subscriptionId,
+                                           Class<?>... eventTypes) {
         SubscribeToSessionRequested event = new SubscribeToSessionRequested()
                 .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
                 .targetSessionId(asText(targetSessionId, "targetSessionId is required"))
                 .subscription(BLUE.objectToNode(new SubscriptionSpec(
                         requireText(subscriptionId, "subscriptionId is required"),
-                        new ArrayList<Object>())));
+                        buildSubscriptionEvents(eventTypes))));
         return emitBean("SubscribeToSession", SubscribeToSessionRequested.class, event);
     }
 
@@ -142,6 +161,16 @@ public final class MyOsSteps {
         return emitBean("GrantWorkerAgencyPermission", WorkerAgencyPermissionGrantRequested.class, event);
     }
 
+    public StepsBuilder grantWorkerAgencyPermission(String onBehalfOf,
+                                                    String requestId,
+                                                    Object workerAgencyPermissions) {
+        WorkerAgencyPermissionGrantRequested event = new WorkerAgencyPermissionGrantRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"))
+                .workerAgencyPermissions(toNode(workerAgencyPermissions, true));
+        return emitBean("GrantWorkerAgencyPermission", WorkerAgencyPermissionGrantRequested.class, event);
+    }
+
     public StepsBuilder revokeWorkerAgencyPermission(String onBehalfOf,
                                                      String requestId,
                                                      Object targetSessionId) {
@@ -149,6 +178,14 @@ public final class MyOsSteps {
                 .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
                 .requestId(requireText(requestId, "requestId is required"))
                 .targetSessionId(asText(targetSessionId, "targetSessionId is required"));
+        return emitBean("RevokeWorkerAgencyPermission", WorkerAgencyPermissionRevokeRequested.class, event);
+    }
+
+    public StepsBuilder revokeWorkerAgencyPermission(String onBehalfOf,
+                                                     String requestId) {
+        WorkerAgencyPermissionRevokeRequested event = new WorkerAgencyPermissionRevokeRequested()
+                .onBehalfOf(requireText(onBehalfOf, "onBehalfOf is required"))
+                .requestId(requireText(requestId, "requestId is required"));
         return emitBean("RevokeWorkerAgencyPermission", WorkerAgencyPermissionRevokeRequested.class, event);
     }
 
@@ -258,5 +295,19 @@ public final class MyOsSteps {
             this.id = id;
             this.events = events;
         }
+    }
+
+    private static List<Object> buildSubscriptionEvents(Class<?>... eventTypes) {
+        List<Object> events = new ArrayList<Object>();
+        if (eventTypes == null) {
+            return events;
+        }
+        for (Class<?> eventType : eventTypes) {
+            if (eventType == null) {
+                continue;
+            }
+            events.add(new Node().type(blue.language.sdk.internal.TypeRef.of(eventType).asTypeNode()));
+        }
+        return events;
     }
 }

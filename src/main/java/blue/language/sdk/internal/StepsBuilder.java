@@ -2,6 +2,11 @@ package blue.language.sdk.internal;
 
 import blue.language.Blue;
 import blue.language.model.Node;
+import blue.language.sdk.AccessConfig;
+import blue.language.sdk.AccessSteps;
+import blue.language.sdk.AgencyConfig;
+import blue.language.sdk.AgencySteps;
+import blue.language.sdk.LinkedAccessConfig;
 import blue.language.sdk.MyOsPermissions;
 import blue.language.sdk.MyOsSteps;
 import blue.language.sdk.ai.AIIntegrationConfig;
@@ -35,13 +40,26 @@ public final class StepsBuilder {
 
     private final List<Node> steps = new ArrayList<Node>();
     private final Map<String, AIIntegrationConfig> aiIntegrations;
+    private final Map<String, AccessConfig> accessConfigs;
+    private final Map<String, LinkedAccessConfig> linkedAccessConfigs;
+    private final Map<String, AgencyConfig> agencyConfigs;
 
     public StepsBuilder() {
-        this(null);
+        this(null, null, null, null);
     }
 
     public StepsBuilder(Map<String, AIIntegrationConfig> aiIntegrations) {
+        this(aiIntegrations, null, null, null);
+    }
+
+    public StepsBuilder(Map<String, AIIntegrationConfig> aiIntegrations,
+                        Map<String, AccessConfig> accessConfigs,
+                        Map<String, LinkedAccessConfig> linkedAccessConfigs,
+                        Map<String, AgencyConfig> agencyConfigs) {
         this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
+        this.accessConfigs = new LinkedHashMap<String, AccessConfig>();
+        this.linkedAccessConfigs = new LinkedHashMap<String, LinkedAccessConfig>();
+        this.agencyConfigs = new LinkedHashMap<String, AgencyConfig>();
         if (aiIntegrations != null) {
             for (Map.Entry<String, AIIntegrationConfig> entry : aiIntegrations.entrySet()) {
                 String key = entry.getKey();
@@ -50,6 +68,36 @@ public final class StepsBuilder {
                     continue;
                 }
                 this.aiIntegrations.put(key.trim(), value);
+            }
+        }
+        if (accessConfigs != null) {
+            for (Map.Entry<String, AccessConfig> entry : accessConfigs.entrySet()) {
+                String key = entry.getKey();
+                AccessConfig value = entry.getValue();
+                if (key == null || value == null) {
+                    continue;
+                }
+                this.accessConfigs.put(key.trim(), value);
+            }
+        }
+        if (linkedAccessConfigs != null) {
+            for (Map.Entry<String, LinkedAccessConfig> entry : linkedAccessConfigs.entrySet()) {
+                String key = entry.getKey();
+                LinkedAccessConfig value = entry.getValue();
+                if (key == null || value == null) {
+                    continue;
+                }
+                this.linkedAccessConfigs.put(key.trim(), value);
+            }
+        }
+        if (agencyConfigs != null) {
+            for (Map.Entry<String, AgencyConfig> entry : agencyConfigs.entrySet()) {
+                String key = entry.getKey();
+                AgencyConfig value = entry.getValue();
+                if (key == null || value == null) {
+                    continue;
+                }
+                this.agencyConfigs.put(key.trim(), value);
             }
         }
     }
@@ -221,6 +269,30 @@ public final class StepsBuilder {
         return new AISteps(this, requireAiIntegration(aiName));
     }
 
+    public AccessSteps access(String accessName) {
+        if (accessName == null || accessName.trim().isEmpty()) {
+            throw new IllegalArgumentException("access name is required");
+        }
+        AccessConfig config = accessConfigs.get(accessName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown access: '" + accessName
+                    + "'. Define it with .access(\"" + accessName + "\")...done().");
+        }
+        return new AccessSteps(this, config);
+    }
+
+    public AgencySteps viaAgency(String agencyName) {
+        if (agencyName == null || agencyName.trim().isEmpty()) {
+            throw new IllegalArgumentException("agency name is required");
+        }
+        AgencyConfig config = agencyConfigs.get(agencyName.trim());
+        if (config == null) {
+            throw new IllegalArgumentException("Unknown agency: '" + agencyName
+                    + "'. Define it with .agency(\"" + agencyName + "\")...done().");
+        }
+        return new AgencySteps(this, config);
+    }
+
     public StepsBuilder replaceValue(String name, String path, Object value) {
         return updateDocument(name, changeset -> changeset.replaceValue(path, value));
     }
@@ -317,6 +389,13 @@ public final class StepsBuilder {
         return text
                 .replace("\\", "\\\\")
                 .replace("'", "\\'");
+    }
+
+    public Node subscriptionSpec(String subscriptionId) {
+        Node subscription = new Node().properties(new LinkedHashMap<String, Node>());
+        subscription.properties("id", new Node().value(subscriptionId));
+        subscription.properties("events", new Node().items(new ArrayList<Node>()));
+        return subscription;
     }
 
     List<Node> build() {

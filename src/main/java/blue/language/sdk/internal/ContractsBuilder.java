@@ -1,6 +1,9 @@
 package blue.language.sdk.internal;
 
 import blue.language.model.Node;
+import blue.language.sdk.AccessConfig;
+import blue.language.sdk.AgencyConfig;
+import blue.language.sdk.LinkedAccessConfig;
 import blue.language.sdk.ai.AIIntegrationConfig;
 
 import java.util.ArrayList;
@@ -13,17 +16,40 @@ public final class ContractsBuilder {
 
     private final Map<String, Node> contracts;
     private final Map<String, AIIntegrationConfig> aiIntegrations;
+    private final Map<String, AccessConfig> accessConfigs;
+    private final Map<String, LinkedAccessConfig> linkedAccessConfigs;
+    private final Map<String, AgencyConfig> agencyConfigs;
 
     public ContractsBuilder(Map<String, Node> contracts) {
-        this(contracts, null);
+        this(contracts, null, null, null, null);
     }
 
     public ContractsBuilder(Map<String, Node> contracts,
                             Map<String, AIIntegrationConfig> aiIntegrations) {
+        this(contracts, aiIntegrations, null, null, null);
+    }
+
+    public ContractsBuilder(Map<String, Node> contracts,
+                            Map<String, AIIntegrationConfig> aiIntegrations,
+                            Map<String, AccessConfig> accessConfigs,
+                            Map<String, LinkedAccessConfig> linkedAccessConfigs,
+                            Map<String, AgencyConfig> agencyConfigs) {
         this.contracts = contracts;
         this.aiIntegrations = new LinkedHashMap<String, AIIntegrationConfig>();
+        this.accessConfigs = new LinkedHashMap<String, AccessConfig>();
+        this.linkedAccessConfigs = new LinkedHashMap<String, LinkedAccessConfig>();
+        this.agencyConfigs = new LinkedHashMap<String, AgencyConfig>();
         if (aiIntegrations != null) {
             this.aiIntegrations.putAll(aiIntegrations);
+        }
+        if (accessConfigs != null) {
+            this.accessConfigs.putAll(accessConfigs);
+        }
+        if (linkedAccessConfigs != null) {
+            this.linkedAccessConfigs.putAll(linkedAccessConfigs);
+        }
+        if (agencyConfigs != null) {
+            this.agencyConfigs.putAll(agencyConfigs);
         }
     }
 
@@ -103,7 +129,8 @@ public final class ContractsBuilder {
         if (customizer == null) {
             return this;
         }
-        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
+        StepsBuilder stepsBuilder = new StepsBuilder(
+                aiIntegrations, accessConfigs, linkedAccessConfigs, agencyConfigs);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW_OPERATION);
@@ -120,7 +147,8 @@ public final class ContractsBuilder {
             return this;
         }
 
-        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
+        StepsBuilder stepsBuilder = new StepsBuilder(
+                aiIntegrations, accessConfigs, linkedAccessConfigs, agencyConfigs);
         customizer.accept(stepsBuilder);
         List<Node> nextSteps = stepsBuilder.build();
 
@@ -154,7 +182,8 @@ public final class ContractsBuilder {
                                                String channel,
                                                Node event,
                                                Consumer<StepsBuilder> customizer) {
-        StepsBuilder stepsBuilder = new StepsBuilder(aiIntegrations);
+        StepsBuilder stepsBuilder = new StepsBuilder(
+                aiIntegrations, accessConfigs, linkedAccessConfigs, agencyConfigs);
         customizer.accept(stepsBuilder);
 
         Node workflow = new Node().type(TypeAliases.CONVERSATION_SEQUENTIAL_WORKFLOW);
