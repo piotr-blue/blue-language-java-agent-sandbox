@@ -148,6 +148,8 @@ All DSL methods auto-track in the active section: channels, operations, workflow
 .channels("aliceChannel", "bobChannel")
 ```
 
+Default mapping: `.channel("x")` creates `contracts/x` with type `Core/Channel`.
+
 ### 4.2 Channel from bean
 
 ```java
@@ -262,7 +264,12 @@ This creates:
 
 ### 6.3 Document interaction listeners
 
-These are typed convenience wrappers for documents using `access()`, `accessLinked()`, or `agency()`. They auto-correlate on the request ID and subscription ID from the named configuration.
+These are typed convenience wrappers for documents using `access()`, `accessLinked()`, or `agency()`.
+
+Correlation behavior:
+- `onAccessGranted/Rejected/Revoked`, `onLinkedAccessGranted/Rejected/Revoked`, `onAgencyGranted/Rejected/Revoked` correlate by the configured request ID.
+- `onUpdate(...)` correlates by the configured subscription ID.
+- `onCallResponse`, `onSessionCreated`, `onLinkedDocGranted/Revoked`, and agency session lifecycle listeners validate the configured name and match by event type.
 
 ```java
 // access() listeners
@@ -276,13 +283,17 @@ These are typed convenience wrappers for documents using `access()`, `accessLink
 .onSessionCreated("orders", "onNewDoc", steps -> ...)
 
 // accessLinked() listeners
-.onAccessGranted("shopData", "onLinkedGranted", steps -> ...)
+.onLinkedAccessGranted("shopData", "onLinkedGranted", steps -> ...)
+.onLinkedAccessRejected("shopData", "onLinkedRejected", steps -> ...)
+.onLinkedAccessRevoked("shopData", "onLinkedRevoked", steps -> ...)
+// optional aliases:
 .onLinkedDocGranted("shopData", "onNewPurchase", steps -> ...)
 .onLinkedDocRevoked("shopData", "onPurchaseRemoved", steps -> ...)
 
 // agency() listeners
 .onAgencyGranted("procurement", "onReady", steps -> ...)
 .onAgencyRejected("procurement", "onDenied", steps -> ...)
+.onAgencyRevoked("procurement", "onRevoked", steps -> ...)
 .onSessionStarting("procurement", "onStarting", steps -> ...)
 .onSessionStarted("procurement", "onReady", steps -> ...)
 .onSessionFailed("procurement", "onFailed", steps -> ...)
@@ -375,8 +386,8 @@ steps.access("orders").subscribe();
 steps.access("orders").subscribe("SubscribeNow");
 steps.access("orders").revokePermission();
 
-steps.agency("procurement").requestPermission();
-steps.agency("procurement").requestPermission("RequestAgency");
+steps.viaAgency("procurement").requestPermission();
+steps.viaAgency("procurement").requestPermission("RequestAgency");
 ```
 
 ### 7.4 Step extensions
@@ -388,6 +399,7 @@ steps.ext(MyCustomSteps::new).doSomething();
 ## 8) AI Integration DSL
 
 AI integration is a first-class `DocBuilder` primitive.
+Use `.ai(...)` directly on `DocBuilder` / `SimpleDocBuilder`; it is not nested under `.myOs()`.
 
 ### 8.1 Define integration
 
@@ -539,14 +551,18 @@ Auto-generated contracts per `access("orders")`:
 
 | Contract key | Type | Trigger |
 |---|---|---|
-| `accessOrdersRequestPermission` | Sequential Workflow | Permission timing (init/event/docChange) |
-| `accessOrdersGranted` | Sequential Workflow | `Single Document Permission Granted` with `REQ_ACCESS_ORDERS` |
-| `accessOrdersRejected` | Sequential Workflow | `Single Document Permission Rejected` |
-| `accessOrdersSubscribe` | Sequential Workflow | After granted (if `subscribeAfterGranted`) |
-| `accessOrdersSubscriptionReady` | Sequential Workflow | `Subscription to Session Initiated` |
-| `accessOrdersSubscriptionFailed` | Sequential Workflow | `Subscription to Session Failed` |
+| `accessORDERSRequestPermission` | Sequential Workflow | Permission timing (init/event/docChange) |
+| `accessORDERSGranted` | Sequential Workflow | `Single Document Permission Granted` with `REQ_ACCESS_ORDERS` |
+| `accessORDERSRejected` | Sequential Workflow | `Single Document Permission Rejected` |
+| `accessORDERSRevoked` | Sequential Workflow | `Single Document Permission Revoked` |
+| `accessORDERSSubscriptionReady` | Sequential Workflow | `Subscription to Session Initiated` (if `subscribeAfterGranted`) |
+| `accessORDERSSubscriptionFailed` | Sequential Workflow | `Subscription to Session Failed` (if `subscribeAfterGranted`) |
 
-Status path transitions: `pending` → `granted` / `rejected` → `subscribed` / `subscription-failed` → `revoked`
+Notes:
+- Token in generated keys is uppercase alphanumeric from the configured name (`orders` -> `ORDERS`).
+- There is no separate `...Subscribe` workflow; subscribe is emitted as a step inside `...Granted`.
+
+Status path transitions (when `statusPath` is configured): `pending` → `granted` / `rejected` → `subscribed` / `subscription-failed` → `revoked`
 
 Step-level usage:
 
@@ -594,7 +610,10 @@ Auto-generated contracts follow the same pattern as `access()` but emit `Linked 
 Additional listeners for linked document lifecycle:
 
 ```java
-.onAccessGranted("shopData", "onLinkedGranted", steps -> ...)
+.onLinkedAccessGranted("shopData", "onLinkedGranted", steps -> ...)
+.onLinkedAccessRejected("shopData", "onLinkedRejected", steps -> ...)
+.onLinkedAccessRevoked("shopData", "onLinkedRevoked", steps -> ...)
+// optional aliases:
 .onLinkedDocGranted("shopData", "onNewPurchase", steps -> ...)
 .onLinkedDocRevoked("shopData", "onPurchaseRemoved", steps -> ...)
 ```
@@ -617,9 +636,10 @@ Auto-generated contracts:
 
 | Contract key | Type | Trigger |
 |---|---|---|
-| `agencyProcurementRequest` | Sequential Workflow | Permission timing |
-| `agencyProcurementGranted` | Sequential Workflow | `Worker Agency Permission Granted` |
-| `agencyProcurementRejected` | Sequential Workflow | `Worker Agency Permission Rejected` |
+| `agencyPROCUREMENTRequestPermission` | Sequential Workflow | Permission timing |
+| `agencyPROCUREMENTGranted` | Sequential Workflow | `Worker Agency Permission Granted` |
+| `agencyPROCUREMENTRejected` | Sequential Workflow | `Worker Agency Permission Rejected` |
+| `agencyPROCUREMENTRevoked` | Sequential Workflow | `Worker Agency Permission Revoked` |
 
 Step-level usage:
 
@@ -667,6 +687,7 @@ Listeners:
 ```java
 .onAgencyGranted("procurement", "onReady", steps -> ...)
 .onAgencyRejected("procurement", "onDenied", steps -> ...)
+.onAgencyRevoked("procurement", "onRevoked", steps -> ...)
 .onSessionStarting("procurement", "onStarting", steps -> ...)
 .onSessionStarted("procurement", "onReady", steps -> ...)
 .onSessionFailed("procurement", "onFailed", steps -> ...)
@@ -688,7 +709,7 @@ For manual timing, trigger from steps:
 ```java
 steps.access("orders").requestPermission();
 steps.access("orders").requestPermission("RequestNow");  // custom step name
-steps.agency("procurement").requestPermission();
+steps.viaAgency("procurement").requestPermission();
 ```
 
 ### 9.5 Revocation
@@ -740,6 +761,14 @@ steps.myOs().requestSingleDocPermission(
     DocBuilder.expr("document('/providerSessionId')"),
     MyOsPermissions.create().read(true).singleOps("provideInstructions"));
 
+// optional overload: auto-grant session-subscription from permission results
+steps.myOs().requestSingleDocPermission(
+    "ownerChannel",
+    "REQ_PROVIDER",
+    DocBuilder.expr("document('/providerSessionId')"),
+    MyOsPermissions.create().read(true),
+    true);
+
 steps.myOs().requestLinkedDocsPermission(
     "ownerChannel",
     "REQ_LINKED",
@@ -757,6 +786,7 @@ steps.myOs().addParticipant("bobChannel", "bob@example.com");
 steps.myOs().removeParticipant("legacyChannel");
 steps.myOs().callOperation("ownerChannel", "session-1", "processData", requestBean);
 steps.myOs().subscribeToSession("ownerChannel", "session-1", "SUB_1");
+steps.myOs().subscribeToSession("ownerChannel", "session-1", "SUB_1", CallOperationResponded.class);
 steps.myOs().startWorkerSession("agentChannel", workerConfigNode);
 ```
 
@@ -764,6 +794,7 @@ Worker agency helpers:
 
 ```java
 steps.myOs().grantWorkerAgencyPermission("ownerChannel", "REQ_W", permissionNode);
+steps.myOs().grantWorkerAgencyPermission("ownerChannel", "REQ_W", "session-1", permissionNode);
 steps.myOs().revokeWorkerAgencyPermission("ownerChannel", "REQ_W");
 ```
 
@@ -1109,7 +1140,7 @@ Node orchestrator = DocBuilder.doc()
 - **AI**: `ai().done()`, `steps.askAI()`, `onAIResponse()`, `steps.ai().requestPermission/subscribe`
 - **Document interaction**: `access().done()`, `accessLinked().done()`, `agency().done()`
 - **Interaction steps**: `steps.access("x").call()`, `steps.viaAgency("x").startSession()`
-- **Interaction listeners**: `onAccessGranted/Rejected/Revoked`, `onCallResponse`, `onUpdate`, `onSessionCreated/Started/Failed`, `onAgencyGranted/Rejected`, `onLinkedDocGranted/Revoked`, `onParticipantResolved`, `onAllParticipantsReady`
+- **Interaction listeners**: `onAccessGranted/Rejected/Revoked`, `onCallResponse`, `onUpdate`, `onSessionCreated`, `onLinkedAccessGranted/Rejected/Revoked`, optional `onLinkedDocGranted/Revoked`, `onAgencyGranted/Rejected/Revoked`, `onSessionStarting/Started/Failed`, `onParticipantResolved`, `onAllParticipantsReady`
 - **MyOS low-level**: `steps.myOs().<requests>`
 - **Payments**: `triggerPayment`, `requestBackwardPayment`, `via*` rails
 - **Bootstrap**: `steps.bootstrapDocument`, `steps.viaAgency("x").startSession()`
